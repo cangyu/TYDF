@@ -12,236 +12,275 @@
 using namespace std;
 
 const string swp_t("TRUE");
+
 const string swp_f("FALSE");
 
 const string bc_o2o("ONE_TO_ONE");
+
 const string bc_sym("SYM");
+
 const string bc_wal("WALL");
+
 const string bc_far("FAR");
 
 class NMF_BCRange
 {
 public:
-	uint32_t blk_seq;
-	uint32_t face_seq;
-	uint32_t pri_start_seq, pri_end_seq;
-	uint32_t sec_start_seq, sec_end_seq;
+    uint32_t blk_seq;
+    uint32_t face_seq;
+    uint32_t pri_start_seq, pri_end_seq;
+    uint32_t sec_start_seq, sec_end_seq;
 
-	NMF_BCRange(uint32_t *src) :
-		blk_seq(src[0]), face_seq(src[1]),
-		pri_start_seq(src[2]), pri_end_seq(src[3]),
-		sec_start_seq(src[4]), sec_end_seq(src[5])
-	{
-		//Empty Initialization Body
-	}
+    NMF_BCRange(uint32_t *src) :
+        blk_seq(src[0]), face_seq(src[1]),
+        pri_start_seq(src[2]), pri_end_seq(src[3]),
+        sec_start_seq(src[4]), sec_end_seq(src[5])
+    {
+        //Empty Initialization Body
+    }
 
-	NMF_BCRange(uint32_t b = 0, uint32_t f = 0, uint32_t s1 = 0, uint32_t e1 = 0, uint32_t s2 = 0, uint32_t e2 = 0) :
-		blk_seq(b), face_seq(f),
-		pri_start_seq(s1), pri_end_seq(e1),
-		sec_start_seq(s2), sec_end_seq(e2)
-	{
-		//Empty Initialization Body
-	}
+    NMF_BCRange() :
+        blk_seq(0), face_seq(0),
+        pri_start_seq(0), pri_end_seq(0),
+        sec_start_seq(0), sec_end_seq(0)
+    {
+        //Empty Initialization Body
+    }
+
+    NMF_BCRange(uint32_t b, uint32_t f, uint32_t s1, uint32_t e1, uint32_t s2, uint32_t e2) :
+        blk_seq(b), face_seq(f),
+        pri_start_seq(s1), pri_end_seq(e1),
+        sec_start_seq(s2), sec_end_seq(e2)
+    {
+        //Empty Initialization Body
+    }
 };
 
 class NMF_Entry
 {
 public:
-	string bc;
-	NMF_BCRange *rg1, *rg2;
-	bool swap;
+    string bc;
+    NMF_BCRange *rg1, *rg2;
+    bool swap;
 
-	NMF_Entry(string t, uint32_t *s) :
-		bc(t),
-		rg1(new NMF_BCRange(s)),
-		rg2(nullptr),
-		swap(false)
-	{
-		//Empty Initialization Body
-	}
+    NMF_Entry(const string &t, uint32_t *s) :
+        bc(t),
+        rg1(new NMF_BCRange(s)),
+        rg2(nullptr),
+        swap(false)
+    {
+        //Empty Initialization Body
+    }
 
-	NMF_Entry(string t, uint32_t *s1, uint32_t *s2, bool f) :
-		bc(t),
-		rg1(new NMF_BCRange(s1)),
-		rg2(new NMF_BCRange(s2)),
-		swap(f)
-	{
-		//Empty Initialization Body
-	}
+    NMF_Entry(const string &t, uint32_t *s1, uint32_t *s2, bool f) :
+        bc(t),
+        rg1(new NMF_BCRange(s1)),
+        rg2(new NMF_BCRange(s2)),
+        swap(f)
+    {
+        //Empty Initialization Body
+    }
 
-	~NMF_Entry()
-	{
-		if (rg1)
-			delete rg1;
-		if (rg2)
-			delete rg2;
-	}
+    ~NMF_Entry()
+    {
+        delete rg1;
+        delete rg2;
+    }
 };
 
 class NMF_BLKDim
 {
 public:
-	uint32_t i_dim, j_dim, k_dim;
+    uint32_t i_dim, j_dim, k_dim;
 
-	NMF_BLKDim(uint32_t in = 0, uint32_t jn = 0, uint32_t kn = 0) : i_dim(in), j_dim(jn), k_dim(kn)
-	{
-		//Empty Initialization Body
-	}
+    NMF_BLKDim() :
+        i_dim(0), j_dim(0), k_dim(0)
+    {
+        //Empty Initialization Body
+    }
+
+    NMF_BLKDim(uint32_t in, uint32_t jn, uint32_t kn) :
+        i_dim(in), j_dim(jn), k_dim(kn)
+    {
+        //Empty Initialization Body
+    }
+
+    uint32_t cell_num()
+    {
+        return (i_dim - 1) * (j_dim - 1) * (k_dim - 1);
+    }
+
+    uint32_t face_num()
+    {
+        uint32_t ret = 0;
+        ret += i_dim * (j_dim - 1) * (k_dim - 1);
+        ret += (i_dim - 1) * j_dim * (k_dim - 1);
+        ret += (i_dim - 1) * (j_dim - 1) * k_dim;
+        return ret;
+    }
+
+    uint32_t pnt_num()
+    {
+        return i_dim * j_dim * k_dim;
+    }
 };
 
 class NMF
 {
 public:
-	uint32_t blk_num;
-	vector<NMF_BLKDim> blk_dim;
-	vector<NMF_Entry*> mapping_entry;
+    uint32_t blk_num;
+    vector<NMF_BLKDim> blk_dim;
+    vector<NMF_Entry *> mapping_entry;
 
-	NMF(uint32_t n = 0) :
-            blk_num(n),
-            blk_dim(vector<NMF_BLKDim>(n)),
-            mapping_entry(vector<NMF_Entry*>())
-	{
-		//Empty Initialization Body
-	}
+    NMF(uint32_t n = 0) :
+        blk_num(n),
+        blk_dim(vector<NMF_BLKDim>(n)),
+        mapping_entry(vector<NMF_Entry *>())
+    {
+        //Empty Initialization Body
+    }
 
-	NMF(const string &path) :mapping_entry(vector<NMF_Entry*>())
-	{
-		//Load file
-		ifstream mfp;
-		mfp.open(path);
-		if (mfp.fail())
-		{
-			cerr << "Can not open the neutral mapping file!" << endl;
-			return;
-		}
+    NMF(const string &path) : mapping_entry(vector<NMF_Entry *>())
+    {
+        //Load file
+        ifstream mfp;
+        mfp.open(path);
+        if (mfp.fail()) {
+            cerr << "Can not open the neutral mapping file!" << endl;
+            return;
+        }
 
-		//Skip header
-		for (int i = 0; i < 4; i++)
-			mfp.ignore(numeric_limits<streamsize>::max(), mfp.widen('\n'));
+        //Skip header
+        for (int i = 0; i < 4; i++)
+            mfp.ignore(numeric_limits<streamsize>::max(), mfp.widen('\n'));
 
-		//Read block dimension info
-		mfp >> blk_num;
-		blk_dim = vector<NMF_BLKDim>(blk_num);
+        //Read block dimension info
+        mfp >> blk_num;
+        blk_dim = vector<NMF_BLKDim>(blk_num);
 
-		for (uint32_t i = 0; i < blk_num; i++)
-		{
-			uint32_t idx;
-			mfp >> idx;
-			mfp >> blk_dim[idx - 1].i_dim;
-			mfp >> blk_dim[idx - 1].j_dim;
-			mfp >> blk_dim[idx - 1].k_dim;
-		}
+        for (uint32_t i = 0; i < blk_num; i++) {
+            uint32_t idx;
+            mfp >> idx;
+            mfp >> blk_dim[idx - 1].i_dim;
+            mfp >> blk_dim[idx - 1].j_dim;
+            mfp >> blk_dim[idx - 1].k_dim;
+        }
 
-		//Skip seperators
-		for (int i = 0; i < 4; i++)
-			mfp.ignore(numeric_limits<streamsize>::max(), mfp.widen('\n'));
+        //Skip seperators
+        for (int i = 0; i < 4; i++)
+            mfp.ignore(numeric_limits<streamsize>::max(), mfp.widen('\n'));
 
-		//Read bc mappings
-		string s;
-		while (mfp >> s)
-		{
-			transform(s.begin(), s.end(), s.begin(), ::toupper);
-			if (s == bc_o2o)
-			{
-				uint32_t tmp[2][6] = { 0 };
-				for (uint8_t i = 0; i < 2; i++)
-					for (uint8_t j = 0; j < 6; j++)
-						mfp >> tmp[i][j];
-				mfp >> s;
-				transform(s.begin(), s.end(), s.begin(), ::toupper);
-				bool flag = s == swp_t;
+        //Read bc mappings
+        string s;
+        while (mfp >> s) {
+            transform(s.begin(), s.end(), s.begin(), ::toupper);
+            if (s == bc_o2o) {
+                uint32_t tmp[2][6] = {0};
+                for (uint8_t i = 0; i < 2; i++)
+                    for (uint8_t j = 0; j < 6; j++)
+                        mfp >> tmp[i][j];
+                mfp >> s;
+                transform(s.begin(), s.end(), s.begin(), ::toupper);
+                bool flag = s == swp_t;
 
-				mapping_entry.push_back(new NMF_Entry(bc_o2o, tmp[0], tmp[1], flag));
-			}
-			else
-			{
-				uint32_t tmp[6] = { 0 };
-				for (uint8_t i = 0; i < 6; i++)
-					mfp >> tmp[i];
+                mapping_entry.push_back(new NMF_Entry(bc_o2o, tmp[0], tmp[1], flag));
+            }
+            else {
+                uint32_t tmp[6] = {0};
+                for (uint8_t i = 0; i < 6; i++)
+                    mfp >> tmp[i];
 
-				mapping_entry.push_back(new NMF_Entry(s, tmp));
-			}
-		}
+                mapping_entry.push_back(new NMF_Entry(s, tmp));
+            }
+        }
 
-		//Done
-		mfp.close();
-	}
+        //Done
+        mfp.close();
+    }
 
-	~NMF()
-	{
-		for (uint32_t i = 0; i < mapping_entry.size(); i++)
-			delete mapping_entry[i];
-	}
+    ~NMF()
+    {
+        for (uint32_t i = 0; i < mapping_entry.size(); i++)
+            delete mapping_entry[i];
+    }
 
-	int save(const string &path)
-	{
-		ofstream f_out;
-		f_out.open(path);
-		if (f_out.fail())
-		{
-			cerr << "Can not open target output file!" << endl;
-			return -1;
-		}
+    int save(const string &path)
+    {
+        ofstream f_out;
+        f_out.open(path);
+        if (f_out.fail()) {
+            cerr << "Can not open target output file!" << endl;
+            return -1;
+        }
 
-		f_out << "# ======================== Neutral Map File generated by the GridGlue software ===============================" << endl;
-		f_out << "# ============================================================================================================" << endl;
-		f_out << "# Block#    IDIM    JDIM    KDIM" << endl;
-		f_out << "# ------------------------------------------------------------------------------------------------------------" << endl;
-		f_out << setw(8)<<right<< blk_num << endl;
-		for (uint32_t i = 0; i < blk_num; i++)
-		{
-			f_out << setw(8) << right << i + 1;
-			f_out << setw(8) << right << blk_dim[i].i_dim;
-			f_out << setw(8) << right << blk_dim[i].j_dim;
-			f_out << setw(8) << right << blk_dim[i].k_dim << endl;
-		}
+        f_out << "# ======================== Neutral Map File generated by the GridGlue software ===============================" << endl;
+        f_out << "# ============================================================================================================" << endl;
+        f_out << "# Block#    IDIM    JDIM    KDIM" << endl;
+        f_out << "# ------------------------------------------------------------------------------------------------------------" << endl;
+        f_out << setw(8) << right << blk_num << endl;
+        for (uint32_t i = 0; i < blk_num; i++) {
+            f_out << setw(8) << right << i + 1;
+            f_out << setw(8) << right << blk_dim[i].i_dim;
+            f_out << setw(8) << right << blk_dim[i].j_dim;
+            f_out << setw(8) << right << blk_dim[i].k_dim << endl;
+        }
 
-		f_out << "# ============================================================================================================" << endl;
-		f_out << "# Type           B1    F1       S1    E1       S2    E2       B2    F2       S1    E1       S2    E2      Swap" << endl;
-		f_out << "# ------------------------------------------------------------------------------------------------------------" << endl;
-		for (uint32_t i = 0; i < mapping_entry.size(); i++)
-		{
-			f_out << setw(13) << left <<mapping_entry[i]->bc;
-			f_out << setw(6) << right << mapping_entry[i]->rg1->blk_seq;
-			f_out << setw(6) << right << mapping_entry[i]->rg1->face_seq;
-			f_out << setw(9) << right << mapping_entry[i]->rg1->pri_start_seq;
-			f_out << setw(6) << right << mapping_entry[i]->rg1->pri_end_seq;
-			f_out << setw(9) << right << mapping_entry[i]->rg1->sec_start_seq;
-			f_out << setw(6) << right << mapping_entry[i]->rg1->sec_end_seq;
+        f_out << "# ============================================================================================================" << endl;
+        f_out << "# Type           B1    F1       S1    E1       S2    E2       B2    F2       S1    E1       S2    E2      Swap" << endl;
+        f_out << "# ------------------------------------------------------------------------------------------------------------" << endl;
+        for (uint32_t i = 0; i < mapping_entry.size(); i++) {
+            f_out << setw(13) << left << mapping_entry[i]->bc;
+            f_out << setw(6) << right << mapping_entry[i]->rg1->blk_seq;
+            f_out << setw(6) << right << mapping_entry[i]->rg1->face_seq;
+            f_out << setw(9) << right << mapping_entry[i]->rg1->pri_start_seq;
+            f_out << setw(6) << right << mapping_entry[i]->rg1->pri_end_seq;
+            f_out << setw(9) << right << mapping_entry[i]->rg1->sec_start_seq;
+            f_out << setw(6) << right << mapping_entry[i]->rg1->sec_end_seq;
 
-			if (mapping_entry[i]->rg2)
-			{
-				f_out << setw(9) << right << mapping_entry[i]->rg2->blk_seq;
-				f_out << setw(6) << right << mapping_entry[i]->rg2->face_seq;
-				f_out << setw(9) << right << mapping_entry[i]->rg2->pri_start_seq;
-				f_out << setw(6) << right << mapping_entry[i]->rg2->pri_end_seq;
-				f_out << setw(9) << right << mapping_entry[i]->rg2->sec_start_seq;
-				f_out << setw(6) << right << mapping_entry[i]->rg2->sec_end_seq;
-				f_out << setw(10) << right << (mapping_entry[i]->swap ? swp_t : swp_f);
-			}
+            if (mapping_entry[i]->rg2) {
+                f_out << setw(9) << right << mapping_entry[i]->rg2->blk_seq;
+                f_out << setw(6) << right << mapping_entry[i]->rg2->face_seq;
+                f_out << setw(9) << right << mapping_entry[i]->rg2->pri_start_seq;
+                f_out << setw(6) << right << mapping_entry[i]->rg2->pri_end_seq;
+                f_out << setw(9) << right << mapping_entry[i]->rg2->sec_start_seq;
+                f_out << setw(6) << right << mapping_entry[i]->rg2->sec_end_seq;
+                f_out << setw(10) << right << (mapping_entry[i]->swap ? swp_t : swp_f);
+            }
 
-			f_out << endl;
-		}
+            f_out << endl;
+        }
 
-		f_out.close();
-		return 0;
-	}
+        f_out.close();
+        return 0;
+    }
 };
 
 int main(int argc, char **argv)
 {
-	/*
-	if (argc != 3)
-	{
-		cout << "Usage: gridglue map.nmf grid.fmt" << endl;
-		return -1;
-	}
-	*/
+    /*
+    if (argc != 3)
+    {
+        cout << "Usage: gridglue map.nmf grid.fmt" << endl;
+        return -1;
+    }
+    */
 
-	NMF bc_mp("../test/mapping.nmf");
+    NMF bc_mp("../test/mapping.nmf");
 
-	bc_mp.save("../test/test.nmf");
+    uint32_t total_cell_num = 0, total_face_num = 0, total_pnt_num = 0;
+    for (uint32_t i = 0; i < bc_mp.blk_num; i++) {
+        total_cell_num += bc_mp.blk_dim[i].cell_num();
+        total_face_num += bc_mp.blk_dim[i].face_num();
+        total_pnt_num += bc_mp.blk_dim[i].pnt_num();
+    }
 
+    /*
+    cout << total_cell_num <<endl;
+    cout << total_face_num <<endl;
+    cout << total_pnt_num <<endl;
+    */
 
-	return 0;
+    bc_mp.save("../test/test.nmf");
+
+    return 0;
 }

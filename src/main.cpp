@@ -19,8 +19,6 @@ const string bc_sym("SYM");
 const string bc_wal("WALL");
 const string bc_far("FAR");
 
-//unordered_map<string, int> nmf_bc_tbl({{bc_o2o, 0}, {bc_sym, 1}, {bc_wal, 2}, {bc_far, 3}});
-
 class NMF_BCRange
 {
 public:
@@ -98,7 +96,10 @@ public:
 	vector<NMF_BLKDim> blk_dim;
 	vector<NMF_Entry*> mapping_entry;
 
-	NMF(uint32_t n = 0) : blk_num(n), blk_dim(vector<NMF_BLKDim>(n)), mapping_entry(vector<NMF_Entry*>())
+	NMF(uint32_t n = 0) :
+            blk_num(n),
+            blk_dim(vector<NMF_BLKDim>(n)),
+            mapping_entry(vector<NMF_Entry*>())
 	{
 		//Empty Initialization Body
 	}
@@ -150,7 +151,7 @@ public:
 				transform(s.begin(), s.end(), s.begin(), ::toupper);
 				bool flag = s == swp_t;
 
-				mapping_entry.push_back(new NMF_Entry(s, tmp[0], tmp[1], flag));
+				mapping_entry.push_back(new NMF_Entry(bc_o2o, tmp[0], tmp[1], flag));
 			}
 			else
 			{
@@ -200,29 +201,30 @@ public:
 		f_out << "# ------------------------------------------------------------------------------------------------------------" << endl;
 		for (uint32_t i = 0; i < mapping_entry.size(); i++)
 		{
-			f_out << setw(11) << left <<mapping_entry[i]->bc;
-			f_out << setw(5) << right << mapping_entry[i]->rg1->blk_seq;
-			f_out << setw(5) << right << mapping_entry[i]->rg1->face_seq;
+			f_out << setw(13) << left <<mapping_entry[i]->bc;
+			f_out << setw(6) << right << mapping_entry[i]->rg1->blk_seq;
+			f_out << setw(6) << right << mapping_entry[i]->rg1->face_seq;
 			f_out << setw(9) << right << mapping_entry[i]->rg1->pri_start_seq;
-			f_out << setw(5) << right << mapping_entry[i]->rg1->pri_end_seq;
+			f_out << setw(6) << right << mapping_entry[i]->rg1->pri_end_seq;
 			f_out << setw(9) << right << mapping_entry[i]->rg1->sec_start_seq;
-			f_out << setw(5) << right << mapping_entry[i]->rg1->sec_end_seq;
+			f_out << setw(6) << right << mapping_entry[i]->rg1->sec_end_seq;
 
 			if (mapping_entry[i]->rg2)
 			{
 				f_out << setw(9) << right << mapping_entry[i]->rg2->blk_seq;
-				f_out << setw(5) << right << mapping_entry[i]->rg2->face_seq;
+				f_out << setw(6) << right << mapping_entry[i]->rg2->face_seq;
 				f_out << setw(9) << right << mapping_entry[i]->rg2->pri_start_seq;
-				f_out << setw(5) << right << mapping_entry[i]->rg2->pri_end_seq;
+				f_out << setw(6) << right << mapping_entry[i]->rg2->pri_end_seq;
 				f_out << setw(9) << right << mapping_entry[i]->rg2->sec_start_seq;
-				f_out << setw(5) << right << mapping_entry[i]->rg2->sec_end_seq;
-				f_out << setw(5) << right << mapping_entry[i]->swap ? swp_t : swp_f;
+				f_out << setw(6) << right << mapping_entry[i]->rg2->sec_end_seq;
+				f_out << setw(10) << right << (mapping_entry[i]->swap ? swp_t : swp_f);
 			}
 
 			f_out << endl;
 		}
 
 		f_out.close();
+		return 0;
 	}
 };
 
@@ -236,11 +238,9 @@ int main(int argc, char **argv)
 	}
 	*/
 
-	// Parse mapping file
-	//mfp.open(argv[1]);
-	NMF bc_mp("../../test/mapping.nmf");
+	NMF bc_mp("../test/mapping.nmf");
 
-	bc_mp.save("../../test/test.nmf");
+	bc_mp.save("../test/test.nmf");
 
 
 	return 0;

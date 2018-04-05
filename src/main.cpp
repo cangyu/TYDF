@@ -9,6 +9,8 @@
 #include <cctype>
 #include <algorithm>
 #include <cstring>
+#include <list>
+#include <utility>
 
 using namespace std;
 
@@ -71,6 +73,14 @@ public:
 	{
 		return (pri_node_num() - 1) * (sec_node_num() - 1);
 	}
+
+	bool range_constains(uint32_t pri, uint32_t sec)
+	{
+		bool t1 = pri_start_seq <= pri && pri <= pri_end_seq;
+		bool t2 = sec_start_seq <= sec && sec <= sec_end_seq;
+
+		return t1 && t2;
+	}
 };
 
 class NMF_Entry
@@ -80,6 +90,18 @@ public:
 	NMF_BCRange *rg1, *rg2;
 	bool swap;
 
+private:
+	bool left_contains(uint32_t bs, uint32_t fs, uint32_t lpri, uint32_t lsec)
+	{
+		return rg1->blk_seq == bs && rg1->face_seq == fs && rg1->range_constains(lpri, lsec);
+	}
+
+	bool right_contains(uint32_t bs, uint32_t fs, uint32_t lpri, uint32_t lsec)
+	{
+		return rg2->blk_seq == bs && rg2->face_seq == fs && rg2->range_constains(lpri, lsec);
+	}
+
+public:
 	NMF_Entry(const string &t, uint32_t *s) :
 		bc(t), rg1(new NMF_BCRange(s)), rg2(nullptr), swap(false)
 	{
@@ -96,6 +118,65 @@ public:
 	{
 		delete rg1;
 		delete rg2;
+	}
+
+	uint8_t contains(uint32_t bs, uint32_t fs, uint32_t lpri, uint32_t lsec)
+	{
+		if (left_contains(bs, fs, lpri, lsec))
+			return 1;
+		else if(right_contains(bs, fs, lpri, lsec))
+			return 2;
+		else
+			return 0;
+	}
+
+	vector<uint32_t> opposite_logical_desc(uint32_t bs, uint32_t fs, uint32_t lpri, uint32_t lsec, uint8_t side)
+	{
+		if(!rg2)
+			throw "Internal Error!";
+
+		vector<uint32_t> ret(4, 0);
+		uint32_t pri_off, sec_off;
+
+		//Calc Offset in each direction
+		if(side == 1)
+		{
+			ret[0] = rg2->blk_seq;
+			ret[1] = rg2->face_seq;
+			pri_off = lpri - rg1->pri_start_seq;
+			sec_off = lsec - rg1->sec_start_seq;
+		}
+		else if(side == 2)
+		{
+			ret[0] = rg1->blk_seq;
+			ret[1] = rg1->face_seq;
+			pri_off = lpri - rg2->pri_start_seq;
+			sec_off = lsec - rg2->sec_start_seq;
+		}
+		else
+			throw "Invalid side indication.";
+
+		//Swap on necessary, using bit manipulation
+		if(swap)
+		{
+			pri_off ^= sec_off;
+			sec_off ^= pri_off;
+			pri_off ^= sec_off;
+		}
+
+		//Mark opposite position
+		if(side == 1)
+		{
+			ret[2] = rg2->pri_start_seq + pri_off;
+			ret[3] = rg2->sec_start_seq + sec_off;
+		}
+		else
+		{
+			ret[2] = rg1->pri_start_seq + pri_off;
+			ret[3] = rg1->sec_start_seq + sec_off;
+		}
+
+		return ret;
 	}
 };
 
@@ -296,6 +377,53 @@ public:
 
 		return ret;
 	}
+
+	vector<uint32_t> real_coordinate(uint32_t f, uint32_t pri, uint32_t sec)
+	{
+		vector<uint32_t> ret(3, 0);
+
+		if(f == 1)
+		{
+			ret[2] = 0;
+			ret[0] = pri-1;
+			ret[1] = sec-1;
+		}
+		else if( f==2)
+		{
+			ret[2] = k_dim-1;
+			ret[0] = pri-1;
+			ret[1] = sec-1;
+		}
+		else if(f==3)
+		{
+			ret[0] = 0;
+			ret[1] = pri-1;
+			ret[2] = sec-1;
+		}
+		else if(f==4)
+		{
+			ret[0] = i_dim-1;
+			ret[1] = pri-1;
+			ret[2] = sec-1;
+		}
+		else if(f==5)
+		{
+			ret[1] = 0;
+			ret[2] = pri-1;
+			ret[0] = sec-1;
+		}
+		else if(f==6)
+		{
+			ret[1] = j_dim-1;
+			ret[2] = pri-1;
+			ret[0] = sec-1;
+		}
+		else
+			throw "Invalid face seq.";
+
+
+		return ret;
+	}
 };
 
 pair<uint32_t, uint32_t> logical_coordinate(uint32_t f, uint32_t i, uint32_t j, uint32_t k)
@@ -331,11 +459,6 @@ public:
 	uint32_t blk_num;
 	vector<NMF_BLKDim> blk_dim;
 	vector<NMF_Entry *> mapping_entry;
-
-private:
-	vector<vector<list<pair<uint32_t, uint32_t>>>> adj_info;
-
-public:
 
 	NMF(uint32_t n = 0) :
 		blk_num(n),
@@ -407,25 +530,6 @@ public:
 			}
 		}
 
-		//Construct face adjacent info
-		adj_info.resize(blk_num+1);
-		for (uint32_t c = 0; c < blk_num; ++c)
-			adj_info[c].resize(6+1);
-
-		for (auto e : mapping_entry)
-		{
-			if (e->bc == bc_o2o)
-			{
-				uint32_t b1 = e->rg1->blk_seq;
-				uint32_t f1 = e->rg1->face_seq;
-				uint32_t b2 = e->rg2->blk_seq;
-				uint32_t f2 = e->rg2->face_seq;
-
-				adj_info[b1][f1].push_back(make_pair(b2, f2));
-				adj_info[b2][f2].push_back(make_pair(b1, f1));
-			}
-		}
-
 		//Done
 		mfp.close();
 	}
@@ -490,30 +594,57 @@ public:
 		return 0;
 	}
 
+	vector<pair<uint32_t, uint32_t>> find_all_counterpart(uint32_t lbs, uint32_t lfs, uint32_t li, uint32_t lj, uint32_t lk)
+	{
+		vector<pair<uint32_t, uint32_t>> ret;
+
+		auto llc = logical_coordinate(lfs, li, lj, lk);
+		uint32_t lpri = llc.first;
+		uint32_t lsec = llc.second;
+
+		//Search through, maybe not efficient, but convenient
+		for(const auto &e : mapping_entry)
+		{
+			if(e->rg2)
+			{
+				uint8_t side = e->contains(lbs, lfs, lpri, lsec);
+				if(side)
+				{
+					auto t = e->opposite_logical_desc(lbs, lfs, lpri, lsec, side);
+					uint32_t cbs = t[0], cfs = t[1], cpri = t[2], csec = t[3];
+					uint32_t cbi = cbs-1;
+					auto c = blk_dim[cbi].real_coordinate(cfs, cpri, csec);
+					uint32_t csni = blk_dim[cbi].shell_node_idx(c[0], c[1], c[2]);
+					ret.push_back(make_pair(cbi, csni));
+				}
+			}
+		}
+
+		return ret;
+	}
+
 	void find_all_occurrence(uint32_t b, uint32_t &i, uint32_t &j, uint32_t &k, vector<pair<uint32_t , uint32_t>> &closure)
 	{
 		uint32_t t = 0;
 		while (t < closure.size())
 		{
-			uint32_t cur_blk_idx = closure[t].first;
-			uint32_t cur_blk_seq = cur_blk_idx + 1;
-			uint32_t cur_shell_node_idx = closure[t].second;
+			uint32_t cbi = closure[t].first;
+			uint32_t cbs = cbi + 1;
+			uint32_t csni = closure[t].second;
 
 			uint32_t ii, jj, kk;
-			blk_dim[cur_blk_idx].shell_node_coordinate(cur_shell_node_idx, ii, jj, kk);
-			vector<uint32_t> cur_face_set = blk_dim[cur_blk_idx].face_set_from_coordinate(ii, jj, kk);
-			
-			vector<pair<uint32_t, uint32_t>> cur_logical_set;
-			for (uint32_t f : cur_face_set)
-				cur_logical_set.push_back(logical_coordinate(f, ii, jj, kk));
+			blk_dim[cbi].shell_node_coordinate(csni, ii, jj, kk);
+			vector<uint32_t> fs = blk_dim[cbi].face_set_from_coordinate(ii, jj, kk);
 
-			if (cur_face_set.size() != cur_logical_set.size())
-				throw "Internal Error.";
-
-			for (uint32_t c = 0; c < cur_face_set.size(); c++)
+			for (auto cfs : fs)
 			{
-				uint32_t cur_face_seq = cur_face_set[c];
+				vector<pair<uint32_t, uint32_t>> nei = find_all_counterpart(cbs, cfs, ii, jj, kk);
 
+				for(const auto &d : nei)
+				{
+					if(find(closure.cbegin(), closure.cend(), d) == closure.cend())
+						closure.push_back(d);
+				}
 			}
 		}
 	}

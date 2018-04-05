@@ -124,7 +124,7 @@ public:
 	{
 		if (left_contains(bs, fs, lpri, lsec))
 			return 1;
-		else if(right_contains(bs, fs, lpri, lsec))
+		else if (right_contains(bs, fs, lpri, lsec))
 			return 2;
 		else
 			return 0;
@@ -132,21 +132,21 @@ public:
 
 	vector<uint32_t> opposite_logical_desc(uint32_t bs, uint32_t fs, uint32_t lpri, uint32_t lsec, uint8_t side)
 	{
-		if(!rg2)
+		if (!rg2)
 			throw "Internal Error!";
 
 		vector<uint32_t> ret(4, 0);
 		uint32_t pri_off, sec_off;
 
 		//Calc Offset in each direction
-		if(side == 1)
+		if (side == 1)
 		{
 			ret[0] = rg2->blk_seq;
 			ret[1] = rg2->face_seq;
 			pri_off = lpri - rg1->pri_start_seq;
 			sec_off = lsec - rg1->sec_start_seq;
 		}
-		else if(side == 2)
+		else if (side == 2)
 		{
 			ret[0] = rg1->blk_seq;
 			ret[1] = rg1->face_seq;
@@ -157,7 +157,7 @@ public:
 			throw "Invalid side indication.";
 
 		//Swap on necessary, using bit manipulation
-		if(swap)
+		if (swap)
 		{
 			pri_off ^= sec_off;
 			sec_off ^= pri_off;
@@ -165,7 +165,7 @@ public:
 		}
 
 		//Mark opposite position
-		if(side == 1)
+		if (side == 1)
 		{
 			ret[2] = rg2->pri_start_seq + pri_off;
 			ret[3] = rg2->sec_start_seq + sec_off;
@@ -382,41 +382,41 @@ public:
 	{
 		vector<uint32_t> ret(3, 0);
 
-		if(f == 1)
+		if (f == 1)
 		{
 			ret[2] = 0;
-			ret[0] = pri-1;
-			ret[1] = sec-1;
+			ret[0] = pri - 1;
+			ret[1] = sec - 1;
 		}
-		else if( f==2)
+		else if (f == 2)
 		{
-			ret[2] = k_dim-1;
-			ret[0] = pri-1;
-			ret[1] = sec-1;
+			ret[2] = k_dim - 1;
+			ret[0] = pri - 1;
+			ret[1] = sec - 1;
 		}
-		else if(f==3)
+		else if (f == 3)
 		{
 			ret[0] = 0;
-			ret[1] = pri-1;
-			ret[2] = sec-1;
+			ret[1] = pri - 1;
+			ret[2] = sec - 1;
 		}
-		else if(f==4)
+		else if (f == 4)
 		{
-			ret[0] = i_dim-1;
-			ret[1] = pri-1;
-			ret[2] = sec-1;
+			ret[0] = i_dim - 1;
+			ret[1] = pri - 1;
+			ret[2] = sec - 1;
 		}
-		else if(f==5)
+		else if (f == 5)
 		{
 			ret[1] = 0;
-			ret[2] = pri-1;
-			ret[0] = sec-1;
+			ret[2] = pri - 1;
+			ret[0] = sec - 1;
 		}
-		else if(f==6)
+		else if (f == 6)
 		{
-			ret[1] = j_dim-1;
-			ret[2] = pri-1;
-			ret[0] = sec-1;
+			ret[1] = j_dim - 1;
+			ret[2] = pri - 1;
+			ret[0] = sec - 1;
 		}
 		else
 			throw "Invalid face seq.";
@@ -603,16 +603,16 @@ public:
 		uint32_t lsec = llc.second;
 
 		//Search through, maybe not efficient, but convenient
-		for(const auto &e : mapping_entry)
+		for (const auto &e : mapping_entry)
 		{
-			if(e->rg2)
+			if (e->rg2)
 			{
 				uint8_t side = e->contains(lbs, lfs, lpri, lsec);
-				if(side)
+				if (side)
 				{
 					auto t = e->opposite_logical_desc(lbs, lfs, lpri, lsec, side);
 					uint32_t cbs = t[0], cfs = t[1], cpri = t[2], csec = t[3];
-					uint32_t cbi = cbs-1;
+					uint32_t cbi = cbs - 1;
 					auto c = blk_dim[cbi].real_coordinate(cfs, cpri, csec);
 					uint32_t csni = blk_dim[cbi].shell_node_idx(c[0], c[1], c[2]);
 					ret.push_back(make_pair(cbi, csni));
@@ -623,7 +623,7 @@ public:
 		return ret;
 	}
 
-	void find_all_occurrence(uint32_t b, uint32_t &i, uint32_t &j, uint32_t &k, vector<pair<uint32_t , uint32_t>> &closure)
+	void find_all_occurrence(uint32_t b, uint32_t &i, uint32_t &j, uint32_t &k, vector<pair<uint32_t, uint32_t>> &closure)
 	{
 		uint32_t t = 0;
 		while (t < closure.size())
@@ -640,12 +640,14 @@ public:
 			{
 				vector<pair<uint32_t, uint32_t>> nei = find_all_counterpart(cbs, cfs, ii, jj, kk);
 
-				for(const auto &d : nei)
+				for (const auto &d : nei)
 				{
-					if(find(closure.cbegin(), closure.cend(), d) == closure.cend())
+					if (find(closure.cbegin(), closure.cend(), d) == closure.cend())
 						closure.push_back(d);
 				}
 			}
+
+			++t;
 		}
 	}
 };
@@ -737,9 +739,9 @@ int main(int argc, char **argv)
 
 	total_node_num = cnt - 1;
 
-	cout << total_cell_num << endl;
-	cout << total_face_num << endl;
-	cout << total_node_num << endl;
+	cout << "Cell num: " << total_cell_num << endl;
+	cout << "Face num: " << total_face_num << endl;
+	cout << "Node num: " << total_node_num << endl;
 
 	bc_mp.save("../../test/test2.nmf");
 

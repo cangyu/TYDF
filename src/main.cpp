@@ -229,7 +229,101 @@ public:
 		else
 			throw "Invalid node index.";
 	}
+
+	void node_coordinate(uint32_t f, uint32_t pri_seq, uint32_t sec_seq, uint32_t &i, uint32_t &j, uint32_t &k)
+	{
+		if (f == 1)
+		{
+			k = 0;
+			i = pri_seq - 1;
+			j = sec_seq - 1;
+		}
+		else if (f == 2)
+		{
+			k = k_dim - 1;
+			i = pri_seq - 1;
+			j = sec_seq - 1;
+		}
+		else if (f == 3)
+		{
+			i = 0;
+			j = pri_seq - 1;
+			k = sec_seq - 1;
+		}
+		else if (f == 4)
+		{
+			i = i_dim - 1;
+			j = pri_seq - 1;
+			k = sec_seq - 1;
+		}
+		else if (f == 5)
+		{
+			j = 0;
+			k = pri_seq - 1;
+			i = sec_seq - 1;
+		}
+		else if (f == 6)
+		{
+			j = j_dim - 1;
+			k = pri_seq - 1;
+			i = sec_seq - 1;
+		}
+		else
+		{
+			throw "Invalid  face index.";
+		}
+	}
+
+	vector<uint32_t> face_set_from_coordinate(uint32_t i, uint32_t j, uint32_t k)
+	{
+		vector<uint32_t> ret;
+
+		if (k == 0)
+			ret.push_back(1);
+		if (k == k_dim - 1)
+			ret.push_back(2);
+		if (i == 0)
+			ret.push_back(3);
+		if (i == i_dim - 1)
+			ret.push_back(4);
+		if (j == 0)
+			ret.push_back(5);
+		if (j == j_dim - 1)
+			ret.push_back(6);
+
+		if (ret.empty())
+			throw "Not a boundary node.";
+
+		return ret;
+	}
 };
+
+pair<uint32_t, uint32_t> logical_coordinate(uint32_t f, uint32_t i, uint32_t j, uint32_t k)
+{
+	pair<uint32_t, uint32_t> ret;
+
+	if (f == 1 || f == 2)
+	{
+		ret.first = i + 1;
+		ret.second = j + 1;
+	}
+	else if (f == 3 || f == 4)
+	{
+		ret.first = j + 1;
+		ret.second = k + 1;
+	}
+	else if (f == 5 || f == 6)
+	{
+		ret.first = k + 1;
+		ret.second = i + 1;
+	}
+	else
+	{
+		throw "Invalid face index.";
+	}
+
+	return ret;
+}
 
 class NMF
 {
@@ -237,6 +331,11 @@ public:
 	uint32_t blk_num;
 	vector<NMF_BLKDim> blk_dim;
 	vector<NMF_Entry *> mapping_entry;
+
+private:
+	vector<vector<list<pair<uint32_t, uint32_t>>>> adj_info;
+
+public:
 
 	NMF(uint32_t n = 0) :
 		blk_num(n),
@@ -308,6 +407,25 @@ public:
 			}
 		}
 
+		//Construct face adjacent info
+		adj_info.resize(blk_num+1);
+		for (uint32_t c = 0; c < blk_num; ++c)
+			adj_info[c].resize(6+1);
+
+		for (auto e : mapping_entry)
+		{
+			if (e->bc == bc_o2o)
+			{
+				uint32_t b1 = e->rg1->blk_seq;
+				uint32_t f1 = e->rg1->face_seq;
+				uint32_t b2 = e->rg2->blk_seq;
+				uint32_t f2 = e->rg2->face_seq;
+
+				adj_info[b1][f1].push_back(make_pair(b2, f2));
+				adj_info[b2][f2].push_back(make_pair(b1, f1));
+			}
+		}
+
 		//Done
 		mfp.close();
 	}
@@ -371,6 +489,34 @@ public:
 		f_out.close();
 		return 0;
 	}
+
+	void find_all_occurrence(uint32_t b, uint32_t &i, uint32_t &j, uint32_t &k, vector<pair<uint32_t , uint32_t>> &closure)
+	{
+		uint32_t t = 0;
+		while (t < closure.size())
+		{
+			uint32_t cur_blk_idx = closure[t].first;
+			uint32_t cur_blk_seq = cur_blk_idx + 1;
+			uint32_t cur_shell_node_idx = closure[t].second;
+
+			uint32_t ii, jj, kk;
+			blk_dim[cur_blk_idx].shell_node_coordinate(cur_shell_node_idx, ii, jj, kk);
+			vector<uint32_t> cur_face_set = blk_dim[cur_blk_idx].face_set_from_coordinate(ii, jj, kk);
+			
+			vector<pair<uint32_t, uint32_t>> cur_logical_set;
+			for (uint32_t f : cur_face_set)
+				cur_logical_set.push_back(logical_coordinate(f, ii, jj, kk));
+
+			if (cur_face_set.size() != cur_logical_set.size())
+				throw "Internal Error.";
+
+			for (uint32_t c = 0; c < cur_face_set.size(); c++)
+			{
+				uint32_t cur_face_seq = cur_face_set[c];
+
+			}
+		}
+	}
 };
 
 int main(int argc, char **argv)
@@ -403,8 +549,62 @@ int main(int argc, char **argv)
 		shell_node_seq[i].resize(bc_mp.blk_dim[i].shell_node_num());
 		memset(shell_node_seq[i].data(), 0, shell_node_seq[i].size() * sizeof(uint32_t));
 	}
-		
 
+	uint32_t cnt = total_node_num + 1;
+	for (uint32_t k = 0; k < bc_mp.mapping_entry.size(); k++)
+	{
+		if (bc_mp.mapping_entry[k]->bc == bc_o2o)
+		{
+			uint32_t blk = bc_mp.mapping_entry[k]->rg1->blk_seq - 1;
+			uint32_t face = bc_mp.mapping_entry[k]->rg1->face_seq;
+
+			for (uint32_t pri = bc_mp.mapping_entry[k]->rg1->pri_start_seq; pri <= bc_mp.mapping_entry[k]->rg1->pri_end_seq; pri++)
+			{
+				for (uint32_t sec = bc_mp.mapping_entry[k]->rg1->sec_start_seq; sec <= bc_mp.mapping_entry[k]->rg1->sec_end_seq; sec++)
+				{
+					uint32_t ii = 0, jj = 0, kk = 0;
+					bc_mp.blk_dim[blk].node_coordinate(face, pri, sec, ii, jj, kk);
+					uint32_t s_idx = bc_mp.blk_dim[blk].shell_node_idx(ii, jj, kk);
+					if (shell_node_seq[blk][s_idx] == 0)
+					{
+						vector<pair<uint32_t, uint32_t>> g;
+						g.push_back(make_pair(blk, s_idx));
+						bc_mp.find_all_occurrence(blk, ii, jj, kk, g);
+						for (uint32_t t = 0; t < g.size(); t++)
+						{
+							uint32_t b = g[t].first;
+							uint32_t idx = g[t].second;
+							shell_node_seq[b][idx] = cnt;
+						}
+						++cnt;
+					}
+				}
+			}
+		}
+	}
+
+	for (uint32_t k = 0; k < bc_mp.mapping_entry.size(); k++)
+	{
+		if (bc_mp.mapping_entry[k]->bc != bc_o2o)
+		{
+			uint32_t blk = bc_mp.mapping_entry[k]->rg1->blk_seq - 1;
+			uint32_t face = bc_mp.mapping_entry[k]->rg1->face_seq;
+
+			for (uint32_t pri = bc_mp.mapping_entry[k]->rg1->pri_start_seq; pri <= bc_mp.mapping_entry[k]->rg1->pri_end_seq; pri++)
+			{
+				for (uint32_t sec = bc_mp.mapping_entry[k]->rg1->sec_start_seq; sec <= bc_mp.mapping_entry[k]->rg1->sec_end_seq; sec++)
+				{
+					uint32_t ii = 0, jj = 0, kk = 0;
+					bc_mp.blk_dim[blk].node_coordinate(face, pri, sec, ii, jj, kk);
+					uint32_t s_idx = bc_mp.blk_dim[blk].shell_node_idx(ii, jj, kk);
+					if (shell_node_seq[blk][s_idx] == 0)
+						shell_node_seq[blk][s_idx] = cnt++;
+				}
+			}
+		}
+	}
+
+	total_node_num = cnt - 1;
 
 	cout << total_cell_num << endl;
 	cout << total_face_num << endl;

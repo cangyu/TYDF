@@ -189,7 +189,7 @@ public:
 			throw("Invalid node index!");
 	}
 
-	~XF_MAIN_RECORD() = default;
+	virtual ~XF_MAIN_RECORD() = default;
 
 	int zone() const
 	{

@@ -336,7 +336,7 @@ public:
 		this->c[0] = c[0];
 		this->c[1] = c[1];
 
-		uint8_t i;
+		int i;
 		for (i = 0; i < x; ++i)
 			this->n[i] = n[i];
 		while (i < 4)
@@ -351,7 +351,7 @@ public:
 		if (with_x)
 			out << " " << x;
 
-		for (uint8_t i = 0; i < x; ++i)
+		for (int i = 0; i < x; ++i)
 			out << " " << n[i];
 		out << " " << c[0] << " " << c[1];
 	}

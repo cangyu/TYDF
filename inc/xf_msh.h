@@ -1,11 +1,15 @@
 #ifndef __XF_MSH_H__
 #define __XF_MSH_H__
 
-#include <vector>
-#include <string>
 #include <istream>
 #include <ostream>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <vector>
+#include <string>
 #include <cstdint>
+#include <algorithm>
 
 typedef enum {
 	COMMENT = 0,
@@ -344,16 +348,6 @@ public:
 			this->n[i] = 0;
 			++i;
 		}
-	}
-
-	void writeTo(std::ostream &out, bool with_x = false)
-	{
-		if (with_x)
-			out << " " << x;
-
-		for (int i = 0; i < x; ++i)
-			out << " " << n[i];
-		out << " " << c[0] << " " << c[1];
 	}
 };
 

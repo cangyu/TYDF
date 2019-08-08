@@ -1,16 +1,13 @@
 #include "../inc/xf_msh.h"
-#include <algorithm>
-#include <fstream>
-#include <iostream>
 
 void XF_COMMENT::repr(std::ostream &out)
 {
-	out << "(" << m_identity << " " << m_info << ")" << std::endl;
+	out << "(" << std::dec << m_identity << " \"" << m_info << "\")" << std::endl;
 }
 
 void XF_HEADER::repr(std::ostream & out)
 {
-	out << "(" << m_identity << " " << m_msg << ")" << std::endl;
+	out << "(" << std::dec << m_identity << " \"" << m_msg << "\")" << std::endl;
 }
 
 XF_DIMENSION::XF_DIMENSION(int dim) :
@@ -26,7 +23,7 @@ XF_DIMENSION::XF_DIMENSION(int dim) :
 
 void XF_DIMENSION::repr(std::ostream & out)
 {
-	out << "(" << m_identity << " " << ND() << ")" << std::endl;
+	out << "(" << std::dec << m_identity << " " << ND() << ")" << std::endl;
 }
 
 XF_NODE::XF_NODE(int zone, int first, int last, int type, int ND) :
@@ -74,13 +71,16 @@ void XF_NODE::repr(std::ostream & out)
 	const int n_dim = ND();
 	const int N = num();
 
-	out << "(" << m_identity << " (" << zone() << " " << first_index() << " " << last_index() << " " << type() << " " << n_dim << ")(" << std::endl;
+	out << "(" << std::dec << m_identity;
+	out << " (" << std::hex << zone() << " " << first_index() << " " << last_index() << " ";
+	out << std::dec << type() << " " << n_dim << ")(" << std::endl;
 
 	size_t loc_idx = 0;
+	out.precision(7);
 	for (int i = 0; i < N; ++i)
 	{
 		for (int k = 0; k < n_dim; ++k)
-			out << " " << m_pnt[loc_idx + k];
+			out << " " << std::fixed << m_pnt[loc_idx + k];
 		out << std::endl;
 		loc_idx += n_dim;
 	}
@@ -147,12 +147,10 @@ XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
 
 void XF_CELL::repr(std::ostream & out)
 {
-	out << "(" << m_identity << " (";
-	out << m_zone << " ";
-	out << m_first << " ";
-	out << m_last << " ";
-	out << m_type << " ";
-	out << m_elem << ")";
+	out << "(" << std::dec << m_identity << " (";
+	out << std::hex << m_zone << " " << m_first << " " << m_last << " ";
+	out << std::dec << m_type << " " << m_elem << ")";
+
 	if (m_elem != XF_CELL_ELEM_TYPE::MIXED)
 		out << ")" << std::endl;
 	else
@@ -164,7 +162,7 @@ void XF_CELL::repr(std::ostream & out)
 		{
 			if (i % 40 == 0)
 				out << std::endl;
-			out << " " << elem(i);
+			out << " " << std::dec << elem(i);
 		}
 		out << std::endl << "))" << std::endl;
 	}
@@ -250,29 +248,32 @@ XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 
 void XF_FACE::repr(std::ostream & out)
 {
-	out << "(" << m_identity << " (";
-	out << zone() << " ";
-	out << first_index() << " ";
-	out << last_index() << " ";
-	out << bc_type() << " ";
-	out << face_type() << ")(" << std::endl;
+	out << "(" << std::dec << m_identity << " (";
+	out << std::hex << zone() << " " << first_index() << " " << last_index() << " ";
+	out << std::dec << bc_type() << " " << face_type() << ")(" << std::endl;
 
 	const int N = num();
 
+	out << std::hex;
 	if (m_face == XF_FACE_TYPE::F_MIXED)
 	{
 		for (int i = 0; i < N; ++i)
 		{
-			m_connectivity[i].writeTo(out, true);
-			out << std::endl;
+			const auto &loc_cnect = m_connectivity[i];
+			out << " " << loc_cnect.x;
+			for (int i = 0; i < loc_cnect.x; ++i)
+				out << " " << loc_cnect.n[i];
+			out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
 		}
 	}
 	else
 	{
 		for (int i = 0; i < N; ++i)
 		{
-			m_connectivity[i].writeTo(out);
-			out << std::endl;
+			const auto &loc_cnect = m_connectivity[i];
+			for (int i = 0; i < loc_cnect.x; ++i)
+				out << " " << loc_cnect.n[i];
+			out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
 		}
 	}
 
@@ -281,6 +282,7 @@ void XF_FACE::repr(std::ostream & out)
 
 void XF_ZONE::repr(std::ostream & out)
 {
+	out << std::dec;
 	out << "(" << m_identity << " (" << m_zoneID << " " << m_zoneType << " " << m_zoneName << ")())" << std::endl;
 }
 

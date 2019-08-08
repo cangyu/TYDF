@@ -7,7 +7,8 @@
 
 using namespace std;
 
-const string MESH_PATH("../../fluent.msh");
+const string MESH_PATH("./fluent.msh");
+const string OUTPUT_PATH("./blessed.msh");
 
 XF_MSH msh;
 
@@ -22,7 +23,7 @@ int main(int argc, char *argv[])
 	else
 		cout << "Failure: " << ret << endl;
 
-	ret = msh.writeToFile("../../blessed.msh");
+	ret = msh.writeToFile(OUTPUT_PATH);
 
     return 0;
 }

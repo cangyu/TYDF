@@ -1,4 +1,5 @@
 #include "../inc/xf_msh.h"
+#include <typeinfo>
 
 void XF_COMMENT::repr(std::ostream &out)
 {
@@ -76,11 +77,11 @@ void XF_NODE::repr(std::ostream & out)
 	out << std::dec << type() << " " << n_dim << ")(" << std::endl;
 
 	size_t loc_idx = 0;
-	out.precision(7);
+	out.precision(12);
 	for (int i = 0; i < N; ++i)
 	{
 		for (int k = 0; k < n_dim; ++k)
-			out << " " << std::fixed << m_pnt[loc_idx + k];
+			out << " " << m_pnt[loc_idx + k];
 		out << std::endl;
 		loc_idx += n_dim;
 	}
@@ -148,8 +149,9 @@ XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
 void XF_CELL::repr(std::ostream & out)
 {
 	out << "(" << std::dec << m_identity << " (";
-	out << std::hex << m_zone << " " << m_first << " " << m_last << " ";
-	out << std::dec << m_type << " " << m_elem << ")";
+	out << std::hex;
+	out << m_zone << " " << m_first << " " << m_last << " ";
+	out << m_type << " " << m_elem << ")";
 
 	if (m_elem != XF_CELL_ELEM_TYPE::MIXED)
 		out << ")" << std::endl;
@@ -162,7 +164,7 @@ void XF_CELL::repr(std::ostream & out)
 		{
 			if (i % 40 == 0)
 				out << std::endl;
-			out << " " << std::dec << elem(i);
+			out << " " << elem(i);
 		}
 		out << std::endl << "))" << std::endl;
 	}
@@ -249,12 +251,11 @@ XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 void XF_FACE::repr(std::ostream & out)
 {
 	out << "(" << std::dec << m_identity << " (";
-	out << std::hex << zone() << " " << first_index() << " " << last_index() << " ";
-	out << std::dec << bc_type() << " " << face_type() << ")(" << std::endl;
+	out << std::hex;
+	out << zone() << " " << first_index() << " " << last_index() << " ";
+	out << bc_type() << " " << face_type() << ")(" << std::endl;
 
 	const int N = num();
-
-	out << std::hex;
 	if (m_face == XF_FACE_TYPE::F_MIXED)
 	{
 		for (int i = 0; i < N; ++i)
@@ -365,12 +366,27 @@ int XF_MSH::readFromFile(const std::string & src)
 				eat(fin, ')');
 				eat(fin, '(');
 				std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
-				double x, y, z;
-				for (int i = first; i <= last; ++i)
+				if(nd == 3)
 				{
-					size_t i_loc = i - first;
-					fin >> x >> y >> z;
-					e->record_pnt_coordinate(i_loc, x, y, z);
+					double x, y, z;
+					for (int i = first; i <= last; ++i)
+					{
+						size_t i_loc = i - first;
+						fin >> x >> y >> z;
+						e->record_pnt_coordinate(i_loc, x, y, z);
+					}
+					m_is3D = true;
+				}
+				else
+				{
+					double x, y;
+					for (int i = first; i <= last; ++i)
+					{
+						size_t i_loc = i - first;
+						fin >> x >> y;
+						e->record_pnt_coordinate(i_loc, x, y);
+					}
+					m_is3D = false;
 				}
 				eat(fin, ')');
 				eat(fin, ')');
@@ -551,10 +567,42 @@ int XF_MSH::readFromFile(const std::string & src)
 int XF_MSH::writeToFile(const std::string & dst)
 {
 	std::ofstream fout(dst);
-
 	const size_t N = m_content.size();
-	for (size_t i = 0; i < N; ++i)
+
+	// Dimension specification
+	size_t i = 0;
+	for(; i < N; ++i)
+	{
 		m_content[i]->repr(fout);
+
+		if(dynamic_cast<XF_DIMENSION*>(m_content[i]))
+		{
+			// Node declaration
+			fout << "(" << std::dec << XF_SECTION::NODE << " (";
+			fout << std::hex << 0 << " " << 1 << " " << m_totalNodeNum << " ";
+			fout << std::dec << 0 << " " <<  (m_is3D ? 3 : 2) << "))" << std::endl;
+
+			// Cell declaration 
+			fout << "(" << std::dec << XF_SECTION::CELL << " (";
+			fout << std::hex << 0 << " " << 1 << " " << m_totalCellNum << " ";
+			fout << std::dec << 0 << " " << 0 << "))" << std::endl;
+
+			// Face declaration
+			fout << "(" << std::dec << XF_SECTION::FACE << " (";
+			fout << std::hex << 0 << " " << 1 << " " << m_totalFaceNum << " ";
+			fout << std::dec << 0 << " " << 0 << "))" << std::endl;
+			
+			break;
+		}
+	}
+
+	for (i+=1; i < N; ++i)
+	{
+		if(typeid(*m_content[i]) == typeid(XF_DIMENSION))
+			continue;
+
+		m_content[i]->repr(fout);
+	}
 
 	fout.close();
 	return 0;

@@ -316,7 +316,7 @@ public:
 class XF_CONNECTIVITY
 {
 public:
-	uint8_t x;
+	int x;
 	size_t n[4];
 	size_t c[2];
 
@@ -330,16 +330,16 @@ public:
 
 	~XF_CONNECTIVITY() = default;
 
-	void set(uint8_t x, size_t *n, size_t *c)
+	void set(int x, size_t *n, size_t *c)
 	{
 		this->x = x;
 		this->c[0] = c[0];
 		this->c[1] = c[1];
 
 		uint8_t i;
-		for(i=0; i < x; ++i)
+		for (i = 0; i < x; ++i)
 			this->n[i] = n[i];
-		while(i < 4)
+		while (i < 4)
 		{
 			this->n[i] = 0;
 			++i;
@@ -417,7 +417,7 @@ public:
 class XF_MSH
 {
 private:
-	std::vector<XF_ENTRY*> m_content; 
+	std::vector<XF_ENTRY*> m_content;
 	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
 	bool m_is3D;
 
@@ -446,6 +446,15 @@ private:
 		char tmp;
 
 		do { in >> tmp; } while (tmp != c);
+	}
+
+	void skipWhite(std::istream &in)
+	{
+		char tmp;
+
+		do { in >> tmp; } while (tmp == ' ' || tmp == '\t' || tmp == '\n');
+
+		in.unget();
 	}
 };
 

@@ -290,9 +290,12 @@ int XF_MSH::readFromFile(const std::string & src)
 	if (!fin)
 		return -1;
 
-	bool done = false;
-	while (!done)
+	while (true)
 	{
+		skipWhite(fin);
+		if (fin.eof())
+			break;
+
 		eat(fin, '(');
 		int ti;
 		fin >> std::dec >> ti;
@@ -373,7 +376,7 @@ int XF_MSH::readFromFile(const std::string & src)
 				eat(fin, ')');
 				std::cout << "Done!" << std::endl;
 
-				add_entry(e);				
+				add_entry(e);
 			}
 		}
 		else if (ti == XF_SECTION::CELL)
@@ -452,7 +455,7 @@ int XF_MSH::readFromFile(const std::string & src)
 				}
 				else
 					std::cout << e->num() << " " << XF_CELL::cell_name(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
-				
+
 				eat(fin, ')');
 				add_entry(e);
 			}
@@ -484,7 +487,8 @@ int XF_MSH::readFromFile(const std::string & src)
 			{
 				// If zone-id is positive, it indicates a regular face section and will be
 				// followed by a body containing information about the grid connectivity.
-				size_t first, last, bc, face;
+				size_t first, last;
+				int bc, face;
 				fin >> first >> last;
 				fin >> bc >> face;
 				auto e = new XF_FACE(zone, first, last, bc, face);
@@ -492,7 +496,7 @@ int XF_MSH::readFromFile(const std::string & src)
 				eat(fin, '(');
 
 				std::cout << "Reading " << e->num() << " faces in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
-				
+
 				size_t tmp_n[4];
 				size_t tmp_c[2];
 				for (size_t i = first; i <= last; ++i)
@@ -501,7 +505,7 @@ int XF_MSH::readFromFile(const std::string & src)
 					size_t i_loc = i - first;
 
 					// Read connectivity record
-					for(int j =0; j < face; ++j)
+					for (int j = 0; j < face; ++j)
 						fin >> tmp_n[j];
 					fin >> tmp_c[0] >> tmp_c[1];
 
@@ -517,7 +521,23 @@ int XF_MSH::readFromFile(const std::string & src)
 		}
 		else if (ti == XF_SECTION::ZONE)
 		{
-			std::cout << "Reading zone section ..." << std::endl;
+			std::cout << "Reading ZONE section ..." << std::endl;
+			eat(fin, '(');
+			int zone;
+			fin >> std::dec >> zone;
+			std::string ztp;
+			fin >> ztp;
+			skipWhite(fin);
+			std::string zname;
+			char t0;
+			while ((t0 = fin.get()) != ')')
+				zname.push_back(t0);
+			eat(fin, '(');
+			eat(fin, ')');
+			eat(fin, ')');
+
+			auto e = new XF_ZONE(zone, ztp, zname);
+			add_entry(e);
 		}
 		else
 			throw("Unsupported section index: " + std::to_string(ti) + "!");

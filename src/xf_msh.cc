@@ -290,12 +290,9 @@ int XF_MSH::readFromFile(const std::string & src)
 	if (!fin)
 		return -1;
 
-	while (true)
+	while (!fin.eof())
 	{
 		skipWhite(fin);
-		if (fin.eof())
-			break;
-
 		eat(fin, '(');
 		int ti;
 		fin >> std::dec >> ti;
@@ -308,6 +305,7 @@ int XF_MSH::readFromFile(const std::string & src)
 				ts.push_back(tc);
 			eat(fin, ')');
 			add_entry(new XF_COMMENT(ts));
+			skipWhite(fin);
 		}
 		else if (ti == XF_SECTION::HEADER)
 		{
@@ -318,6 +316,7 @@ int XF_MSH::readFromFile(const std::string & src)
 				ts.push_back(tc);
 			eat(fin, ')');
 			add_entry(new XF_HEADER(ts));
+			skipWhite(fin);
 		}
 		else if (ti == XF_SECTION::DIMENSION)
 		{
@@ -325,6 +324,7 @@ int XF_MSH::readFromFile(const std::string & src)
 			fin >> std::dec >> nd;
 			eat(fin, ')');
 			add_entry(new XF_DIMENSION(nd));
+			skipWhite(fin);
 		}
 		else if (ti == XF_SECTION::NODE)
 		{
@@ -362,22 +362,20 @@ int XF_MSH::readFromFile(const std::string & src)
 				auto e = new XF_NODE(zone, first, last, tp, nd);
 				eat(fin, ')');
 				eat(fin, '(');
-
 				std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
 				double x, y, z;
 				for (int i = first; i <= last; ++i)
 				{
-					fin >> x >> y >> z;
-
 					size_t i_loc = i - first;
+					fin >> x >> y >> z;
 					e->record_pnt_coordinate(i_loc, x, y, z);
 				}
 				eat(fin, ')');
 				eat(fin, ')');
 				std::cout << "Done!" << std::endl;
-
 				add_entry(e);
 			}
+			skipWhite(fin);
 		}
 		else if (ti == XF_SECTION::CELL)
 		{
@@ -459,6 +457,7 @@ int XF_MSH::readFromFile(const std::string & src)
 				eat(fin, ')');
 				add_entry(e);
 			}
+			skipWhite(fin);
 		}
 		else if (ti == XF_SECTION::FACE)
 		{
@@ -515,9 +514,9 @@ int XF_MSH::readFromFile(const std::string & src)
 				eat(fin, ')');
 				eat(fin, ')');
 				std::cout << "Done!" << std::endl;
-
 				add_entry(e);
 			}
+			skipWhite(fin);
 		}
 		else if (ti == XF_SECTION::ZONE)
 		{
@@ -535,9 +534,9 @@ int XF_MSH::readFromFile(const std::string & src)
 			eat(fin, '(');
 			eat(fin, ')');
 			eat(fin, ')');
-
 			auto e = new XF_ZONE(zone, ztp, zname);
 			add_entry(e);
+			skipWhite(fin);
 		}
 		else
 			throw("Unsupported section index: " + std::to_string(ti) + "!");
@@ -549,5 +548,12 @@ int XF_MSH::readFromFile(const std::string & src)
 
 int XF_MSH::writeToFile(const std::string & dst)
 {
+	std::ofstream fout(dst);
+
+	const size_t N = m_content.size();
+	for (size_t i = 0; i < N; ++i)
+		m_content[i]->repr(fout);
+
+	fout.close();
 	return 0;
 }

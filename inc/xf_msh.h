@@ -445,16 +445,21 @@ private:
 	{
 		char tmp;
 
-		do { in >> tmp; } while (tmp != c);
+		do { 
+			in >> tmp; 
+		} while (tmp != c);
 	}
 
 	void skipWhite(std::istream &in)
 	{
 		char tmp;
 
-		do { in >> tmp; } while (tmp == ' ' || tmp == '\t' || tmp == '\n');
+		do { 
+			in >> tmp; 
+		} while (tmp == ' ' || tmp == '\t' || tmp == '\n');
 
-		in.unget();
+		if(!in.eof())
+			in.unget();
 	}
 };
 

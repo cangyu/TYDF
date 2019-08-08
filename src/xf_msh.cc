@@ -1,4 +1,4 @@
-#include "xf_msh.h"
+#include "../inc/xf_msh.h"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -484,8 +484,7 @@ int XF_MSH::readFromFile(const std::string & src)
 			{
 				// If zone-id is positive, it indicates a regular face section and will be
 				// followed by a body containing information about the grid connectivity.
-				size_t first, last;
-				uint8_t bc, face;
+				size_t first, last, bc, face;
 				fin >> first >> last;
 				fin >> bc >> face;
 				auto e = new XF_FACE(zone, first, last, bc, face);
@@ -496,7 +495,7 @@ int XF_MSH::readFromFile(const std::string & src)
 				
 				size_t tmp_n[4];
 				size_t tmp_c[2];
-				for (int i = first; i <= last; ++i)
+				for (size_t i = first; i <= last; ++i)
 				{
 					// Local index
 					size_t i_loc = i - first;
@@ -518,7 +517,7 @@ int XF_MSH::readFromFile(const std::string & src)
 		}
 		else if (ti == XF_SECTION::ZONE)
 		{
-			
+			std::cout << "Reading zone section ..." << std::endl;
 		}
 		else
 			throw("Unsupported section index: " + std::to_string(ti) + "!");

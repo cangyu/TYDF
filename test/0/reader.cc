@@ -3,11 +3,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include "xf_msh.h"
+#include "../../inc/xf_msh.h"
 
 using namespace std;
 
-const string MESH_PATH("./fluent.msh");
+const string MESH_PATH("../../fluent.msh");
 
 XF_MSH msh;
 

@@ -157,7 +157,7 @@ void XF_CELL::repr(std::ostream & out)
 		out << ")" << std::endl;
 	else
 	{
-		out << "ги";
+		out << "(";
 
 		const size_t N = num();
 		for (size_t i = 0; i < N; ++i)
@@ -246,21 +246,6 @@ XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 	}
 
 	m_connectivity.resize(num());
-}
-
-void XF_FACE::record_connectivity(size_t loc_idx, size_t n0, size_t n1, size_t c0, size_t c1)
-{
-	m_connectivity[loc_idx].set(2, c0, c1, n0, n1);
-}
-
-void XF_FACE::record_connectivity(size_t loc_idx, size_t n0, size_t n1, size_t n2, size_t c0, size_t c1)
-{
-	m_connectivity[loc_idx].set(3, c0, c1, n0, n1, n2);
-}
-
-void XF_FACE::record_connectivity(size_t loc_idx, size_t n0, size_t n1, size_t n2, size_t n3, size_t c0, size_t c1)
-{
-	m_connectivity[loc_idx].set(4, c0, c1, n0, n1, n2, n3);
 }
 
 void XF_FACE::repr(std::ostream & out)
@@ -474,7 +459,62 @@ int XF_MSH::readFromFile(const std::string & src)
 		}
 		else if (ti == XF_SECTION::FACE)
 		{
-			
+			eat(fin, '(');
+			int zone;
+			fin >> std::hex >> zone;
+			if (zone == 0)
+			{
+				// If zone-id is 0, indicating total number of faces in the mesh.
+				int tmp;
+				fin >> tmp;
+				if (tmp != 1)
+					throw("Invalid \"first-index\" in FACE declaration!");
+				fin >> m_totalFaceNum;
+				std::cout << "Total number of faces: " << m_totalFaceNum << std::endl;
+				fin >> tmp;
+				char ndc = fin.get();
+				if (ndc != ')')
+				{
+					fin >> tmp;
+					eat(fin, ')');
+				}
+				eat(fin, ')');
+			}
+			else
+			{
+				// If zone-id is positive, it indicates a regular face section and will be
+				// followed by a body containing information about the grid connectivity.
+				size_t first, last;
+				uint8_t bc, face;
+				fin >> first >> last;
+				fin >> bc >> face;
+				auto e = new XF_FACE(zone, first, last, bc, face);
+				eat(fin, ')');
+				eat(fin, '(');
+
+				std::cout << "Reading " << e->num() << " faces in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
+				
+				size_t tmp_n[4];
+				size_t tmp_c[2];
+				for (int i = first; i <= last; ++i)
+				{
+					// Local index
+					size_t i_loc = i - first;
+
+					// Read connectivity record
+					for(int j =0; j < face; ++j)
+						fin >> tmp_n[j];
+					fin >> tmp_c[0] >> tmp_c[1];
+
+					// Store current connectivity info
+					e->connectivity(i_loc).set(face, tmp_n, tmp_c);
+				}
+				eat(fin, ')');
+				eat(fin, ')');
+				std::cout << "Done!" << std::endl;
+
+				add_entry(e);
+			}
 		}
 		else if (ti == XF_SECTION::ZONE)
 		{

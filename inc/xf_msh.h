@@ -318,28 +318,32 @@ class XF_CONNECTIVITY
 public:
 	uint8_t x;
 	size_t n[4];
-	size_t c0, c1;
+	size_t c[2];
 
 public:
 	XF_CONNECTIVITY() :
 		x(1),
 		n{ 0, 0, 0, 0 },
-		c0(0),
-		c1(0)
+		c{ 0, 0 }
 	{
 	}
 
 	~XF_CONNECTIVITY() = default;
 
-	void set(uint8_t x, size_t c0, size_t c1, size_t n0, size_t n1, size_t n2 = 0, size_t n3 = 0)
+	void set(uint8_t x, size_t *n, size_t *c)
 	{
 		this->x = x;
-		this->c0 = c0;
-		this->c1 = c1;
-		this->n[0] = n0;
-		this->n[1] = n1;
-		this->n[2] = n2;
-		this->n[3] = n3;
+		this->c[0] = c[0];
+		this->c[1] = c[1];
+
+		uint8_t i;
+		for(i=0; i < x; ++i)
+			this->n[i] = n[i];
+		while(i < 4)
+		{
+			this->n[i] = 0;
+			++i;
+		}
 	}
 
 	void writeTo(std::ostream &out, bool with_x = false)
@@ -349,7 +353,7 @@ public:
 
 		for (uint8_t i = 0; i < x; ++i)
 			out << " " << n[i];
-		out << " " << c0 << " " << c1;
+		out << " " << c[0] << " " << c[1];
 	}
 };
 
@@ -384,12 +388,6 @@ public:
 	{
 		return m_connectivity[loc_idx];
 	}
-
-	void record_connectivity(size_t loc_idx, size_t n0, size_t n1, size_t c0, size_t c1);
-
-	void record_connectivity(size_t loc_idx, size_t n0, size_t n1, size_t n2, size_t c0, size_t c1);
-
-	void record_connectivity(size_t loc_idx, size_t n0, size_t n1, size_t n2, size_t n3, size_t c0, size_t c1);
 
 	void repr(std::ostream &out);
 };

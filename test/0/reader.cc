@@ -7,7 +7,7 @@
 
 using namespace std;
 
-const string MESH_PATH("../../fluent.msh");
+const string MESH_PATH("./fluent.msh");
 
 XF_MSH msh;
 
@@ -21,8 +21,6 @@ int main(int argc, char *argv[])
 		cout << "Done!" << endl;
 	else
 		cout << "Failure: " << ret << endl;
-
-	system("pause");
 
     return 0;
 }

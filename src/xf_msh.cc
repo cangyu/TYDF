@@ -1,4 +1,4 @@
-#include "../inc/xf_msh.h"
+#include "xf_msh.h"
 
 void XF_COMMENT::repr(std::ostream &out)
 {

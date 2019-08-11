@@ -1,5 +1,4 @@
 #include "../inc/xf_msh.h"
-#include <typeinfo>
 
 void XF_COMMENT::repr(std::ostream &out)
 {
@@ -569,7 +568,6 @@ int XF_MSH::writeToFile(const std::string & dst)
 	std::ofstream fout(dst);
 	const size_t N = m_content.size();
 
-	// Dimension specification
 	size_t i = 0;
 	for(; i < N; ++i)
 	{
@@ -598,7 +596,7 @@ int XF_MSH::writeToFile(const std::string & dst)
 
 	for (i+=1; i < N; ++i)
 	{
-		if(typeid(*m_content[i]) == typeid(XF_DIMENSION))
+		if(dynamic_cast<XF_DIMENSION*>(m_content[i]))
 			continue;
 
 		m_content[i]->repr(fout);

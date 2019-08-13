@@ -292,6 +292,8 @@ int XF_MSH::readFromFile(const std::string & src)
 	if (!fin)
 		return -1;
 
+	clear_entry();
+
 	while (!fin.eof())
 	{
 		skipWhite(fin);
@@ -365,7 +367,7 @@ int XF_MSH::readFromFile(const std::string & src)
 				eat(fin, ')');
 				eat(fin, '(');
 				std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
-				if(nd == 3)
+				if (nd == 3)
 				{
 					double x, y, z;
 					for (int i = first; i <= last; ++i)
@@ -563,45 +565,68 @@ int XF_MSH::readFromFile(const std::string & src)
 	return 0;
 }
 
-int XF_MSH::writeToFile(const std::string & dst)
+int XF_MSH::writeToFile(const std::string & dst) const
 {
 	std::ofstream fout(dst);
 	const size_t N = m_content.size();
 
 	size_t i = 0;
-	for(; i < N; ++i)
+
+	// Write until dimension declaration
+	while (true)
 	{
 		m_content[i]->repr(fout);
-
-		if(dynamic_cast<XF_DIMENSION*>(m_content[i]))
-		{
-			// Node declaration
-			fout << "(" << std::dec << XF_SECTION::NODE << " (";
-			fout << std::hex << 0 << " " << 1 << " " << m_totalNodeNum << " ";
-			fout << std::dec << 0 << " " <<  (m_is3D ? 3 : 2) << "))" << std::endl;
-
-			// Cell declaration 
-			fout << "(" << std::dec << XF_SECTION::CELL << " (";
-			fout << std::hex << 0 << " " << 1 << " " << m_totalCellNum << " ";
-			fout << std::dec << 0 << " " << 0 << "))" << std::endl;
-
-			// Face declaration
-			fout << "(" << std::dec << XF_SECTION::FACE << " (";
-			fout << std::hex << 0 << " " << 1 << " " << m_totalFaceNum << " ";
-			fout << std::dec << 0 << " " << 0 << "))" << std::endl;
-			
+		bool flag = dynamic_cast<XF_DIMENSION*>(m_content[i]) != nullptr;
+		++i;
+		if (flag)
 			break;
-		}
 	}
 
-	for (i+=1; i < N; ++i)
-	{
-		if(dynamic_cast<XF_DIMENSION*>(m_content[i]))
-			continue;
+	// Declaration of NODE, FACE, CELL
+	fout << "(" << std::dec << XF_SECTION::NODE << " (";
+	fout << std::hex << 0 << " " << 1 << " " << m_totalNodeNum << " ";
+	fout << std::dec << 0 << " " << (m_is3D ? 3 : 2) << "))" << std::endl;
+	fout << "(" << std::dec << XF_SECTION::CELL << " (";
+	fout << std::hex << 0 << " " << 1 << " " << m_totalCellNum << " ";
+	fout << std::dec << 0 << " " << 0 << "))" << std::endl;
+	fout << "(" << std::dec << XF_SECTION::FACE << " (";
+	fout << std::hex << 0 << " " << 1 << " " << m_totalFaceNum << " ";
+	fout << std::dec << 0 << " " << 0 << "))" << std::endl;
 
+	// Contents
+	for (; i < N; ++i)
 		m_content[i]->repr(fout);
-	}
 
+	// Finalize
 	fout.close();
+	return 0;
+}
+
+int XF_MSH::computeTopology(
+	std::vector<std::vector<double>>& nCoord,
+	std::vector<std::vector<size_t>>& nAdjN,
+	std::vector<std::vector<size_t>>& nDepF,
+	std::vector<std::vector<size_t>>& nDepC,
+	std::vector<std::vector<size_t>>& fAdjC,
+	std::vector<std::vector<size_t>>& fIncN,
+	std::vector<double>& fArea,
+	std::vector<std::vector<double>>& fCoord,
+	std::vector<std::vector<double>>& fUNLR,
+	std::vector<std::vector<double>>& fUNRL,
+	std::vector<std::vector<double>>& fNLR,
+	std::vector<std::vector<double>>& fNRL,
+	std::vector<std::vector<double>>& cCoord,
+	std::vector<double>& cVol,
+	std::vector<std::vector<size_t>>& cIncN,
+	std::vector<std::vector<size_t>>& cIncF,
+	std::vector<std::vector<size_t>>& cAdjC,
+	std::vector<std::vector<double>>& cFUNVec, 
+	std::vector<std::vector<double>>& cFNVec
+) const
+{
+	const int ND = dimension();
+
+
+	// TODO
 	return 0;
 }

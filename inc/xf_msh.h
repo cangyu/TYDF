@@ -427,7 +427,52 @@ public:
 
 	int readFromFile(const std::string &src);
 
-	int writeToFile(const std::string &dst);
+	int writeToFile(const std::string &dst) const;
+
+	int dimension() const
+	{
+		if (m_is3D)
+			return 3;
+		else
+			return 2;
+	}
+
+	size_t numOfNode() const
+	{
+		return m_totalNodeNum;
+	}
+
+	size_t numOfFace() const
+	{
+		return m_totalFaceNum;
+	}
+
+	size_t numOfCell() const
+	{
+		return m_totalCellNum;
+	}
+
+	int computeTopology(
+		std::vector<std::vector<double>> &nCoord, // Coordinates of each node.
+		std::vector<std::vector<size_t>> &nAdjN, // Adjacent nodes of each node.
+		std::vector<std::vector<size_t>> &nDepF, // Dependent faces of each node.
+		std::vector<std::vector<size_t>> &nDepC, // Dependent cells of each node.
+		std::vector<std::vector<size_t>> &fAdjC, // Adjacent cells of each face, the order of nodes follows right-hand convention.
+		std::vector<std::vector<size_t>> &fIncN, // Included nodes of each face, the order of nodes follows right-hand convention.
+		std::vector<double> &fArea, // Area of each face.
+		std::vector<std::vector<double>> &fCoord, // Coordinates of each face centre.
+		std::vector<std::vector<double>> &fUNLR, // Unit normal vector of each face, from c0/cl to c1/cr.
+		std::vector<std::vector<double>> &fUNRL, // Unit normal vector of each face, from c1/cr to c0/cl.
+		std::vector<std::vector<double>> &fNLR, // Normal vector of each face, from c0/cl to c1/cr, magnitude equals to face area.
+		std::vector<std::vector<double>> &fNRL, // Normal vector of each face, from c1/cr to c0/cl, magnitude equals to face area.
+		std::vector<std::vector<double>> &cCoord, // Coordinates of each cell centre.
+		std::vector<double> &cVol, // Volumn of each face.
+		std::vector<std::vector<size_t>> &cIncN, // Included nodes of each cell.
+		std::vector<std::vector<size_t>> &cIncF, // Included faces of each cell.
+		std::vector<std::vector<size_t>> &cAdjC, // Adjacent cells of each cell, the order is in accordance with cIncF.
+		std::vector<std::vector<double>> &cFUNVec, // Positive unit normal vector of each included face of each cell, the order is in accordance with cIncF.
+		std::vector<std::vector<double>> &cFNVec // Positive normal vector of each included face of each cell, the order is in accordance with cIncF, magnitude equals to face area.
+	) const;
 
 private:
 	void add_entry(XF_ENTRY *e)
@@ -435,12 +480,24 @@ private:
 		m_content.push_back(e);
 	}
 
+	void clear_entry()
+	{
+		// Release previous contents
+		const size_t N = m_content.size();
+		for (size_t i = 0; i < N; ++i)
+			if(m_content[i])
+				delete m_content[i];
+
+		// Clear container
+		m_content.clear();
+	}
+
 	void eat(std::istream &in, char c)
 	{
 		char tmp;
 
-		do { 
-			in >> tmp; 
+		do {
+			in >> tmp;
 		} while (tmp != c);
 	}
 
@@ -448,11 +505,11 @@ private:
 	{
 		char tmp;
 
-		do { 
-			in >> tmp; 
+		do {
+			in >> tmp;
 		} while (tmp == ' ' || tmp == '\t' || tmp == '\n');
 
-		if(!in.eof())
+		if (!in.eof())
 			in.unget();
 	}
 };

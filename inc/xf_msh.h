@@ -88,6 +88,11 @@ public:
 	{
 	}
 
+	int identity() const
+	{
+		return m_identity;
+	}
+
 	virtual ~XF_ENTRY() = default;
 
 	virtual void repr(std::ostream &out) = 0;
@@ -153,12 +158,15 @@ class XF_DIMENSION :public XF_ENTRY
 {
 private:
 	bool m_is3D;
+	int m_dim;
 
 public:
 	XF_DIMENSION() :
-		XF_ENTRY(XF_SECTION::DIMENSION),
-		m_is3D(true)
+		XF_ENTRY(XF_SECTION::DIMENSION)
 	{
+		// Set to 3D by default.
+		m_is3D = true;
+		m_dim = 3;
 	}
 
 	XF_DIMENSION(int dim);
@@ -221,6 +229,7 @@ class XF_NODE :public XF_MAIN_RECORD
 private:
 	XF_NODE_TYPE m_type;
 	bool m_is3D;
+	int m_dim;
 	std::vector<double> m_pnt;
 
 public:
@@ -241,11 +250,39 @@ public:
 			return 2;
 	}
 
+	void get_pnt_coordinate(size_t loc_idx, std::vector<double> &dst) const
+	{
+		size_t stx = pnt_stx(loc_idx);
+		for (int i = 0; i < m_dim; ++i)
+			dst[i] = m_pnt[stx + i];
+	}
+
 	void record_pnt_coordinate(size_t loc_idx, double x0, double x1, double x2);
 
 	void record_pnt_coordinate(size_t loc_idx, double x0, double x1);
 
 	void repr(std::ostream &out);
+
+	bool is_virtual_pnt() const
+	{
+		return m_type == XF_NODE_TYPE::VIRTUAL;
+	}
+
+	bool is_boundary_pnt() const
+	{
+		return m_type == XF_NODE_TYPE::BOUNDARY;
+	}
+
+	bool is_internal_pnt() const
+	{
+		return m_type == XF_NODE_TYPE::ANY;
+	}
+
+private:
+	size_t pnt_stx(size_t loc_idx) const
+	{
+		return loc_idx * m_dim;
+	}
 };
 
 class XF_CELL :public XF_MAIN_RECORD
@@ -454,12 +491,14 @@ public:
 
 	int computeTopology(
 		std::vector<std::vector<double>> &nCoord, // Coordinates of each node.
+		std::vector<bool> &nAtBdry, // If located at boundary of each node.
 		std::vector<std::vector<size_t>> &nAdjN, // Adjacent nodes of each node.
 		std::vector<std::vector<size_t>> &nDepF, // Dependent faces of each node.
 		std::vector<std::vector<size_t>> &nDepC, // Dependent cells of each node.
 		std::vector<std::vector<size_t>> &fAdjC, // Adjacent cells of each face, the order of nodes follows right-hand convention.
 		std::vector<std::vector<size_t>> &fIncN, // Included nodes of each face, the order of nodes follows right-hand convention.
 		std::vector<double> &fArea, // Area of each face.
+		std::vector<bool> &fAtBdry, // If located at boundary of each face.
 		std::vector<std::vector<double>> &fCoord, // Coordinates of each face centre.
 		std::vector<std::vector<double>> &fUNLR, // Unit normal vector of each face, from c0/cl to c1/cr.
 		std::vector<std::vector<double>> &fUNRL, // Unit normal vector of each face, from c1/cr to c0/cl.

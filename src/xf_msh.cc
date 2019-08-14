@@ -19,6 +19,8 @@ XF_DIMENSION::XF_DIMENSION(int dim) :
 		m_is3D = true;
 	else
 		throw("Invalid dimension!");
+
+	m_dim = dim;
 }
 
 void XF_DIMENSION::repr(std::ostream & out)
@@ -44,6 +46,7 @@ XF_NODE::XF_NODE(int zone, int first, int last, int type, int ND) :
 		m_is3D = true;
 	else
 		throw("Invalid specification of node dimension!");
+	m_dim = ND;
 
 	m_pnt.resize(ND * num());
 	std::fill(m_pnt.begin(), m_pnt.end(), 0.0);
@@ -603,30 +606,71 @@ int XF_MSH::writeToFile(const std::string & dst) const
 }
 
 int XF_MSH::computeTopology(
-	std::vector<std::vector<double>>& nCoord,
-	std::vector<std::vector<size_t>>& nAdjN,
-	std::vector<std::vector<size_t>>& nDepF,
-	std::vector<std::vector<size_t>>& nDepC,
-	std::vector<std::vector<size_t>>& fAdjC,
-	std::vector<std::vector<size_t>>& fIncN,
-	std::vector<double>& fArea,
-	std::vector<std::vector<double>>& fCoord,
-	std::vector<std::vector<double>>& fUNLR,
-	std::vector<std::vector<double>>& fUNRL,
-	std::vector<std::vector<double>>& fNLR,
-	std::vector<std::vector<double>>& fNRL,
-	std::vector<std::vector<double>>& cCoord,
-	std::vector<double>& cVol,
-	std::vector<std::vector<size_t>>& cIncN,
-	std::vector<std::vector<size_t>>& cIncF,
-	std::vector<std::vector<size_t>>& cAdjC,
-	std::vector<std::vector<double>>& cFUNVec, 
-	std::vector<std::vector<double>>& cFNVec
+	std::vector<std::vector<double>> &nCoord, // Coordinates of each node.
+	std::vector<bool> &nAtBdry, // If located at boundary of each node.
+	std::vector<std::vector<size_t>> &nAdjN, // Adjacent nodes of each node.
+	std::vector<std::vector<size_t>> &nDepF, // Dependent faces of each node.
+	std::vector<std::vector<size_t>> &nDepC, // Dependent cells of each node.
+	std::vector<std::vector<size_t>> &fAdjC, // Adjacent cells of each face, the order of nodes follows right-hand convention.
+	std::vector<std::vector<size_t>> &fIncN, // Included nodes of each face, the order of nodes follows right-hand convention.
+	std::vector<double> &fArea, // Area of each face.
+	std::vector<bool> &fAtBdry, // If located at boundary of each face.
+	std::vector<std::vector<double>> &fCoord, // Coordinates of each face centre.
+	std::vector<std::vector<double>> &fUNLR, // Unit normal vector of each face, from c0/cl to c1/cr.
+	std::vector<std::vector<double>> &fUNRL, // Unit normal vector of each face, from c1/cr to c0/cl.
+	std::vector<std::vector<double>> &fNLR, // Normal vector of each face, from c0/cl to c1/cr, magnitude equals to face area.
+	std::vector<std::vector<double>> &fNRL, // Normal vector of each face, from c1/cr to c0/cl, magnitude equals to face area.
+	std::vector<std::vector<double>> &cCoord, // Coordinates of each cell centre.
+	std::vector<double> &cVol, // Volumn of each face.
+	std::vector<std::vector<size_t>> &cIncN, // Included nodes of each cell.
+	std::vector<std::vector<size_t>> &cIncF, // Included faces of each cell.
+	std::vector<std::vector<size_t>> &cAdjC, // Adjacent cells of each cell, the order is in accordance with cIncF.
+	std::vector<std::vector<double>> &cFUNVec, // Positive unit normal vector of each included face of each cell, the order is in accordance with cIncF.
+	std::vector<std::vector<double>> &cFNVec // Positive normal vector of each included face of each cell, the order is in accordance with cIncF, magnitude equals to face area.
 ) const
 {
 	const int ND = dimension();
 
+	// Setup containers
+	nCoord.clear();
+	nCoord.resize(numOfNode(), std::vector<double>(ND, 0.0));
 
-	// TODO
+	nAtBdry.clear();
+	nAtBdry.resize(numOfNode(), false);
+
+	nAdjN.clear();
+	nAdjN.resize(numOfNode());
+
+	// Parse each entry accordingly.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::NODE)
+		{
+			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
+			int loc_first = curObj->first_index();
+			bool atBC = curObj->is_boundary_pnt();
+			for (int i = 0; i < curObj->num(); ++i)
+			{
+				int global_idx = (loc_first - 1) + i;
+				curObj->get_pnt_coordinate(i, nCoord[global_idx]);
+				nAtBdry[global_idx] = atBC;
+			}
+
+		}
+		else if (curPtr->identity() == XF_SECTION::CELL)
+		{
+
+		}
+		else if (curPtr->identity() == XF_SECTION::FACE)
+		{
+
+		}
+		else
+		{
+
+		}
+	}
+
 	return 0;
 }

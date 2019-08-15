@@ -12,12 +12,12 @@ int XF_SECTION::identity() const
 
 void XF_COMMENT::repr(std::ostream &out)
 {
-	out << "(" << std::dec << m_identity << " \"" << m_info << "\")" << std::endl;
+	out << "(" << std::dec << identity() << " \"" << m_info << "\")" << std::endl;
 }
 
 void XF_HEADER::repr(std::ostream & out)
 {
-	out << "(" << std::dec << m_identity << " \"" << m_msg << "\")" << std::endl;
+	out << "(" << std::dec << identity() << " \"" << m_msg << "\")" << std::endl;
 }
 
 XF_DIMENSION::XF_DIMENSION(int dim) :
@@ -35,18 +35,18 @@ XF_DIMENSION::XF_DIMENSION(int dim) :
 
 void XF_DIMENSION::repr(std::ostream & out)
 {
-	out << "(" << std::dec << m_identity << " " << ND() << ")" << std::endl;
+	out << "(" << std::dec << identity() << " " << ND() << ")" << std::endl;
 }
 
 XF_NODE::XF_NODE(int zone, int first, int last, int type, int ND) :
 	XF_MAIN_RECORD(XF_SECTION::NODE, zone, first, last)
 {
 	if (type == 0)
-		m_type = XF_NODE_TYPE::VIRTUAL;
+		m_type = XF_NODE::VIRTUAL;
 	else if (type == 1)
-		m_type = XF_NODE_TYPE::ANY;
+		m_type = XF_NODE::ANY;
 	else if (type == 2)
-		m_type = XF_NODE_TYPE::BOUNDARY;
+		m_type = XF_NODE::BOUNDARY;
 	else
 		throw("Invalid description of node type!");
 
@@ -62,7 +62,7 @@ XF_NODE::XF_NODE(int zone, int first, int last, int type, int ND) :
 	std::fill(m_pnt.begin(), m_pnt.end(), 0.0);
 }
 
-void XF_NODE::record_pnt_coordinate(size_t loc_idx, double x0, double x1, double x2)
+void XF_NODE::set_node_coordinate(size_t loc_idx, double x0, double x1, double x2)
 {
 	const size_t stx = loc_idx * 3;
 
@@ -71,7 +71,7 @@ void XF_NODE::record_pnt_coordinate(size_t loc_idx, double x0, double x1, double
 	m_pnt[stx + 2] = x2;
 }
 
-void XF_NODE::record_pnt_coordinate(size_t loc_idx, double x0, double x1)
+void XF_NODE::set_node_coordinate(size_t loc_idx, double x0, double x1)
 {
 	const size_t stx = loc_idx * 2;
 
@@ -84,7 +84,7 @@ void XF_NODE::repr(std::ostream & out)
 	const int n_dim = ND();
 	const int N = num();
 
-	out << "(" << std::dec << m_identity;
+	out << "(" << std::dec << identity();
 	out << " (" << std::hex << zone() << " " << first_index() << " " << last_index() << " ";
 	out << std::dec << type() << " " << n_dim << ")(" << std::endl;
 
@@ -387,7 +387,7 @@ int XF_MSH::readFromFile(const std::string & src)
 					{
 						size_t i_loc = i - first;
 						fin >> x >> y >> z;
-						e->record_pnt_coordinate(i_loc, x, y, z);
+						e->set_node_coordinate(i_loc, x, y, z);
 					}
 					m_is3D = true;
 				}
@@ -398,7 +398,7 @@ int XF_MSH::readFromFile(const std::string & src)
 					{
 						size_t i_loc = i - first;
 						fin >> x >> y;
-						e->record_pnt_coordinate(i_loc, x, y);
+						e->set_node_coordinate(i_loc, x, y);
 					}
 					m_is3D = false;
 				}
@@ -659,11 +659,11 @@ int XF_MSH::computeTopology(
 		{
 			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
 			int loc_first = curObj->first_index();
-			bool atBC = curObj->is_boundary_pnt();
+			bool atBC = curObj->is_boundary_node();
 			for (int i = 0; i < curObj->num(); ++i)
 			{
 				int global_idx = (loc_first - 1) + i;
-				curObj->get_pnt_coordinate(i, nCoord[global_idx]);
+				curObj->get_node_coordinate(i, nCoord[global_idx]);
 				nAtBdry[global_idx] = atBC;
 			}
 

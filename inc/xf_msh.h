@@ -12,12 +12,6 @@
 #include <algorithm>
 
 typedef enum {
-	VIRTUAL = 0,
-	ANY = 1,
-	BOUNDARY = 2
-} XF_NODE_TYPE;
-
-typedef enum {
 	DEAD = 0,
 	FLUID = 1,
 	SOLID = 17
@@ -146,24 +140,18 @@ private:
 	int m_dim;
 
 public:
-	XF_DIMENSION() :
-		XF_SECTION(XF_SECTION::DIMENSION)
-	{
-		// Set to 3D by default.
-		m_is3D = true;
-		m_dim = 3;
-	}
-
 	XF_DIMENSION(int dim);
 
 	~XF_DIMENSION() = default;
 
 	int ND() const
 	{
-		if (m_is3D)
-			return 3;
-		else
-			return 2;
+		return m_dim;
+	}
+
+	bool is3D() const
+	{
+		return m_is3D;
 	}
 
 	void repr(std::ostream &out);
@@ -212,12 +200,14 @@ public:
 class XF_NODE :public XF_MAIN_RECORD
 {
 private:
-	XF_NODE_TYPE m_type;
+	int m_type;
 	bool m_is3D;
 	int m_dim;
 	std::vector<double> m_pnt;
 
 public:
+	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
+
 	XF_NODE(int zone, int first, int last, int type, int ND);
 
 	~XF_NODE() = default;
@@ -229,38 +219,40 @@ public:
 
 	int ND() const
 	{
-		if (m_is3D)
-			return 3;
-		else
-			return 2;
+		return m_dim;
 	}
 
-	void get_pnt_coordinate(size_t loc_idx, std::vector<double> &dst) const
+	bool is3D() const
+	{
+		return m_is3D;
+	}
+
+	void get_node_coordinate(size_t loc_idx, std::vector<double> &dst) const
 	{
 		size_t stx = pnt_stx(loc_idx);
 		for (int i = 0; i < m_dim; ++i)
 			dst[i] = m_pnt[stx + i];
 	}
 
-	void record_pnt_coordinate(size_t loc_idx, double x0, double x1, double x2);
+	void set_node_coordinate(size_t loc_idx, double x0, double x1, double x2);
 
-	void record_pnt_coordinate(size_t loc_idx, double x0, double x1);
+	void set_node_coordinate(size_t loc_idx, double x0, double x1);
 
 	void repr(std::ostream &out);
 
-	bool is_virtual_pnt() const
+	bool is_virtual_node() const
 	{
-		return m_type == XF_NODE_TYPE::VIRTUAL;
+		return m_type == XF_NODE::VIRTUAL;
 	}
 
-	bool is_boundary_pnt() const
+	bool is_boundary_node() const
 	{
-		return m_type == XF_NODE_TYPE::BOUNDARY;
+		return m_type == XF_NODE::BOUNDARY;
 	}
 
-	bool is_internal_pnt() const
+	bool is_internal_node() const
 	{
-		return m_type == XF_NODE_TYPE::ANY;
+		return m_type == XF_NODE::ANY;
 	}
 
 private:
@@ -509,7 +501,7 @@ private:
 		// Release previous contents
 		const size_t N = m_content.size();
 		for (size_t i = 0; i < N; ++i)
-			if(m_content[i])
+			if (m_content[i])
 				delete m_content[i];
 
 		// Clear container

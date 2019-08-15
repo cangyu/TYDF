@@ -12,17 +12,6 @@
 #include <algorithm>
 
 typedef enum {
-	COMMENT = 0,
-	HEADER = 1,
-	DIMENSION = 2,
-	NODE = 10,
-	CELL = 12,
-	FACE = 13,
-	EDGE = 11,
-	ZONE = 39
-} XF_SECTION;
-
-typedef enum {
 	VIRTUAL = 0,
 	ANY = 1,
 	BOUNDARY = 2
@@ -77,41 +66,37 @@ typedef enum {
 	F_POLYGONAL = 5
 } XF_FACE_TYPE;
 
-class XF_ENTRY
+class XF_SECTION
 {
 protected:
-	XF_SECTION m_identity;
+	int m_identity;
 
 public:
-	XF_ENTRY(XF_SECTION id) :
-		m_identity(id)
-	{
-	}
+	enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
 
-	int identity() const
-	{
-		return m_identity;
-	}
+	XF_SECTION(int id);
 
-	virtual ~XF_ENTRY() = default;
+	virtual ~XF_SECTION() = default;
 
 	virtual void repr(std::ostream &out) = 0;
+
+	int identity() const;
 };
 
-class XF_COMMENT : public XF_ENTRY
+class XF_COMMENT : public XF_SECTION
 {
 private:
 	std::string m_info;
 
 public:
 	XF_COMMENT() :
-		XF_ENTRY(XF_SECTION::COMMENT),
+		XF_SECTION(XF_SECTION::COMMENT),
 		m_info("")
 	{
 	}
 
 	XF_COMMENT(const std::string &info) :
-		XF_ENTRY(XF_SECTION::COMMENT),
+		XF_SECTION(XF_SECTION::COMMENT),
 		m_info(info)
 	{
 	}
@@ -126,20 +111,20 @@ public:
 	void repr(std::ostream &out);
 };
 
-class XF_HEADER :public XF_ENTRY
+class XF_HEADER :public XF_SECTION
 {
 private:
 	std::string m_msg;
 
 public:
 	XF_HEADER() :
-		XF_ENTRY(XF_SECTION::HEADER),
+		XF_SECTION(XF_SECTION::HEADER),
 		m_msg("")
 	{
 	}
 
 	XF_HEADER(const std::string &msg) :
-		XF_ENTRY(XF_SECTION::HEADER),
+		XF_SECTION(XF_SECTION::HEADER),
 		m_msg(msg)
 	{
 	}
@@ -154,7 +139,7 @@ public:
 	void repr(std::ostream &out);
 };
 
-class XF_DIMENSION :public XF_ENTRY
+class XF_DIMENSION :public XF_SECTION
 {
 private:
 	bool m_is3D;
@@ -162,7 +147,7 @@ private:
 
 public:
 	XF_DIMENSION() :
-		XF_ENTRY(XF_SECTION::DIMENSION)
+		XF_SECTION(XF_SECTION::DIMENSION)
 	{
 		// Set to 3D by default.
 		m_is3D = true;
@@ -184,15 +169,15 @@ public:
 	void repr(std::ostream &out);
 };
 
-class XF_MAIN_RECORD :public XF_ENTRY
+class XF_MAIN_RECORD :public XF_SECTION
 {
 protected:
 	int m_zone;
 	int m_first, m_last;
 
 public:
-	XF_MAIN_RECORD(XF_SECTION id, int zone, int first, int last) :
-		XF_ENTRY(id),
+	XF_MAIN_RECORD(int id, int zone, int first, int last) :
+		XF_SECTION(id),
 		m_zone(zone),
 		m_first(first),
 		m_last(last)
@@ -423,7 +408,7 @@ public:
 	void repr(std::ostream &out);
 };
 
-class XF_ZONE :public XF_ENTRY
+class XF_ZONE :public XF_SECTION
 {
 private:
 	int m_zoneID;
@@ -432,7 +417,7 @@ private:
 
 public:
 	XF_ZONE(int zone, const std::string &type, const std::string &name) :
-		XF_ENTRY(XF_SECTION::ZONE),
+		XF_SECTION(XF_SECTION::ZONE),
 		m_zoneID(zone),
 		m_zoneType(type),
 		m_zoneName(name),
@@ -448,7 +433,7 @@ public:
 class XF_MSH
 {
 private:
-	std::vector<XF_ENTRY*> m_content;
+	std::vector<XF_SECTION*> m_content;
 	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
 	bool m_is3D;
 
@@ -514,7 +499,7 @@ public:
 	) const;
 
 private:
-	void add_entry(XF_ENTRY *e)
+	void add_entry(XF_SECTION *e)
 	{
 		m_content.push_back(e);
 	}

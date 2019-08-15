@@ -1,5 +1,15 @@
 #include "xf_msh.h"
 
+XF_SECTION::XF_SECTION(int id)
+{
+	m_identity = id;
+}
+
+int XF_SECTION::identity() const
+{
+	return m_identity;
+}
+
 void XF_COMMENT::repr(std::ostream &out)
 {
 	out << "(" << std::dec << m_identity << " \"" << m_info << "\")" << std::endl;
@@ -11,7 +21,7 @@ void XF_HEADER::repr(std::ostream & out)
 }
 
 XF_DIMENSION::XF_DIMENSION(int dim) :
-	XF_ENTRY(XF_SECTION::DIMENSION)
+	XF_SECTION(XF_SECTION::DIMENSION)
 {
 	if (dim == 2)
 		m_is3D = false;
@@ -674,3 +684,5 @@ int XF_MSH::computeTopology(
 
 	return 0;
 }
+
+

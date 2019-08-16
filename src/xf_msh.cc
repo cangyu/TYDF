@@ -58,25 +58,25 @@ XF_NODE::XF_NODE(int zone, int first, int last, int type, int ND) :
 		throw("Invalid specification of node dimension!");
 	m_dim = ND;
 
-	m_pnt.resize(ND * num());
-	std::fill(m_pnt.begin(), m_pnt.end(), 0.0);
+	m_node.resize(ND * num());
+	std::fill(m_node.begin(), m_node.end(), 0.0);
 }
 
 void XF_NODE::set_node_coordinate(size_t loc_idx, double x0, double x1, double x2)
 {
 	const size_t stx = loc_idx * 3;
 
-	m_pnt[stx] = x0;
-	m_pnt[stx + 1] = x1;
-	m_pnt[stx + 2] = x2;
+	m_node[stx] = x0;
+	m_node[stx + 1] = x1;
+	m_node[stx + 2] = x2;
 }
 
 void XF_NODE::set_node_coordinate(size_t loc_idx, double x0, double x1)
 {
 	const size_t stx = loc_idx * 2;
 
-	m_pnt[stx] = x0;
-	m_pnt[stx + 1] = x1;
+	m_node[stx] = x0;
+	m_node[stx + 1] = x1;
 }
 
 void XF_NODE::repr(std::ostream & out)
@@ -93,7 +93,7 @@ void XF_NODE::repr(std::ostream & out)
 	for (int i = 0; i < N; ++i)
 	{
 		for (int k = 0; k < n_dim; ++k)
-			out << " " << m_pnt[loc_idx + k];
+			out << " " << m_node[loc_idx + k];
 		out << std::endl;
 		loc_idx += n_dim;
 	}
@@ -188,49 +188,49 @@ XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 	switch (bc)
 	{
 	case 2:
-		m_bc = XF_BC_TYPE::INTERIOR;
+		m_bc = XF_BC::INTERIOR;
 		break;
 	case 3:
-		m_bc = XF_BC_TYPE::WALL;
+		m_bc = XF_BC::WALL;
 		break;
 	case 4:
-		m_bc = XF_BC_TYPE::PRESSURE_INLET;
+		m_bc = XF_BC::PRESSURE_INLET;
 		break;
 	case 5:
-		m_bc = XF_BC_TYPE::PRESSURE_OUTLET;
+		m_bc = XF_BC::PRESSURE_OUTLET;
 		break;
 	case 7:
-		m_bc = XF_BC_TYPE::SYMMETRY;
+		m_bc = XF_BC::SYMMETRY;
 		break;
 	case 8:
-		m_bc = XF_BC_TYPE::PERIODIC_SHADOW;
+		m_bc = XF_BC::PERIODIC_SHADOW;
 		break;
 	case 9:
-		m_bc = XF_BC_TYPE::PRESSURE_FAR_FIELD;
+		m_bc = XF_BC::PRESSURE_FAR_FIELD;
 		break;
 	case 10:
-		m_bc = XF_BC_TYPE::VELOCITY_INLET;
+		m_bc = XF_BC::VELOCITY_INLET;
 		break;
 	case 12:
-		m_bc = XF_BC_TYPE::PERIODIC;
+		m_bc = XF_BC::PERIODIC;
 		break;
 	case 14:
-		m_bc = XF_BC_TYPE::FAN;
+		m_bc = XF_BC::FAN;
 		break;
 	case 20:
-		m_bc = XF_BC_TYPE::MASS_FLOW_INLET;
+		m_bc = XF_BC::MASS_FLOW_INLET;
 		break;
 	case 24:
-		m_bc = XF_BC_TYPE::INTERFACE;
+		m_bc = XF_BC::INTERFACE;
 		break;
 	case 31:
-		m_bc = XF_BC_TYPE::PARENT;
+		m_bc = XF_BC::PARENT;
 		break;
 	case 36:
-		m_bc = XF_BC_TYPE::OUTFLOW;
+		m_bc = XF_BC::OUTFLOW;
 		break;
 	case 37:
-		m_bc = XF_BC_TYPE::AXIS;
+		m_bc = XF_BC::AXIS;
 		break;
 	default:
 		throw("Invalid specification of B.C. type!");
@@ -239,19 +239,19 @@ XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 	switch (face)
 	{
 	case 0:
-		m_face = XF_FACE_TYPE::F_MIXED;
+		m_face = XF_FACE::MIXED;
 		break;
 	case 2:
-		m_face = XF_FACE_TYPE::F_LINEAR;
+		m_face = XF_FACE::LINEAR;
 		break;
 	case 3:
-		m_face = XF_FACE_TYPE::F_TRIANGULAR;
+		m_face = XF_FACE::TRIANGULAR;
 		break;
 	case 4:
-		m_face = XF_FACE_TYPE::F_QUADRILATERAL;
+		m_face = XF_FACE::QUADRILATERAL;
 		break;
 	case 5:
-		m_face = XF_FACE_TYPE::F_POLYGONAL;
+		m_face = XF_FACE::POLYGONAL;
 		throw("Currently not supported!");
 	default:
 		throw("Invalid face-type!");
@@ -262,13 +262,13 @@ XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 
 void XF_FACE::repr(std::ostream & out)
 {
-	out << "(" << std::dec << m_identity << " (";
+	out << "(" << std::dec << identity() << " (";
 	out << std::hex;
 	out << zone() << " " << first_index() << " " << last_index() << " ";
 	out << bc_type() << " " << face_type() << ")(" << std::endl;
 
 	const int N = num();
-	if (m_face == XF_FACE_TYPE::F_MIXED)
+	if (m_face == XF_FACE::MIXED)
 	{
 		for (int i = 0; i < N; ++i)
 		{
@@ -296,7 +296,7 @@ void XF_FACE::repr(std::ostream & out)
 void XF_ZONE::repr(std::ostream & out)
 {
 	out << std::dec;
-	out << "(" << m_identity << " (" << m_zoneID << " " << m_zoneType << " " << m_zoneName << ")())" << std::endl;
+	out << "(" << identity() << " (" << m_zoneID << " " << m_zoneType << " " << m_zoneName << ")())" << std::endl;
 }
 
 int XF_MSH::readFromFile(const std::string & src)
@@ -342,6 +342,8 @@ int XF_MSH::readFromFile(const std::string & src)
 			eat(fin, ')');
 			add_entry(new XF_DIMENSION(nd));
 			skipWhite(fin);
+			m_dim = nd;
+			m_is3D = (nd == 3);
 		}
 		else if (ti == XF_SECTION::NODE)
 		{
@@ -380,6 +382,10 @@ int XF_MSH::readFromFile(const std::string & src)
 				eat(fin, ')');
 				eat(fin, '(');
 				std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
+
+				if (nd != dimension())
+					throw("Inconsistent with previous DIMENSION declaration!");
+
 				if (nd == 3)
 				{
 					double x, y, z;
@@ -389,7 +395,6 @@ int XF_MSH::readFromFile(const std::string & src)
 						fin >> x >> y >> z;
 						e->set_node_coordinate(i_loc, x, y, z);
 					}
-					m_is3D = true;
 				}
 				else
 				{
@@ -400,7 +405,6 @@ int XF_MSH::readFromFile(const std::string & src)
 						fin >> x >> y;
 						e->set_node_coordinate(i_loc, x, y);
 					}
-					m_is3D = false;
 				}
 				eat(fin, ')');
 				eat(fin, ')');

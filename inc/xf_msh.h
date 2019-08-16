@@ -33,15 +33,7 @@ typedef enum {
 	PARENT = 31,
 	OUTFLOW = 36,
 	AXIS = 37
-} XF_BC_TYPE;
-
-typedef enum {
-	F_MIXED = 0,
-	F_LINEAR = 2,
-	F_TRIANGULAR = 3,
-	F_QUADRILATERAL = 4,
-	F_POLYGONAL = 5
-} XF_FACE_TYPE;
+} XF_BC;
 
 class XF_SECTION
 {
@@ -186,7 +178,7 @@ private:
 	int m_type;
 	bool m_is3D;
 	int m_dim;
-	std::vector<double> m_pnt;
+	std::vector<double> m_node;
 
 public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
@@ -214,7 +206,7 @@ public:
 	{
 		size_t stx = pnt_stx(loc_idx);
 		for (int i = 0; i < m_dim; ++i)
-			dst[i] = m_pnt[stx + i];
+			dst[i] = m_node[stx + i];
 	}
 
 	void set_node_coordinate(size_t loc_idx, double x0, double x1, double x2);
@@ -250,7 +242,7 @@ class XF_CELL :public XF_MAIN_RECORD
 private:
 	int m_type;
 	int m_elem;
-	std::vector<int> m_mixedElemDesc;
+	std::vector<int> m_mixedElemDesc; // Only effective when 'm_elem == MIXED'.
 
 public:
 	enum { DEAD = 0, FLUID = 1, SOLID = 17 }; // Cell type.
@@ -355,11 +347,13 @@ public:
 class XF_FACE : public XF_MAIN_RECORD
 {
 private:
-	XF_BC_TYPE m_bc;
-	XF_FACE_TYPE m_face;
+	XF_BC m_bc;
+	int m_face;
 	std::vector<XF_CONNECTIVITY> m_connectivity;
 
 public:
+	enum { MIXED = 0, LINEAR = 2, TRIANGULAR = 3, QUADRILATERAL = 4, POLYGONAL = 5 };
+
 	XF_FACE(int zone, int first, int last, int bc, int face);
 
 	~XF_FACE() = default;
@@ -415,6 +409,7 @@ private:
 	std::vector<XF_SECTION*> m_content;
 	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
 	bool m_is3D;
+	int m_dim;
 
 public:
 	XF_MSH() {}
@@ -430,12 +425,14 @@ public:
 
 	int writeToFile(const std::string &dst) const;
 
+	bool is3D() const
+	{
+		return m_is3D;
+	}
+
 	int dimension() const
 	{
-		if (m_is3D)
-			return 3;
-		else
-			return 2;
+		return m_dim;
 	}
 
 	size_t numOfNode() const

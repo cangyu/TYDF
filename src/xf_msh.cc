@@ -104,54 +104,54 @@ void XF_NODE::repr(std::ostream & out)
 XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
 	XF_MAIN_RECORD(XF_SECTION::CELL, zone, first, last)
 {
-	if (type == 1)
-		m_type = XF_CELL_TYPE::FLUID;
-	else if (type == 17)
-		m_type = XF_CELL_TYPE::SOLID;
-	else if (type == 0)
-		m_type = XF_CELL_TYPE::DEAD;
+	if (type == XF_CELL::FLUID)
+		m_type = XF_CELL::FLUID;
+	else if (type == XF_CELL::SOLID)
+		m_type = XF_CELL::SOLID;
+	else if (type == XF_CELL::DEAD)
+		m_type = XF_CELL::DEAD;
 	else
 		throw("Invalid specification of cell type!");
 
-	if (elem_type == 0)
+	if (elem_type == XF_CELL::MIXED)
 	{
-		m_elem = XF_CELL_ELEM_TYPE::MIXED;
+		m_elem = XF_CELL::MIXED;
 		m_mixedElemDesc.resize(num());
-		std::fill(m_mixedElemDesc.begin(), m_mixedElemDesc.end(), XF_CELL_ELEM_TYPE::MIXED);
+		std::fill(m_mixedElemDesc.begin(), m_mixedElemDesc.end(), XF_CELL::MIXED);
 	}
-	else if (elem_type == 1)
+	else if (elem_type == XF_CELL::TRIANGULAR)
 	{
-		m_elem = XF_CELL_ELEM_TYPE::TRIANGULAR;
+		m_elem = XF_CELL::TRIANGULAR;
 		m_mixedElemDesc.resize(0);
 	}
-	else if (elem_type == 2)
+	else if (elem_type == XF_CELL::TETRAHEDRAL)
 	{
-		m_elem = XF_CELL_ELEM_TYPE::TETRAHEDRAL;
+		m_elem = XF_CELL::TETRAHEDRAL;
 		m_mixedElemDesc.resize(0);
 	}
-	else if (elem_type == 3)
+	else if (elem_type == XF_CELL::QUADRILATERAL)
 	{
-		m_elem = XF_CELL_ELEM_TYPE::QUADRILATERAL;
+		m_elem = XF_CELL::QUADRILATERAL;
 		m_mixedElemDesc.resize(0);
 	}
-	else if (elem_type == 4)
+	else if (elem_type == XF_CELL::HEXAHEDRAL)
 	{
-		m_elem = XF_CELL_ELEM_TYPE::HEXAHEDRAL;
+		m_elem = XF_CELL::HEXAHEDRAL;
 		m_mixedElemDesc.resize(0);
 	}
-	else if (elem_type == 5)
+	else if (elem_type == XF_CELL::PYRAMID)
 	{
-		m_elem = XF_CELL_ELEM_TYPE::PYRAMID;
+		m_elem = XF_CELL::PYRAMID;
 		m_mixedElemDesc.resize(0);
 	}
-	else if (elem_type == 6)
+	else if (elem_type == XF_CELL::WEDGE)
 	{
-		m_elem = XF_CELL_ELEM_TYPE::WEDGE;
+		m_elem = XF_CELL::WEDGE;
 		m_mixedElemDesc.resize(0);
 	}
-	else if (elem_type == 7)
+	else if (elem_type == XF_CELL::POLYHEDRAL)
 	{
-		m_elem = XF_CELL_ELEM_TYPE::POLYHEDRAL;
+		m_elem = XF_CELL::POLYHEDRAL;
 		m_mixedElemDesc.resize(0);
 	}
 	else
@@ -160,12 +160,12 @@ XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
 
 void XF_CELL::repr(std::ostream & out)
 {
-	out << "(" << std::dec << m_identity << " (";
+	out << "(" << std::dec << identity() << " (";
 	out << std::hex;
-	out << m_zone << " " << m_first << " " << m_last << " ";
+	out << zone() << " " << first_index() << " " << last_index() << " ";
 	out << m_type << " " << m_elem << ")";
 
-	if (m_elem != XF_CELL_ELEM_TYPE::MIXED)
+	if (m_elem != XF_CELL::MIXED)
 		out << ")" << std::endl;
 	else
 	{
@@ -456,25 +456,25 @@ int XF_MSH::readFromFile(const std::string & src)
 						switch (elem)
 						{
 						case 1:
-							e->elem(i_loc) = XF_CELL_ELEM_TYPE::TRIANGULAR;
+							e->elem(i_loc) = XF_CELL::TRIANGULAR;
 							break;
 						case 2:
-							e->elem(i_loc) = XF_CELL_ELEM_TYPE::TETRAHEDRAL;
+							e->elem(i_loc) = XF_CELL::TETRAHEDRAL;
 							break;
 						case 3:
-							e->elem(i_loc) = XF_CELL_ELEM_TYPE::QUADRILATERAL;
+							e->elem(i_loc) = XF_CELL::QUADRILATERAL;
 							break;
 						case 4:
-							e->elem(i_loc) = XF_CELL_ELEM_TYPE::HEXAHEDRAL;
+							e->elem(i_loc) = XF_CELL::HEXAHEDRAL;
 							break;
 						case 5:
-							e->elem(i_loc) = XF_CELL_ELEM_TYPE::PYRAMID;
+							e->elem(i_loc) = XF_CELL::PYRAMID;
 							break;
 						case 6:
-							e->elem(i_loc) = XF_CELL_ELEM_TYPE::WEDGE;
+							e->elem(i_loc) = XF_CELL::WEDGE;
 							break;
 						case 7:
-							e->elem(i_loc) = XF_CELL_ELEM_TYPE::POLYHEDRAL;
+							e->elem(i_loc) = XF_CELL::POLYHEDRAL;
 							break;
 						default:
 							throw("Invalid cell type!");

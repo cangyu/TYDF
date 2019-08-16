@@ -12,23 +12,6 @@
 #include <algorithm>
 
 typedef enum {
-	DEAD = 0,
-	FLUID = 1,
-	SOLID = 17
-} XF_CELL_TYPE;
-
-typedef enum {
-	MIXED = 0,
-	TRIANGULAR = 1,
-	TETRAHEDRAL = 2,
-	QUADRILATERAL = 3,
-	HEXAHEDRAL = 4,
-	PYRAMID = 5,
-	WEDGE = 6,
-	POLYHEDRAL = 7
-} XF_CELL_ELEM_TYPE;
-
-typedef enum {
 	INTERIOR = 2,
 	WALL = 3,
 	PRESSURE_INLET = 4,
@@ -265,11 +248,15 @@ private:
 class XF_CELL :public XF_MAIN_RECORD
 {
 private:
-	XF_CELL_TYPE m_type;
-	XF_CELL_ELEM_TYPE m_elem;
-	std::vector<XF_CELL_ELEM_TYPE> m_mixedElemDesc;
+	int m_type;
+	int m_elem;
+	std::vector<int> m_mixedElemDesc;
 
 public:
+	enum { DEAD = 0, FLUID = 1, SOLID = 17 }; // Cell type.
+
+	enum { MIXED = 0, TRIANGULAR = 1, TETRAHEDRAL = 2, QUADRILATERAL = 3, HEXAHEDRAL = 4, PYRAMID = 5, WEDGE = 6, POLYHEDRAL = 7 }; // Cell element type.
+
 	XF_CELL(int zone, int first, int last, int type, int elem_type);
 
 	~XF_CELL() = default;
@@ -284,12 +271,12 @@ public:
 		return m_elem;
 	}
 
-	XF_CELL_ELEM_TYPE elem(size_t loc_idx) const
+	int elem(size_t loc_idx) const
 	{
 		return m_mixedElemDesc[loc_idx];
 	}
 
-	XF_CELL_ELEM_TYPE &elem(size_t loc_idx)
+	int &elem(size_t loc_idx)
 	{
 		return m_mixedElemDesc[loc_idx];
 	}
@@ -298,35 +285,35 @@ public:
 
 	static const std::string &cell_name(int x)
 	{
-		const static std::string MIXED("MIXED");
-		const static std::string TRIANGULAR("TRIANGULAR");
-		const static std::string TETRAHEDRAL("TETRAHEDRAL");
-		const static std::string QUADRILATERAL("QUADRILATERAL");
-		const static std::string HEXAHEDRAL("HEXAHEDRAL");
-		const static std::string PYRAMID("PYRAMID");
-		const static std::string WEDGE("WEDGE");
-		const static std::string POLYHEDRAL("POLYHEDRAL");
+		const static std::string sMIXED("MIXED");
+		const static std::string sTRIANGULAR("TRIANGULAR");
+		const static std::string sTETRAHEDRAL("TETRAHEDRAL");
+		const static std::string sQUADRILATERAL("QUADRILATERAL");
+		const static std::string sHEXAHEDRAL("HEXAHEDRAL");
+		const static std::string sPYRAMID("PYRAMID");
+		const static std::string sWEDGE("WEDGE");
+		const static std::string sPOLYHEDRAL("POLYHEDRAL");
 
 		switch (x)
 		{
-		case XF_CELL_ELEM_TYPE::MIXED:
-			return MIXED;
-		case XF_CELL_ELEM_TYPE::TRIANGULAR:
-			return TRIANGULAR;
-		case XF_CELL_ELEM_TYPE::TETRAHEDRAL:
-			return TETRAHEDRAL;
-		case XF_CELL_ELEM_TYPE::QUADRILATERAL:
-			return QUADRILATERAL;
-		case XF_CELL_ELEM_TYPE::HEXAHEDRAL:
-			return HEXAHEDRAL;
-		case XF_CELL_ELEM_TYPE::PYRAMID:
-			return PYRAMID;
-		case XF_CELL_ELEM_TYPE::WEDGE:
-			return WEDGE;
-		case XF_CELL_ELEM_TYPE::POLYHEDRAL:
-			return POLYHEDRAL;
+		case XF_CELL::MIXED:
+			return sMIXED;
+		case XF_CELL::TRIANGULAR:
+			return sTRIANGULAR;
+		case XF_CELL::TETRAHEDRAL:
+			return sTETRAHEDRAL;
+		case XF_CELL::QUADRILATERAL:
+			return sQUADRILATERAL;
+		case XF_CELL::HEXAHEDRAL:
+			return sHEXAHEDRAL;
+		case XF_CELL::PYRAMID:
+			return sPYRAMID;
+		case XF_CELL::WEDGE:
+			return sWEDGE;
+		case XF_CELL::POLYHEDRAL:
+			return sPOLYHEDRAL;
 		default:
-			throw("Unsupported \"XF_CELL_ELEM_TYPE\" input!");
+			throw("Unsupported CELL!");
 		}
 	}
 };

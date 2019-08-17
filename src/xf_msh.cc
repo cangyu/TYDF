@@ -634,12 +634,12 @@ int XF_MSH::computeTopology_nodeCoordinates(std::vector<std::vector<double>>& ds
 		if (curPtr->identity() == XF_SECTION::NODE)
 		{
 			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
-			int loc_first = curObj->first_index();
-			for (int i = 0; i < curObj->num(); ++i)
-			{
-				int global_idx = (loc_first - 1) + i;
-				curObj->get_node_coordinate(i, dst[global_idx]);
-			}
+
+			const int loc_first = curObj->first_index(); // 1-based index, logical
+			const int loc_last = curObj->last_index(); // 1-based index, logical
+
+			for (int i = loc_first; i <= loc_last; ++i)
+				curObj->get_node_coordinate(i, dst[i - 1]); // 0-based index in storage
 		}
 	}
 
@@ -659,13 +659,14 @@ int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool>& dst) const
 		if (curPtr->identity() == XF_SECTION::NODE)
 		{
 			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
-			int loc_first = curObj->first_index();
-			bool flag = curObj->is_boundary_node();
-			for (int i = 0; i < curObj->num(); ++i)
-			{
-				int global_idx = (loc_first - 1) + i;
-				dst[global_idx] = flag;
-			}
+
+			const int loc_first = curObj->first_index(); // 1-based index, logical
+			const int loc_last = curObj->last_index(); // 1-based index, logical
+			
+			const bool flag = curObj->is_boundary_node(); // node type within this zone
+
+			for (int i = loc_first; i <= loc_last; ++i)
+				dst[i - 1] = flag;
 		}
 	}
 

@@ -342,6 +342,22 @@ public:
 			++i;
 		}
 	}
+
+	size_t leftAdj(int loc_idx) const
+	{
+		if (loc_idx == 0)
+			return n[x - 1];
+		else
+			return n[loc_idx - 1];
+	}
+
+	size_t rightAdj(int loc_idx) const
+	{
+		if (loc_idx == x - 1)
+			return n[0];
+		else
+			return n[loc_idx + 1];
+	}
 };
 
 class XF_FACE : public XF_MAIN_RECORD
@@ -484,6 +500,9 @@ public:
 		if (!ret)
 			throw(ret);
 
+		ret = computeTopology_nodeAdjacentNode(nAdjN);
+		if (!ret)
+			throw(ret);
 
 		return ret;
 	}
@@ -530,6 +549,8 @@ private:
 	int computeTopology_nodeCoordinates(std::vector<std::vector<double>> &dst) const;
 
 	int computeTopology_nodeBoundaryFlag(std::vector<bool> &dst) const;
+
+	int computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>> &dst) const;
 };
 
 #endif

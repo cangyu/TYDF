@@ -635,10 +635,10 @@ int XF_MSH::computeTopology_nodeCoordinates(std::vector<std::vector<double>>& ds
 		{
 			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
 
-			const int loc_first = curObj->first_index(); // 1-based index, logical
-			const int loc_last = curObj->last_index(); // 1-based index, logical
+			const int cur_first = curObj->first_index(); // 1-based index, logical
+			const int cur_last = curObj->last_index(); // 1-based index, logical
 
-			for (int i = loc_first; i <= loc_last; ++i)
+			for (int i = cur_first; i <= cur_last; ++i)
 				curObj->get_node_coordinate(i, dst[i - 1]); // 0-based index in storage
 		}
 	}
@@ -660,12 +660,12 @@ int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool>& dst) const
 		{
 			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
 
-			const int loc_first = curObj->first_index(); // 1-based index, logical
-			const int loc_last = curObj->last_index(); // 1-based index, logical
+			const int cur_first = curObj->first_index(); // 1-based index, logical
+			const int cur_last = curObj->last_index(); // 1-based index, logical
 			
 			const bool flag = curObj->is_boundary_node(); // node type within this zone
 
-			for (int i = loc_first; i <= loc_last; ++i)
+			for (int i = cur_first; i <= cur_last; ++i)
 				dst[i - 1] = flag;
 		}
 	}
@@ -673,4 +673,50 @@ int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool>& dst) const
 	return 0;
 }
 
+int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfNode())
+		return -1;
 
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			const int cur_first = curObj->first_index(); // 1-based index, logical
+			const int cur_last = curObj->last_index(); // 1-based index, logical
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				auto cnct = curObj->connectivity(i - 1);
+				for (int j = 0; j < cnct.x; ++j)
+				{
+					int node_idx = cnct.n[j];
+					
+					int l = cnct.leftAdj(j); // 1-based index, logical
+					int r = cnct.rightAdj(j); // 1-based index, logical
+
+					dst[node_idx - 1].push_back(l);
+					if (cnct.x > 2)
+						dst[node_idx - 1].push_back(r);
+				}
+			}
+		}
+	}
+
+	// Remove duplication
+	for (size_t i = 0; i < dst.size(); ++i)
+	{
+		std::sort(dst[i].begin(), dst[i].end());
+		auto it_end = std::unique(dst[i].begin(), dst[i].end());
+		auto it_beg = dst[i].begin();
+		auto curNum = std::distance(it_beg, it_end);
+		dst[i].resize(curNum);
+	}
+
+	return 0;
+}

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iomanip>
 #include <vector>
+#include <set>
 #include <string>
 #include <cstdint>
 #include <algorithm>
@@ -37,7 +38,7 @@ typedef enum {
 
 class XF_SECTION
 {
-protected:
+private:
 	int m_identity;
 
 public:
@@ -504,6 +505,14 @@ public:
 		if (!ret)
 			throw(ret);
 
+		ret = computeTopology_nodeDependentFace(nDepF);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_nodeDependentCell(nDepC);
+		if (!ret)
+			throw(ret);
+
 		return ret;
 	}
 
@@ -551,6 +560,10 @@ private:
 	int computeTopology_nodeBoundaryFlag(std::vector<bool> &dst) const;
 
 	int computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>> &dst) const;
+
+	int computeTopology_nodeDependentFace(std::vector<std::vector<size_t>> &dst) const;
+
+	int computeTopology_nodeDependentCell(std::vector<std::vector<size_t>> &dst) const;
 };
 
 #endif

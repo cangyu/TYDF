@@ -711,12 +711,27 @@ int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>>& d
 	// Remove duplication
 	for (size_t i = 0; i < dst.size(); ++i)
 	{
-		std::sort(dst[i].begin(), dst[i].end());
-		auto it_end = std::unique(dst[i].begin(), dst[i].end());
-		auto it_beg = dst[i].begin();
-		auto curNum = std::distance(it_beg, it_end);
-		dst[i].resize(curNum);
+		//Method 1
+		//std::sort(dst[i].begin(), dst[i].end());
+		//auto it = std::unique(dst[i].begin(), dst[i].end());
+		//dst[i].resize(std::distance(dst[i].begin(), it));
+
+		// Method 2
+		std::set<size_t> st(dst[i].begin(), dst[i].end());
+		dst[i].assign(st.begin(), st.end());
 	}
 
+	return 0;
+}
+
+int XF_MSH::computeTopology_nodeDependentFace(std::vector<std::vector<size_t>>& dst) const
+{
+	// TODO
+	return 0;
+}
+
+int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>>& dst) const
+{
+	// TODO
 	return 0;
 }

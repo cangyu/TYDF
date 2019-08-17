@@ -619,43 +619,15 @@ int XF_MSH::writeToFile(const std::string & dst) const
 	return 0;
 }
 
-int XF_MSH::computeTopology(
-	std::vector<std::vector<double>> &nCoord, // Coordinates of each node.
-	std::vector<bool> &nAtBdry, // If located at boundary of each node.
-	std::vector<std::vector<size_t>> &nAdjN, // Adjacent nodes of each node.
-	std::vector<std::vector<size_t>> &nDepF, // Dependent faces of each node.
-	std::vector<std::vector<size_t>> &nDepC, // Dependent cells of each node.
-	std::vector<std::vector<size_t>> &fAdjC, // Adjacent cells of each face, the order of nodes follows right-hand convention.
-	std::vector<std::vector<size_t>> &fIncN, // Included nodes of each face, the order of nodes follows right-hand convention.
-	std::vector<double> &fArea, // Area of each face.
-	std::vector<bool> &fAtBdry, // If located at boundary of each face.
-	std::vector<std::vector<double>> &fCoord, // Coordinates of each face centre.
-	std::vector<std::vector<double>> &fUNLR, // Unit normal vector of each face, from c0/cl to c1/cr.
-	std::vector<std::vector<double>> &fUNRL, // Unit normal vector of each face, from c1/cr to c0/cl.
-	std::vector<std::vector<double>> &fNLR, // Normal vector of each face, from c0/cl to c1/cr, magnitude equals to face area.
-	std::vector<std::vector<double>> &fNRL, // Normal vector of each face, from c1/cr to c0/cl, magnitude equals to face area.
-	std::vector<std::vector<double>> &cCoord, // Coordinates of each cell centre.
-	std::vector<double> &cVol, // Volumn of each face.
-	std::vector<std::vector<size_t>> &cIncN, // Included nodes of each cell.
-	std::vector<std::vector<size_t>> &cIncF, // Included faces of each cell.
-	std::vector<std::vector<size_t>> &cAdjC, // Adjacent cells of each cell, the order is in accordance with cIncF.
-	std::vector<std::vector<double>> &cFUNVec, // Positive unit normal vector of each included face of each cell, the order is in accordance with cIncF.
-	std::vector<std::vector<double>> &cFNVec // Positive normal vector of each included face of each cell, the order is in accordance with cIncF, magnitude equals to face area.
-) const
+int XF_MSH::computeTopology_nodeCoordinates(std::vector<std::vector<double>>& dst) const
 {
-	const int ND = dimension();
+	// Check output array shape.
+	if (dst.size() != numOfNode())
+		return -1;
+	if (dst[0].size() != dimension())
+		return -2;
 
-	// Setup containers
-	nCoord.clear();
-	nCoord.resize(numOfNode(), std::vector<double>(ND, 0.0));
-
-	nAtBdry.clear();
-	nAtBdry.resize(numOfNode(), false);
-
-	nAdjN.clear();
-	nAdjN.resize(numOfNode());
-
-	// Parse each entry accordingly.
+	// Parse related entries.
 	for (size_t r = 0; r < m_content.size(); ++r)
 	{
 		auto curPtr = m_content[r];
@@ -663,26 +635,37 @@ int XF_MSH::computeTopology(
 		{
 			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
 			int loc_first = curObj->first_index();
-			bool atBC = curObj->is_boundary_node();
 			for (int i = 0; i < curObj->num(); ++i)
 			{
 				int global_idx = (loc_first - 1) + i;
-				curObj->get_node_coordinate(i, nCoord[global_idx]);
-				nAtBdry[global_idx] = atBC;
+				curObj->get_node_coordinate(i, dst[global_idx]);
 			}
-
 		}
-		else if (curPtr->identity() == XF_SECTION::CELL)
-		{
+	}
 
-		}
-		else if (curPtr->identity() == XF_SECTION::FACE)
-		{
+	return 0;
+}
 
-		}
-		else
-		{
+int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfNode())
+		return -1;
 
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::NODE)
+		{
+			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
+			int loc_first = curObj->first_index();
+			bool flag = curObj->is_boundary_node();
+			for (int i = 0; i < curObj->num(); ++i)
+			{
+				int global_idx = (loc_first - 1) + i;
+				dst[global_idx] = flag;
+			}
 		}
 	}
 

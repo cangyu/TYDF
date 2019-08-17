@@ -452,7 +452,7 @@ public:
 
 	int computeTopology(
 		std::vector<std::vector<double>> &nCoord, // Coordinates of each node.
-		std::vector<bool> &nAtBdry, // If located at boundary of each node.
+		std::vector<bool> &nBdryFlag, // If located at boundary of each node.
 		std::vector<std::vector<size_t>> &nAdjN, // Adjacent nodes of each node.
 		std::vector<std::vector<size_t>> &nDepF, // Dependent faces of each node.
 		std::vector<std::vector<size_t>> &nDepC, // Dependent cells of each node.
@@ -472,7 +472,21 @@ public:
 		std::vector<std::vector<size_t>> &cAdjC, // Adjacent cells of each cell, the order is in accordance with cIncF.
 		std::vector<std::vector<double>> &cFUNVec, // Positive unit normal vector of each included face of each cell, the order is in accordance with cIncF.
 		std::vector<std::vector<double>> &cFNVec // Positive normal vector of each included face of each cell, the order is in accordance with cIncF, magnitude equals to face area.
-	) const;
+	) const
+	{
+		int ret = 0;
+
+		ret = computeTopology_nodeCoordinates(nCoord);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_nodeBoundaryFlag(nBdryFlag);
+		if (!ret)
+			throw(ret);
+
+
+		return ret;
+	}
 
 private:
 	void add_entry(XF_SECTION *e)
@@ -512,6 +526,10 @@ private:
 		if (!in.eof())
 			in.unget();
 	}
+
+	int computeTopology_nodeCoordinates(std::vector<std::vector<double>> &dst) const;
+
+	int computeTopology_nodeBoundaryFlag(std::vector<bool> &dst) const;
 };
 
 #endif

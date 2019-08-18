@@ -1,43 +1,5 @@
 #include "xf_msh.h"
 
-XF_SECTION::XF_SECTION(int id)
-{
-	m_identity = id;
-}
-
-int XF_SECTION::identity() const
-{
-	return m_identity;
-}
-
-void XF_COMMENT::repr(std::ostream &out)
-{
-	out << "(" << std::dec << identity() << " \"" << m_info << "\")" << std::endl;
-}
-
-void XF_HEADER::repr(std::ostream & out)
-{
-	out << "(" << std::dec << identity() << " \"" << m_msg << "\")" << std::endl;
-}
-
-XF_DIMENSION::XF_DIMENSION(int dim) :
-	XF_SECTION(XF_SECTION::DIMENSION)
-{
-	if (dim == 2)
-		m_is3D = false;
-	else if (dim == 3)
-		m_is3D = true;
-	else
-		throw("Invalid dimension!");
-
-	m_dim = dim;
-}
-
-void XF_DIMENSION::repr(std::ostream & out)
-{
-	out << "(" << std::dec << identity() << " " << ND() << ")" << std::endl;
-}
-
 XF_NODE::XF_NODE(int zone, int first, int last, int type, int ND) :
 	XF_MAIN_RECORD(XF_SECTION::NODE, zone, first, last)
 {

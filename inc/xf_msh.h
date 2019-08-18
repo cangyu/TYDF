@@ -44,13 +44,19 @@ private:
 public:
 	enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
 
-	XF_SECTION(int id);
+	XF_SECTION(int id) :
+		m_identity(id)
+	{
+	}
 
 	virtual ~XF_SECTION() = default;
 
 	virtual void repr(std::ostream &out) = 0;
 
-	int identity() const;
+	int identity() const
+	{
+		return m_identity;
+	}
 };
 
 class XF_COMMENT : public XF_SECTION
@@ -59,12 +65,6 @@ private:
 	std::string m_info;
 
 public:
-	XF_COMMENT() :
-		XF_SECTION(XF_SECTION::COMMENT),
-		m_info("")
-	{
-	}
-
 	XF_COMMENT(const std::string &info) :
 		XF_SECTION(XF_SECTION::COMMENT),
 		m_info(info)
@@ -78,7 +78,10 @@ public:
 		return m_info;
 	}
 
-	void repr(std::ostream &out);
+	void repr(std::ostream &out)
+	{
+		out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl;
+	}
 };
 
 class XF_HEADER :public XF_SECTION
@@ -87,12 +90,6 @@ private:
 	std::string m_msg;
 
 public:
-	XF_HEADER() :
-		XF_SECTION(XF_SECTION::HEADER),
-		m_msg("")
-	{
-	}
-
 	XF_HEADER(const std::string &msg) :
 		XF_SECTION(XF_SECTION::HEADER),
 		m_msg(msg)
@@ -106,7 +103,10 @@ public:
 		return m_msg;
 	}
 
-	void repr(std::ostream &out);
+	void repr(std::ostream &out)
+	{
+		out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl;
+	}
 };
 
 class XF_DIMENSION :public XF_SECTION
@@ -116,7 +116,18 @@ private:
 	int m_dim;
 
 public:
-	XF_DIMENSION(int dim);
+	XF_DIMENSION(int dim) :
+		XF_SECTION(XF_SECTION::DIMENSION)
+	{
+		if (dim == 2)
+			m_is3D = false;
+		else if (dim == 3)
+			m_is3D = true;
+		else
+			throw("Invalid dimension!");
+
+		m_dim = dim;
+	}
 
 	~XF_DIMENSION() = default;
 
@@ -130,7 +141,10 @@ public:
 		return m_is3D;
 	}
 
-	void repr(std::ostream &out);
+	void repr(std::ostream &out)
+	{
+		out << "(" << std::dec << identity() << " " << ND() << ")" << std::endl;
+	}
 };
 
 class XF_MAIN_RECORD :public XF_SECTION

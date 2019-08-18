@@ -662,7 +662,7 @@ int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool>& dst) const
 
 			const int cur_first = curObj->first_index(); // 1-based index, logical
 			const int cur_last = curObj->last_index(); // 1-based index, logical
-			
+
 			const bool flag = curObj->is_boundary_node(); // node type within this zone
 
 			for (int i = cur_first; i <= cur_last; ++i)
@@ -696,7 +696,7 @@ int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>>& d
 				for (int j = 0; j < cnct.x; ++j)
 				{
 					int node_idx = cnct.n[j];
-					
+
 					int l = cnct.leftAdj(j); // 1-based index, logical
 					int r = cnct.rightAdj(j); // 1-based index, logical
 
@@ -726,12 +726,74 @@ int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>>& d
 
 int XF_MSH::computeTopology_nodeDependentFace(std::vector<std::vector<size_t>>& dst) const
 {
-	// TODO
+	// Check output array shape.
+	if (dst.size() != numOfNode())
+		return -1;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				auto cnct = curObj->connectivity(i - 1);
+				for (int j = 0; j < cnct.x; ++j)
+				{
+					int node_idx = cnct.n[j]; // 1-based
+					dst[node_idx - 1].push_back(i);
+				}
+			}
+		}
+	}
+
 	return 0;
 }
 
 int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>>& dst) const
 {
-	// TODO
+	// Check output array shape.
+	if (dst.size() != numOfNode())
+		return -1;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				auto cnct = curObj->connectivity(i - 1);
+				for (int j = 0; j < cnct.x; ++j)
+				{
+					int node_idx = cnct.n[j]; // 1-based
+					dst[node_idx - 1].push_back(cnct.c[0]);
+					dst[node_idx - 1].push_back(cnct.c[1]);
+				}
+			}
+		}
+	}
+
+	// Remove duplication
+	for (size_t i = 0; i < dst.size(); ++i)
+	{
+		std::set<size_t> st(dst[i].begin(), dst[i].end());
+		dst[i].assign(st.begin(), st.end());
+	}
+
 	return 0;
 }

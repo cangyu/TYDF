@@ -473,8 +473,8 @@ public:
 		std::vector<std::vector<size_t>> &nAdjN, // Adjacent nodes of each node.
 		std::vector<std::vector<size_t>> &nDepF, // Dependent faces of each node.
 		std::vector<std::vector<size_t>> &nDepC, // Dependent cells of each node.
-		std::vector<std::vector<size_t>> &fAdjC, // Adjacent cells of each face, the order of nodes follows right-hand convention.
 		std::vector<std::vector<size_t>> &fIncN, // Included nodes of each face, the order of nodes follows right-hand convention.
+		std::vector<std::vector<size_t>> &fAdjC, // Adjacent cells of each face, the order of nodes follows right-hand convention.
 		std::vector<double> &fArea, // Area of each face.
 		std::vector<bool> &fAtBdry, // If located at boundary of each face.
 		std::vector<std::vector<double>> &fCoord, // Coordinates of each face centre.

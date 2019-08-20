@@ -659,7 +659,7 @@ int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>>& d
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				auto cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - 1);
 				for (int j = 0; j < cnct.x; ++j)
 				{
 					int node_idx = cnct.n[j];
@@ -711,7 +711,7 @@ int XF_MSH::computeTopology_nodeDependentFace(std::vector<std::vector<size_t>>& 
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				auto cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - 1);
 				for (int j = 0; j < cnct.x; ++j)
 				{
 					int node_idx = cnct.n[j]; // 1-based
@@ -744,7 +744,7 @@ int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>>& 
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				auto cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - 1);
 				for (int j = 0; j < cnct.x; ++j)
 				{
 					int node_idx = cnct.n[j]; // 1-based
@@ -762,5 +762,107 @@ int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>>& 
 		dst[i].assign(st.begin(), st.end());
 	}
 
+	return 0;
+}
+
+int XF_MSH::computeTopology_faceIncludedNode(std::vector<std::vector<size_t>>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfFace())
+		return -1;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - 1);
+				dst[i - 1].assign(cnct.n, cnct.n + cnct.x); // Contents of dst[i-1] are 1-based, right-hand convention is preserved.
+			}
+		}
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfFace())
+		return -1;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - 1);
+				dst[i - 1].assign(cnct.c, cnct.c + 2); // Contents of dst[i-1] are 1-based for actual cell, 0 stands for boundary, right-hand convention is preserved.
+			}
+		}
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_faceArea(std::vector<double>& dst) const
+{
+	// TODO
+	return 0;
+}
+
+int XF_MSH::computeTopology_faceBoundaryFlag(std::vector<bool>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfFace())
+		return -1;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - 1);
+				if (cnct.c[0] == 0 || cnct.c[1] == 0)
+					dst[i - 1] = true;
+				else
+					dst[i - 1] = false;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_faceCenterCoordinates(std::vector<std::vector<double>>& dst) const
+{
+	// TODO
 	return 0;
 }

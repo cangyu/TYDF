@@ -501,8 +501,8 @@ public:
 		std::vector<std::vector<size_t>> &fIncN, // Included nodes of each face, the order of nodes follows right-hand convention.
 		std::vector<std::vector<size_t>> &fAdjC, // Adjacent cells of each face, the order of nodes follows right-hand convention.
 		std::vector<double> &fArea, // Area of each face.
-		std::vector<bool> &fAtBdry, // If located at boundary of each face.
-		std::vector<std::vector<double>> &fCoord, // Coordinates of each face centre.
+		std::vector<bool> &fBdryFlag, // If located at boundary of each face.
+		std::vector<std::vector<double>> &fCenCoord, // Coordinates of each face centre.
 		std::vector<std::vector<double>> &fUNLR, // Unit normal vector of each face, from c0/cl to c1/cr.
 		std::vector<std::vector<double>> &fUNRL, // Unit normal vector of each face, from c1/cr to c0/cl.
 		std::vector<std::vector<double>> &fNLR, // Normal vector of each face, from c0/cl to c1/cr, magnitude equals to face area.
@@ -535,6 +535,26 @@ public:
 			throw(ret);
 
 		ret = computeTopology_nodeDependentCell(nDepC);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_faceIncludedNode(fIncN);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_faceAdjacentCell(fAdjC);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_faceArea(fArea);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_faceBoundaryFlag(fBdryFlag);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_faceCenterCoordinates(fCenCoord);
 		if (!ret)
 			throw(ret);
 
@@ -589,6 +609,16 @@ private:
 	int computeTopology_nodeDependentFace(std::vector<std::vector<size_t>> &dst) const;
 
 	int computeTopology_nodeDependentCell(std::vector<std::vector<size_t>> &dst) const;
+
+	int computeTopology_faceIncludedNode(std::vector<std::vector<size_t>> &dst) const;
+
+	int computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>> &dst) const;
+
+	int computeTopology_faceArea(std::vector<double> &dst) const;
+
+	int computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const;
+
+	int computeTopology_faceCenterCoordinates(std::vector<std::vector<double>> &dst) const;
 };
 
 #endif

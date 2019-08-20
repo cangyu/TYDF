@@ -245,6 +245,18 @@ public:
 		return m_type == XF_NODE::ANY;
 	}
 
+	static double distancePnt2D(const std::vector<double> &na, const std::vector<double> &nb)
+	{
+		double ret = std::sqrt(std::pow(na[0] - nb[0], 2) + std::pow(na[1] - nb[1], 2));
+		return ret;
+	}
+
+	static double distancePnt3D(const std::vector<double> &na, const std::vector<double> &nb)
+	{
+		double ret = std::sqrt(std::pow(na[0] - nb[0], 2) + std::pow(na[1] - nb[1], 2) + std::pow(na[2] - nb[2], 2));
+		return ret;
+	}
+
 private:
 	size_t pnt_stx(size_t loc_idx) const
 	{
@@ -546,7 +558,7 @@ public:
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_faceArea(fArea);
+		ret = computeTopology_faceArea(nCoord, fArea);
 		if (!ret)
 			throw(ret);
 
@@ -614,7 +626,7 @@ private:
 
 	int computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_faceArea(std::vector<double> &dst) const;
+	int computeTopology_faceArea(const std::vector<std::vector<double>> &nCoord, std::vector<double> &dst) const;
 
 	int computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const;
 

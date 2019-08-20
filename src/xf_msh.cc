@@ -823,9 +823,52 @@ int XF_MSH::computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>>& d
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceArea(std::vector<double>& dst) const
+int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCoord, std::vector<double>& dst) const
 {
-	// TODO
+	// Check output array shape.
+	if (dst.size() != numOfFace())
+		return -1;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - 1);
+				if (cnct.x == XF_FACE::LINEAR)
+				{
+					size_t na_idx = cnct.n[0] - 1;
+					size_t nb_idx = cnct.n[1] - 1;
+					if (is3D())
+						dst[i - 1] = XF_NODE::distancePnt3D(nCoord[na_idx], nCoord[nb_idx]);
+					else
+						dst[i - 1] = XF_NODE::distancePnt2D(nCoord[na_idx], nCoord[nb_idx]);
+				}
+				else if (cnct.x == XF_FACE::TRIANGULAR)
+				{
+					// TODO
+				}
+				else if (cnct.x == XF_FACE::QUADRILATERAL)
+				{
+					// TODO
+				}
+				else if (cnct.x == XF_FACE::POLYGONAL)
+					throw("Not supported currently!");
+				else
+					throw("Internal error!");
+			}
+		}
+	}
+
 	return 0;
 }
 

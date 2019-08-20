@@ -1,29 +1,31 @@
 #include <iostream>
-#include <fstream>
 #include <cstddef>
-#include <cstdint>
-#include <string>
 #include "xf_msh.h"
 
 using namespace std;
 
-const string MESH_PATH("./fluent.msh");
-const string OUTPUT_PATH("./blessed.msh");
+const string INPUT_MESH_PATH("./fluent.msh");
+const string OUTPUT_MESH_PATH("./blessed.msh");
 
 XF_MSH msh;
 
 int main(int argc, char *argv[])
 {
-	cout << "Reading mesh: \"" << MESH_PATH << "\" ..." << endl;
+	int ret = 0;
 
-	int ret = msh.readFromFile(MESH_PATH);
-	
+	cout << "Reading mesh: \"" << INPUT_MESH_PATH << "\" ..." << endl;
+	ret = msh.readFromFile(INPUT_MESH_PATH);
 	if (!ret)
-		cout << "\"" << MESH_PATH << "\" read successfully!" << endl;
+		cout << "\"" << INPUT_MESH_PATH << "\" reading successfully!" << endl;
 	else
 		cout << "Failure: " << ret << endl;
 
-	ret = msh.writeToFile(OUTPUT_PATH);
+	cout << "Writing mesh: \"" << OUTPUT_MESH_PATH << "\" ..." << endl;
+	ret = msh.writeToFile(OUTPUT_MESH_PATH);
+	if (!ret)
+		cout << "\"" << OUTPUT_MESH_PATH << "\" writing successfully!" << endl;
+	else
+		cout << "Failure: " << ret << endl;
 
-    return 0;
+	return ret;
 }

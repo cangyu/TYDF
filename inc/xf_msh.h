@@ -443,13 +443,24 @@ private:
 	int m_dim;
 
 public:
-	XF_MSH() {}
+	XF_MSH() :
+		m_totalNodeNum(0),
+		m_totalCellNum(0),
+		m_totalFaceNum(0),
+		m_is3D(false),
+		m_dim(3),
+		m_content(0, nullptr)
+	{
+	}
 
 	~XF_MSH()
 	{
-		const size_t N = m_content.size();
-		for (size_t i = 0; i < N; ++i)
-			delete m_content[i];
+		if (!m_content.empty())
+		{
+			const size_t N = m_content.size();
+			for (size_t i = 0; i < N; ++i)
+				delete m_content[i];
+		}
 	}
 
 	int readFromFile(const std::string &src);

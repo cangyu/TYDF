@@ -547,7 +547,12 @@ int XF_MSH::readFromFile(const std::string & src)
 int XF_MSH::writeToFile(const std::string & dst) const
 {
 	std::ofstream fout(dst);
+	if (!fout)
+		return -1;
+
 	const size_t N = m_content.size();
+	if (!N)
+		return -2;
 
 	size_t i = 0;
 

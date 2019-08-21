@@ -311,12 +311,7 @@ public:
 	size_t c[2];
 
 public:
-	XF_CONNECTIVITY() :
-		x(1),
-		n{ 0, 0, 0, 0 },
-		c{ 0, 0 }
-	{
-	}
+	XF_CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
 
 	~XF_CONNECTIVITY() = default;
 
@@ -529,6 +524,31 @@ public:
 		if (!ret)
 			throw(ret);
 
+		ret = computeTopology_faceUnitNormalVector(nCoord, fUNLR);
+		if (!ret)
+			throw(ret);
+
+		if (is3D())
+		{
+			for (size_t i = 0; i < numOfFace(); ++i)
+				for (int j = 0; j < 3; ++j)
+				{
+					fUNRL[i][j] = -fUNLR[i][j];
+					fNRL[i][j] = fUNRL[i][j] * fArea[i];
+					fNLR[i][j] = fUNLR[i][j] * fArea[i];
+				}
+		}
+		else
+		{
+			for (size_t i = 0; i < numOfFace(); ++i)
+				for (int j = 0; j < 2; ++j)
+				{
+					fUNRL[i][j] = -fUNLR[i][j];
+					fNRL[i][j] = fUNRL[i][j] * fArea[i];
+					fNLR[i][j] = fUNLR[i][j] * fArea[i];
+				}
+		}
+
 		return ret;
 	}
 
@@ -590,6 +610,8 @@ private:
 	int computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const;
 
 	int computeTopology_faceCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const;
+
+	int computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const; // From left to right.
 };
 
 #endif

@@ -998,3 +998,10 @@ int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<
 
 	return 0;
 }
+
+int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>>& nCoord, std::vector<std::vector<double>>& dst) const
+{
+	// TODO
+
+	return 0;
+}

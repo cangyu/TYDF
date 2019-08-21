@@ -848,6 +848,7 @@ int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCo
 				{
 					size_t na_idx = cnct.n[0] - 1;
 					size_t nb_idx = cnct.n[1] - 1;
+
 					if (is3D())
 						dst[i - 1] = XF_NODE::distancePnt3D(nCoord[na_idx], nCoord[nb_idx]);
 					else
@@ -855,11 +856,34 @@ int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCo
 				}
 				else if (cnct.x == XF_FACE::TRIANGULAR)
 				{
-					// TODO
+					size_t na_idx = cnct.n[0] - 1;
+					size_t nb_idx = cnct.n[1] - 1;
+					size_t nc_idx = cnct.n[2] - 1;
+
+					if (is3D())
+						dst[i - 1] = XF_FACE::areaTriangle3D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
+					else
+						dst[i - 1] = XF_FACE::areaTriangle2D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
 				}
 				else if (cnct.x == XF_FACE::QUADRILATERAL)
 				{
-					// TODO
+					size_t na_idx = cnct.n[0] - 1;
+					size_t nb_idx = cnct.n[1] - 1;
+					size_t nc_idx = cnct.n[2] - 1;
+					size_t nd_idx = cnct.n[3] - 1;
+
+					if (is3D())
+					{
+						double part1 = XF_FACE::areaTriangle3D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
+						double part2 = XF_FACE::areaTriangle3D(nCoord[nc_idx], nCoord[nd_idx], nCoord[na_idx]);
+						dst[i - 1] = part1 + part2;
+					}
+					else
+					{
+						double part1 = XF_FACE::areaTriangle2D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
+						double part2 = XF_FACE::areaTriangle2D(nCoord[nc_idx], nCoord[nd_idx], nCoord[na_idx]);
+						dst[i - 1] = part1 + part2;
+					}
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
 					throw("Not supported currently!");

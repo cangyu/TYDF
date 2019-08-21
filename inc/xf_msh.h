@@ -422,6 +422,26 @@ public:
 	}
 
 	void repr(std::ostream &out);
+
+	static double areaTriangle2D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc)
+	{
+		double c = XF_NODE::distancePnt2D(na, nb);
+		double a = XF_NODE::distancePnt2D(nb, nc);
+		double b = XF_NODE::distancePnt2D(nc, na);
+		double s = 0.5*(a + b + c);
+		
+		return std::sqrt(s*(s - a)*(s - b)*(s - c));
+	}
+
+	static double areaTriangle3D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc)
+	{
+		double c = XF_NODE::distancePnt3D(na, nb);
+		double a = XF_NODE::distancePnt3D(nb, nc);
+		double b = XF_NODE::distancePnt3D(nc, na);
+		double s = 0.5*(a + b + c);
+
+		return std::sqrt(s*(s - a)*(s - b)*(s - c));
+	}
 };
 
 class XF_ZONE :public XF_SECTION

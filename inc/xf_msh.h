@@ -44,19 +44,13 @@ private:
 public:
 	enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
 
-	XF_SECTION(int id) :
-		m_identity(id)
-	{
-	}
+	XF_SECTION(int id) : m_identity(id) {}
 
 	virtual ~XF_SECTION() = default;
 
 	virtual void repr(std::ostream &out) = 0;
 
-	int identity() const
-	{
-		return m_identity;
-	}
+	int identity() const { return m_identity; }
 };
 
 class XF_COMMENT : public XF_SECTION
@@ -65,18 +59,11 @@ private:
 	std::string m_info;
 
 public:
-	XF_COMMENT(const std::string &info) :
-		XF_SECTION(XF_SECTION::COMMENT),
-		m_info(info)
-	{
-	}
+	XF_COMMENT(const std::string &info) : XF_SECTION(XF_SECTION::COMMENT), m_info(info) {}
 
 	~XF_COMMENT() = default;
 
-	const std::string &str() const
-	{
-		return m_info;
-	}
+	const std::string &str() const { return m_info; }
 
 	void repr(std::ostream &out)
 	{
@@ -90,18 +77,11 @@ private:
 	std::string m_msg;
 
 public:
-	XF_HEADER(const std::string &msg) :
-		XF_SECTION(XF_SECTION::HEADER),
-		m_msg(msg)
-	{
-	}
+	XF_HEADER(const std::string &msg) : XF_SECTION(XF_SECTION::HEADER), m_msg(msg) {}
 
 	~XF_HEADER() = default;
 
-	const std::string &str() const
-	{
-		return m_msg;
-	}
+	const std::string &str() const { return m_msg; }
 
 	void repr(std::ostream &out)
 	{
@@ -131,15 +111,9 @@ public:
 
 	~XF_DIMENSION() = default;
 
-	int ND() const
-	{
-		return m_dim;
-	}
+	int ND() const { return m_dim; }
 
-	bool is3D() const
-	{
-		return m_is3D;
-	}
+	bool is3D() const { return m_is3D; }
 
 	void repr(std::ostream &out)
 	{
@@ -166,25 +140,13 @@ public:
 
 	virtual ~XF_MAIN_RECORD() = default;
 
-	int zone() const
-	{
-		return m_zone;
-	}
+	int zone() const { return m_zone; }
 
-	int first_index() const
-	{
-		return m_first;
-	}
+	int first_index() const { return m_first; }
 
-	int last_index() const
-	{
-		return m_last;
-	}
+	int last_index() const { return m_last; }
 
-	int num() const
-	{
-		return (m_last - m_first + 1);
-	}
+	int num() const { return (m_last - m_first + 1); }
 };
 
 class XF_NODE :public XF_MAIN_RECORD
@@ -202,20 +164,11 @@ public:
 
 	~XF_NODE() = default;
 
-	int type() const
-	{
-		return m_type;
-	}
+	int type() const { return m_type; }
 
-	int ND() const
-	{
-		return m_dim;
-	}
+	int ND() const { return m_dim; }
 
-	bool is3D() const
-	{
-		return m_is3D;
-	}
+	bool is3D() const { return m_is3D; }
 
 	void get_node_coordinate(size_t loc_idx, std::vector<double> &dst) const
 	{
@@ -230,38 +183,63 @@ public:
 
 	void repr(std::ostream &out);
 
-	bool is_virtual_node() const
-	{
-		return m_type == XF_NODE::VIRTUAL;
-	}
+	bool is_virtual_node() const { return m_type == XF_NODE::VIRTUAL; }
 
-	bool is_boundary_node() const
-	{
-		return m_type == XF_NODE::BOUNDARY;
-	}
+	bool is_boundary_node() const { return m_type == XF_NODE::BOUNDARY; }
 
-	bool is_internal_node() const
-	{
-		return m_type == XF_NODE::ANY;
-	}
+	bool is_internal_node() const { return m_type == XF_NODE::ANY; }
 
 	static double distancePnt2D(const std::vector<double> &na, const std::vector<double> &nb)
 	{
-		double ret = std::sqrt(std::pow(na[0] - nb[0], 2) + std::pow(na[1] - nb[1], 2));
-		return ret;
+		return std::sqrt(std::pow(na[0] - nb[0], 2) + std::pow(na[1] - nb[1], 2));
 	}
 
 	static double distancePnt3D(const std::vector<double> &na, const std::vector<double> &nb)
 	{
-		double ret = std::sqrt(std::pow(na[0] - nb[0], 2) + std::pow(na[1] - nb[1], 2) + std::pow(na[2] - nb[2], 2));
-		return ret;
+		return std::sqrt(std::pow(na[0] - nb[0], 2) + std::pow(na[1] - nb[1], 2) + std::pow(na[2] - nb[2], 2));
+	}
+
+	static void middleNode2D(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+	{
+		dst[0] = 0.5*(na[0] + nb[0]);
+		dst[1] = 0.5*(na[1] + nb[1]);
+	}
+
+	static void middleNode3D(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+	{
+		dst[0] = 0.5*(na[0] + nb[0]);
+		dst[1] = 0.5*(na[1] + nb[1]);
+		dst[2] = 0.5*(na[2] + nb[2]);
+	}
+
+	static void middleNode2D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, std::vector<double> &dst)
+	{
+		dst[0] = (na[0] + nb[0] + nc[0]) / 3.0;
+		dst[1] = (na[1] + nb[1] + nc[1]) / 3.0;
+	}
+
+	static void middleNode3D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, std::vector<double> &dst)
+	{
+		dst[0] = (na[0] + nb[0] + nc[0]) / 3.0;
+		dst[1] = (na[1] + nb[1] + nc[1]) / 3.0;
+		dst[2] = (na[2] + nb[2] + nc[2]) / 3.0;
+	}
+
+	static void middleNode2D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, const std::vector<double> &nd, std::vector<double> &dst)
+	{
+		dst[0] = 0.25*(na[0] + nb[0] + nc[0] + nd[0]);
+		dst[1] = 0.25*(na[1] + nb[1] + nc[1] + nd[1]);
+	}
+
+	static void middleNode3D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, const std::vector<double> &nd, std::vector<double> &dst)
+	{
+		dst[0] = 0.25*(na[0] + nb[0] + nc[0] + nd[0]);
+		dst[1] = 0.25*(na[1] + nb[1] + nc[1] + nd[1]);
+		dst[2] = 0.25*(na[2] + nb[2] + nc[2] + nd[2]);
 	}
 
 private:
-	size_t pnt_stx(size_t loc_idx) const
-	{
-		return loc_idx * m_dim;
-	}
+	size_t pnt_stx(size_t loc_idx) const { return loc_idx * m_dim; }
 };
 
 class XF_CELL :public XF_MAIN_RECORD
@@ -280,25 +258,13 @@ public:
 
 	~XF_CELL() = default;
 
-	int type() const
-	{
-		return m_type;
-	}
+	int type() const { return m_type; }
 
-	int element_type() const
-	{
-		return m_elem;
-	}
+	int element_type() const { return m_elem; }
 
-	int elem(size_t loc_idx) const
-	{
-		return m_mixedElemDesc[loc_idx];
-	}
+	int elem(size_t loc_idx) const { return m_mixedElemDesc[loc_idx]; }
 
-	int &elem(size_t loc_idx)
-	{
-		return m_mixedElemDesc[loc_idx];
-	}
+	int &elem(size_t loc_idx) { return m_mixedElemDesc[loc_idx]; }
 
 	void repr(std::ostream &out);
 
@@ -401,25 +367,13 @@ public:
 
 	~XF_FACE() = default;
 
-	int bc_type() const
-	{
-		return m_bc;
-	}
+	int bc_type() const { return m_bc; }
 
-	int face_type() const
-	{
-		return m_face;
-	}
+	int face_type() const { return m_face; }
 
-	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const
-	{
-		return m_connectivity[loc_idx];
-	}
+	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const { return m_connectivity[loc_idx]; }
 
-	XF_CONNECTIVITY &connectivity(size_t loc_idx)
-	{
-		return m_connectivity[loc_idx];
-	}
+	XF_CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity[loc_idx]; }
 
 	void repr(std::ostream &out);
 
@@ -429,7 +383,7 @@ public:
 		double a = XF_NODE::distancePnt2D(nb, nc);
 		double b = XF_NODE::distancePnt2D(nc, na);
 		double s = 0.5*(a + b + c);
-		
+
 		return std::sqrt(s*(s - a)*(s - b)*(s - c));
 	}
 
@@ -499,30 +453,15 @@ public:
 
 	int writeToFile(const std::string &dst) const;
 
-	bool is3D() const
-	{
-		return m_is3D;
-	}
+	bool is3D() const { return m_is3D; }
 
-	int dimension() const
-	{
-		return m_dim;
-	}
+	int dimension() const { return m_dim; }
 
-	size_t numOfNode() const
-	{
-		return m_totalNodeNum;
-	}
+	size_t numOfNode() const { return m_totalNodeNum; }
 
-	size_t numOfFace() const
-	{
-		return m_totalFaceNum;
-	}
+	size_t numOfFace() const { return m_totalFaceNum; }
 
-	size_t numOfCell() const
-	{
-		return m_totalCellNum;
-	}
+	size_t numOfCell() const { return m_totalCellNum; }
 
 	int computeTopology(
 		std::vector<std::vector<double>> &nCoord, // Coordinates of each node.
@@ -586,7 +525,7 @@ public:
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_faceCenterCoordinates(fCenCoord);
+		ret = computeTopology_faceCenterCoordinates(nCoord, fCenCoord);
 		if (!ret)
 			throw(ret);
 
@@ -650,7 +589,7 @@ private:
 
 	int computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const;
 
-	int computeTopology_faceCenterCoordinates(std::vector<std::vector<double>> &dst) const;
+	int computeTopology_faceCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const;
 };
 
 #endif

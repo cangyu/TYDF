@@ -550,9 +550,12 @@ int XF_MSH::writeToFile(const std::string & dst) const
 	if (!fout)
 		return -1;
 
+	if (!numOfCell() || !numOfFace() || !numOfNode())
+		return -2;
+
 	const size_t N = m_content.size();
 	if (!N)
-		return -2;
+		return -3;
 
 	size_t i = 0;
 
@@ -583,6 +586,7 @@ int XF_MSH::writeToFile(const std::string & dst) const
 
 	// Finalize
 	fout.close();
+
 	return 0;
 }
 
@@ -928,8 +932,69 @@ int XF_MSH::computeTopology_faceBoundaryFlag(std::vector<bool>& dst) const
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceCenterCoordinates(std::vector<std::vector<double>>& dst) const
+int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>>& dst) const
 {
-	// TODO
+	// Check output array shape.
+	if (dst.size() != numOfFace())
+		return -1;
+	if (dst[0].size() != dimension())
+		return -2;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - 1);
+				if (cnct.x == XF_FACE::LINEAR)
+				{
+					size_t na_idx = cnct.n[0] - 1;
+					size_t nb_idx = cnct.n[1] - 1;
+
+					if (is3D())
+						XF_NODE::middleNode3D(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
+					else
+						XF_NODE::middleNode2D(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
+				}
+				else if (cnct.x == XF_FACE::TRIANGULAR)
+				{
+					size_t na_idx = cnct.n[0] - 1;
+					size_t nb_idx = cnct.n[1] - 1;
+					size_t nc_idx = cnct.n[2] - 1;
+
+					if (is3D())
+						XF_NODE::middleNode3D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], dst[i - 1]);
+					else
+						XF_NODE::middleNode2D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], dst[i - 1]);
+				}
+				else if (cnct.x == XF_FACE::QUADRILATERAL)
+				{
+					size_t na_idx = cnct.n[0] - 1;
+					size_t nb_idx = cnct.n[1] - 1;
+					size_t nc_idx = cnct.n[2] - 1;
+					size_t nd_idx = cnct.n[3] - 1;
+
+					if (is3D())
+						XF_NODE::middleNode3D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], nCoord[nd_idx], dst[i - 1]);
+					else
+						XF_NODE::middleNode2D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], nCoord[nd_idx], dst[i - 1]);
+				}
+				else if (cnct.x == XF_FACE::POLYGONAL)
+					throw("Not supported currently!");
+				else
+					throw("Internal error!");
+			}
+		}
+	}
+
 	return 0;
 }

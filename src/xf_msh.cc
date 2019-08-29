@@ -1,68 +1,5 @@
 #include "xf_msh.h"
 
-XF_NODE::XF_NODE(int zone, int first, int last, int type, int ND) :
-	XF_MAIN_RECORD(XF_SECTION::NODE, zone, first, last)
-{
-	if (type == 0)
-		m_type = XF_NODE::VIRTUAL;
-	else if (type == 1)
-		m_type = XF_NODE::ANY;
-	else if (type == 2)
-		m_type = XF_NODE::BOUNDARY;
-	else
-		throw("Invalid description of node type!");
-
-	if (ND == 2)
-		m_is3D = false;
-	else if (ND == 3)
-		m_is3D = true;
-	else
-		throw("Invalid specification of node dimension!");
-	m_dim = ND;
-
-	m_node.resize(ND * num());
-	std::fill(m_node.begin(), m_node.end(), 0.0);
-}
-
-void XF_NODE::set_node_coordinate(size_t loc_idx, double x0, double x1, double x2)
-{
-	const size_t stx = loc_idx * 3;
-
-	m_node[stx] = x0;
-	m_node[stx + 1] = x1;
-	m_node[stx + 2] = x2;
-}
-
-void XF_NODE::set_node_coordinate(size_t loc_idx, double x0, double x1)
-{
-	const size_t stx = loc_idx * 2;
-
-	m_node[stx] = x0;
-	m_node[stx + 1] = x1;
-}
-
-void XF_NODE::repr(std::ostream & out)
-{
-	const int n_dim = ND();
-	const int N = num();
-
-	out << "(" << std::dec << identity();
-	out << " (" << std::hex << zone() << " " << first_index() << " " << last_index() << " ";
-	out << std::dec << type() << " " << n_dim << ")(" << std::endl;
-
-	size_t loc_idx = 0;
-	out.precision(12);
-	for (int i = 0; i < N; ++i)
-	{
-		for (int k = 0; k < n_dim; ++k)
-			out << " " << m_node[loc_idx + k];
-		out << std::endl;
-		loc_idx += n_dim;
-	}
-
-	out << "))" << std::endl;
-}
-
 XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
 	XF_MAIN_RECORD(XF_SECTION::CELL, zone, first, last)
 {
@@ -355,7 +292,7 @@ int XF_MSH::readFromFile(const std::string & src)
 					{
 						size_t i_loc = i - first;
 						fin >> x >> y >> z;
-						e->set_node_coordinate(i_loc, x, y, z);
+						e->set_coordinate(i_loc, x, y, z);
 					}
 				}
 				else
@@ -365,7 +302,7 @@ int XF_MSH::readFromFile(const std::string & src)
 					{
 						size_t i_loc = i - first;
 						fin >> x >> y;
-						e->set_node_coordinate(i_loc, x, y);
+						e->set_coordinate(i_loc, x, y);
 					}
 				}
 				eat(fin, ')');
@@ -610,7 +547,7 @@ int XF_MSH::computeTopology_nodeCoordinates(std::vector<std::vector<double>>& ds
 			const int cur_last = curObj->last_index(); // 1-based index, logical
 
 			for (int i = cur_first; i <= cur_last; ++i)
-				curObj->get_node_coordinate(i, dst[i - 1]); // 0-based index in storage
+				curObj->get_coordinate(i, dst[i - 1]); // 0-based index in storage
 		}
 	}
 
@@ -1009,9 +946,9 @@ int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<d
 					// Rotate 90 deg in 2D plane.
 					// Surface mesh not supported currently.
 					double tmp_x = dst[i - 1][0];
-					dst[i-1][0] = dst[i - 1][1];
+					dst[i - 1][0] = dst[i - 1][1];
 					dst[i - 1][1] = -tmp_x;
-					
+
 					// Normalize
 					XF_NODE::normalize(dst[i - 1], dst[i - 1]);
 				}

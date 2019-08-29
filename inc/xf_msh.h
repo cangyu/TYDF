@@ -189,53 +189,71 @@ public:
 
 	bool is_internal_node() const { return m_type == XF_NODE::ANY; }
 
-	static double distancePnt2D(const std::vector<double> &na, const std::vector<double> &nb)
+	static double dot_product(const std::vector<double> &na, const std::vector<double> &nb)
 	{
-		return std::sqrt(std::pow(na[0] - nb[0], 2) + std::pow(na[1] - nb[1], 2));
+		const size_t ND = na.size();
+		double ret = 0.0;
+		for (size_t i = 0; i < ND; ++i)
+			ret += na[i] * nb[i];
+		return ret;
 	}
 
-	static double distancePnt3D(const std::vector<double> &na, const std::vector<double> &nb)
+	static void cross_product(const std::vector<double> &a, const std::vector<double> &b, std::vector<double> &dst)
 	{
-		return std::sqrt(std::pow(na[0] - nb[0], 2) + std::pow(na[1] - nb[1], 2) + std::pow(na[2] - nb[2], 2));
+		dst[0] = a[1] * b[2] - a[2] * b[1];
+		dst[1] = a[2] * b[0] - a[0] * b[2];
+		dst[2] = a[0] * b[1] - a[1] * b[0];
 	}
 
-	static void middleNode2D(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+	static void delta(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
 	{
-		dst[0] = 0.5*(na[0] + nb[0]);
-		dst[1] = 0.5*(na[1] + nb[1]);
+		const size_t ND = dst.size();
+		for (size_t i = 0; i < ND; ++i)
+			dst[i] = nb[i] - na[i];
 	}
 
-	static void middleNode3D(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+	static void normalize(const std::vector<double> &src, std::vector<double> &dst)
 	{
-		dst[0] = 0.5*(na[0] + nb[0]);
-		dst[1] = 0.5*(na[1] + nb[1]);
-		dst[2] = 0.5*(na[2] + nb[2]);
+		const size_t ND = dst.size();
+		double L = 0.0;
+		for (size_t i = 0; i < ND; ++i)
+			L += src[i] * src[i];
+		L = std::sqrt(L);
+		for (size_t i = 0; i < ND; ++i)
+			dst[i] = src[i] / L;
 	}
 
-	static void middleNode2D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, std::vector<double> &dst)
+	static double distance(const std::vector<double> &na, const std::vector<double> &nb)
 	{
-		dst[0] = (na[0] + nb[0] + nc[0]) / 3.0;
-		dst[1] = (na[1] + nb[1] + nc[1]) / 3.0;
+		const size_t ND = na.size();
+		double L = 0.0;
+		for (size_t i = 0; i < ND; ++i)
+		{
+			double di = nb[i] - na[i];
+			L += di * di;
+		}
+		return std::sqrt(L);
 	}
 
-	static void middleNode3D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, std::vector<double> &dst)
+	static void middle(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
 	{
-		dst[0] = (na[0] + nb[0] + nc[0]) / 3.0;
-		dst[1] = (na[1] + nb[1] + nc[1]) / 3.0;
-		dst[2] = (na[2] + nb[2] + nc[2]) / 3.0;
+		const size_t ND = dst.size();
+		for (size_t i = 0; i < ND; ++i)
+			dst[i] = 0.5*(na[i] + nb[i]);
 	}
 
-	static void middleNode2D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, const std::vector<double> &nd, std::vector<double> &dst)
+	static void middle(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, std::vector<double> &dst)
 	{
-		dst[0] = 0.25*(na[0] + nb[0] + nc[0] + nd[0]);
-		dst[1] = 0.25*(na[1] + nb[1] + nc[1] + nd[1]);
+		const size_t ND = dst.size();
+		for (size_t i = 0; i < ND; ++i)
+			dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
 	}
 
-	static void middleNode3D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, const std::vector<double> &nd, std::vector<double> &dst)
+	static void middle(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, const std::vector<double> &nd, std::vector<double> &dst)
 	{
-		dst[0] = 0.25*(na[0] + nb[0] + nc[0] + nd[0]);
-		dst[1] = 0.25*(na[1] + nb[1] + nc[1] + nd[1]);
-		dst[2] = 0.25*(na[2] + nb[2] + nc[2] + nd[2]);
+		const size_t ND = dst.size();
+		for (size_t i = 0; i < ND; ++i)
+			dst[i] = 0.25*(na[i] + nb[i] + nc[i] + nd[i]);
 	}
 
 private:
@@ -372,21 +390,11 @@ public:
 
 	void repr(std::ostream &out);
 
-	static double areaTriangle2D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc)
+	static double areaTriangle(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc)
 	{
-		double c = XF_NODE::distancePnt2D(na, nb);
-		double a = XF_NODE::distancePnt2D(nb, nc);
-		double b = XF_NODE::distancePnt2D(nc, na);
-		double s = 0.5*(a + b + c);
-
-		return std::sqrt(s*(s - a)*(s - b)*(s - c));
-	}
-
-	static double areaTriangle3D(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc)
-	{
-		double c = XF_NODE::distancePnt3D(na, nb);
-		double a = XF_NODE::distancePnt3D(nb, nc);
-		double b = XF_NODE::distancePnt3D(nc, na);
+		double c = XF_NODE::distance(na, nb);
+		double a = XF_NODE::distance(nb, nc);
+		double b = XF_NODE::distance(nc, na);
 		double s = 0.5*(a + b + c);
 
 		return std::sqrt(s*(s - a)*(s - b)*(s - c));
@@ -473,7 +481,7 @@ public:
 		std::vector<std::vector<double>> &fUNRL, // Unit normal vector of each face, from c1/cr to c0/cl.
 		std::vector<std::vector<double>> &fNLR, // Normal vector of each face, from c0/cl to c1/cr, magnitude equals to face area.
 		std::vector<std::vector<double>> &fNRL, // Normal vector of each face, from c1/cr to c0/cl, magnitude equals to face area.
-		std::vector<std::vector<double>> &cCoord, // Coordinates of each cell centre.
+		std::vector<std::vector<double>> &cCenCoord, // Coordinates of each cell centre.
 		std::vector<double> &cVol, // Volumn of each face.
 		std::vector<std::vector<size_t>> &cIncN, // Included nodes of each cell.
 		std::vector<std::vector<size_t>> &cIncF, // Included faces of each cell.
@@ -612,6 +620,10 @@ private:
 	int computeTopology_faceCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const;
 
 	int computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const; // From left to right.
+
+	int computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const;
+
+	int computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, std::vector<double> &dst) const;
 };
 
 #endif

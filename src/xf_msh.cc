@@ -853,10 +853,7 @@ int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCo
 					size_t na_idx = cnct.n[0] - 1;
 					size_t nb_idx = cnct.n[1] - 1;
 
-					if (is3D())
-						dst[i - 1] = XF_NODE::distancePnt3D(nCoord[na_idx], nCoord[nb_idx]);
-					else
-						dst[i - 1] = XF_NODE::distancePnt2D(nCoord[na_idx], nCoord[nb_idx]);
+					dst[i - 1] = XF_NODE::distance(nCoord[na_idx], nCoord[nb_idx]);
 				}
 				else if (cnct.x == XF_FACE::TRIANGULAR)
 				{
@@ -864,10 +861,7 @@ int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCo
 					size_t nb_idx = cnct.n[1] - 1;
 					size_t nc_idx = cnct.n[2] - 1;
 
-					if (is3D())
-						dst[i - 1] = XF_FACE::areaTriangle3D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
-					else
-						dst[i - 1] = XF_FACE::areaTriangle2D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
+					dst[i - 1] = XF_FACE::areaTriangle(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
 				}
 				else if (cnct.x == XF_FACE::QUADRILATERAL)
 				{
@@ -876,18 +870,9 @@ int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCo
 					size_t nc_idx = cnct.n[2] - 1;
 					size_t nd_idx = cnct.n[3] - 1;
 
-					if (is3D())
-					{
-						double part1 = XF_FACE::areaTriangle3D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
-						double part2 = XF_FACE::areaTriangle3D(nCoord[nc_idx], nCoord[nd_idx], nCoord[na_idx]);
-						dst[i - 1] = part1 + part2;
-					}
-					else
-					{
-						double part1 = XF_FACE::areaTriangle2D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
-						double part2 = XF_FACE::areaTriangle2D(nCoord[nc_idx], nCoord[nd_idx], nCoord[na_idx]);
-						dst[i - 1] = part1 + part2;
-					}
+					double part1 = XF_FACE::areaTriangle(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
+					double part2 = XF_FACE::areaTriangle(nCoord[nc_idx], nCoord[nd_idx], nCoord[na_idx]);
+					dst[i - 1] = part1 + part2;
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
 					throw("Not supported currently!");
@@ -954,16 +939,13 @@ int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				const auto &cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - cur_first); // Local 0-based indexing
 				if (cnct.x == XF_FACE::LINEAR)
 				{
 					size_t na_idx = cnct.n[0] - 1;
 					size_t nb_idx = cnct.n[1] - 1;
 
-					if (is3D())
-						XF_NODE::middleNode3D(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
-					else
-						XF_NODE::middleNode2D(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
+					XF_NODE::middle(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::TRIANGULAR)
 				{
@@ -971,10 +953,7 @@ int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<
 					size_t nb_idx = cnct.n[1] - 1;
 					size_t nc_idx = cnct.n[2] - 1;
 
-					if (is3D())
-						XF_NODE::middleNode3D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], dst[i - 1]);
-					else
-						XF_NODE::middleNode2D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], dst[i - 1]);
+					XF_NODE::middle(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::QUADRILATERAL)
 				{
@@ -983,10 +962,7 @@ int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<
 					size_t nc_idx = cnct.n[2] - 1;
 					size_t nd_idx = cnct.n[3] - 1;
 
-					if (is3D())
-						XF_NODE::middleNode3D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], nCoord[nd_idx], dst[i - 1]);
-					else
-						XF_NODE::middleNode2D(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], nCoord[nd_idx], dst[i - 1]);
+					XF_NODE::middle(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], nCoord[nd_idx], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
 					throw("Not supported currently!");
@@ -1001,7 +977,135 @@ int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<
 
 int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>>& nCoord, std::vector<std::vector<double>>& dst) const
 {
-	// TODO
+	// Check output array shape.
+	if (dst.size() != numOfFace())
+		return -1;
+	if (dst[0].size() != dimension())
+		return -2;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - cur_first); // Local 0-based indexing
+				if (cnct.x == XF_FACE::LINEAR)
+				{
+					size_t na_idx = cnct.n[0] - 1; // Global 0-based indexing
+					size_t nb_idx = cnct.n[1] - 1; // Global 0-based indexing
+
+					// Delta vector
+					XF_NODE::delta(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
+
+					// Rotate 90 deg in 2D plane.
+					// Surface mesh not supported currently.
+					double tmp_x = dst[i - 1][0];
+					dst[i-1][0] = dst[i - 1][1];
+					dst[i - 1][1] = -tmp_x;
+					
+					// Normalize
+					XF_NODE::normalize(dst[i - 1], dst[i - 1]);
+				}
+				else if (cnct.x == XF_FACE::TRIANGULAR)
+				{
+					size_t na_idx = cnct.n[0] - 1;
+					size_t nb_idx = cnct.n[1] - 1;
+					size_t nc_idx = cnct.n[2] - 1;
+
+					// Delta vectors
+					auto origin(nCoord[na_idx]);
+					auto r1(nCoord[nb_idx]), r2(nCoord[nc_idx]);
+					XF_NODE::delta(origin, r1, r1);
+					XF_NODE::delta(origin, r2, r2);
+
+					// Cross product to find normal direction
+					XF_NODE::cross_product(r2, r1, dst[i - 1]);
+
+					// Normalize
+					XF_NODE::normalize(dst[i - 1], dst[i - 1]);
+
+				}
+				else if (cnct.x == XF_FACE::QUADRILATERAL)
+				{
+					size_t na_idx = cnct.n[0] - 1;
+					size_t nb_idx = cnct.n[1] - 1;
+					size_t nc_idx = cnct.n[2] - 1;
+					size_t nd_idx = cnct.n[3] - 1;
+
+					// Delta vectors
+					auto origin(nCoord[na_idx]), r0(nCoord[nc_idx]), r1(nCoord[nb_idx]), r2(nCoord[nd_idx]);
+					XF_NODE::delta(origin, r0, r0);
+					XF_NODE::delta(origin, r1, r1);
+					XF_NODE::delta(origin, r2, r2);
+
+					// Cross product to find normal direction
+					XF_NODE::cross_product(r0, r1, origin);
+					XF_NODE::cross_product(r2, r0, dst[i - 1]);
+
+					// Normalize
+					XF_NODE::normalize(origin, origin);
+					XF_NODE::normalize(dst[i - 1], dst[i - 1]);
+
+					// Average
+					for (size_t j = 0; j < 3; j++)
+						dst[i - 1][j] = 0.5 * (dst[i - 1][j] + origin[j]);
+				}
+				else if (cnct.x == XF_FACE::POLYGONAL)
+					throw("Not supported currently!");
+				else
+					throw("Internal error!");
+			}
+		}
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>>& nCoord, std::vector<std::vector<double>>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfCell())
+		return -1;
+	if (dst[0].size() != dimension())
+		return -2;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::CELL)
+		{
+			auto curObj = dynamic_cast<XF_CELL*>(curPtr);
+
+			// Cell index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+
+			}
+
+		}
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_cellVolume(const std::vector<std::vector<double>>& nCoord, std::vector<double>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfCell())
+		return -1;
 
 	return 0;
 }

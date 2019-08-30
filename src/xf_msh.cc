@@ -1007,6 +1007,76 @@ int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<d
 	return 0;
 }
 
+int XF_MSH::computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfCell())
+		return -1;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - cur_first); // Local 0-based indexing
+				auto ccl = cnct.cl(), ccr = cnct.cr(); // 1-based cell index
+				if (ccl != 0)
+				{
+					for (int j = 0; j < cnct.x; ++j)
+						dst[ccl - 1].push_back(cnct.n[j]); // Logital 1-based node index
+				}
+				if (ccr != 0)
+				{
+					for (int j = 0; j < cnct.x; ++j)
+						dst[ccr - 1].push_back(cnct.n[j]); // Logital 1-based node index
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>>& dst) const
+{
+	// Check output array shape.
+	if (dst.size() != numOfCell())
+		return -1;
+
+	// Parse related entries.
+	for (size_t r = 0; r < m_content.size(); ++r)
+	{
+		auto curPtr = m_content[r];
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// Face index, 1-based
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - cur_first); // Local 0-based indexing
+				auto ccl = cnct.cl(), ccr = cnct.cr(); // 1-based cell index
+				if (ccl != 0)
+					dst[ccl - 1].push_back(i); // Logital 1-based face index
+				if (ccr != 0)
+					dst[ccr - 1].push_back(i); // Logital 1-based face index
+			}
+		}
+	}
+}
+
 int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>>& nCoord, std::vector<std::vector<double>>& dst) const
 {
 	// Check output array shape.

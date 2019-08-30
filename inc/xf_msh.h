@@ -379,14 +379,22 @@ public:
 class XF_CONNECTIVITY
 {
 public:
-	int x;
-	size_t n[4];
+	int x; // Length of n
+	size_t n[4]; 
 	size_t c[2];
 
 public:
 	XF_CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
 
 	~XF_CONNECTIVITY() = default;
+
+	size_t cl() const { return c[0]; }
+
+	size_t cr() const { return c[1]; }
+
+	size_t c0() const { return c[0]; }
+
+	size_t c1() const { return c[1]; }
 
 	void set(int x, size_t *n, size_t *c)
 	{
@@ -612,6 +620,22 @@ public:
 				}
 		}
 
+		ret = computeTopology_cellIncludedNodes(cIncN);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_cellIncludedFaces(cIncF);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_cellCenterCoordinates(nCoord, cCenCoord);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_cellVolume(nCoord, cVol);
+		if (!ret)
+			throw(ret);
+
 		return ret;
 	}
 
@@ -675,6 +699,10 @@ private:
 	int computeTopology_faceCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const;
 
 	int computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const; // From left to right.
+
+	int computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>> &cIncN) const;
+
+	int computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &cIncF) const;
 
 	int computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const;
 

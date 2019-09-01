@@ -1091,27 +1091,27 @@ int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<
 	for (size_t i = 0; i < numOfCell(); ++i)
 	{
 		const auto &cnl = cIncN[i];
-		if (cnl.size() == 3)
+		if (cnl.size() == 3) // 三角形
 		{
 			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1; // Convert 1-based to 0-based.
 			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], dst[i]);
 		}
-		else if (cnl.size() == 4)
+		else if (cnl.size() == 4) // 四边形 或 四面体
 		{
 			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1; // Convert 1-based to 0-based.
 			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], dst[i]);
 		}
-		else if (cnl.size() == 5)
+		else if (cnl.size() == 5) // 四角锥
 		{
 			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1; // Convert 1-based to 0-based.
 			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], dst[i]);
 		}
-		else if (cnl.size() == 6)
+		else if (cnl.size() == 6) // 三棱柱
 		{
 			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1; // Convert 1-based to 0-based.
 			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], dst[i]);
 		}
-		else if (cnl.size() == 8)
+		else if (cnl.size() == 8) // 六面体
 		{
 			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1, n6 = cnl[6] - 1, n7 = cnl[7] - 1; // Convert 1-based to 0-based.
 			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], nCoord[n6], nCoord[n7], dst[i]);

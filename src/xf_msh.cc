@@ -1075,9 +1075,11 @@ int XF_MSH::computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>>& 
 			}
 		}
 	}
+
+	return 0;
 }
 
-int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>>& nCoord, std::vector<std::vector<double>>& dst) const
+int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>>& nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>>& dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfCell())
@@ -1085,24 +1087,37 @@ int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<
 	if (dst[0].size() != dimension())
 		return -2;
 
-	// Parse related entries.
-	for (size_t r = 0; r < m_content.size(); ++r)
+	// Average vertexs of each cell
+	for (size_t i = 0; i < numOfCell(); ++i)
 	{
-		auto curPtr = m_content[r];
-		if (curPtr->identity() == XF_SECTION::CELL)
+		const auto &cnl = cIncN[i];
+		if (cnl.size() == 3)
 		{
-			auto curObj = dynamic_cast<XF_CELL*>(curPtr);
-
-			// Cell index, 1-based
-			const int cur_first = curObj->first_index();
-			const int cur_last = curObj->last_index();
-
-			for (int i = cur_first; i <= cur_last; ++i)
-			{
-
-			}
-
+			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1; // Convert 1-based to 0-based.
+			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], dst[i]);
 		}
+		else if (cnl.size() == 4)
+		{
+			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1; // Convert 1-based to 0-based.
+			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], dst[i]);
+		}
+		else if (cnl.size() == 5)
+		{
+			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1; // Convert 1-based to 0-based.
+			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], dst[i]);
+		}
+		else if (cnl.size() == 6)
+		{
+			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1; // Convert 1-based to 0-based.
+			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], dst[i]);
+		}
+		else if (cnl.size() == 8)
+		{
+			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1, n6 = cnl[6] - 1, n7 = cnl[7] - 1; // Convert 1-based to 0-based.
+			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], nCoord[n6], nCoord[n7], dst[i]);
+		}
+		else
+			throw("Invalid num of cell nodes.");
 	}
 
 	return 0;

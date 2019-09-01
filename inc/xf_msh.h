@@ -290,26 +290,88 @@ public:
 		return std::sqrt(L);
 	}
 
-	static void middle(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+	static void middle(
+		const std::vector<double> &na,
+		const std::vector<double> &nb,
+		std::vector<double> &dst
+	)
 	{
 		const size_t ND = dst.size();
 		for (size_t i = 0; i < ND; ++i)
 			dst[i] = 0.5*(na[i] + nb[i]);
 	}
 
-	static void middle(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, std::vector<double> &dst)
+	static void middle(
+		const std::vector<double> &na,
+		const std::vector<double> &nb,
+		const std::vector<double> &nc,
+		std::vector<double> &dst
+	)
 	{
 		const size_t ND = dst.size();
 		for (size_t i = 0; i < ND; ++i)
 			dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
 	}
 
-	static void middle(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, const std::vector<double> &nd, std::vector<double> &dst)
+	static void middle(
+		const std::vector<double> &na,
+		const std::vector<double> &nb,
+		const std::vector<double> &nc,
+		const std::vector<double> &nd,
+		std::vector<double> &dst
+	)
 	{
 		const size_t ND = dst.size();
 		for (size_t i = 0; i < ND; ++i)
 			dst[i] = 0.25*(na[i] + nb[i] + nc[i] + nd[i]);
 	}
+
+	static void middle(
+		const std::vector<double> &na,
+		const std::vector<double> &nb,
+		const std::vector<double> &nc,
+		const std::vector<double> &nd,
+		const std::vector<double> &ne,
+		std::vector<double> &dst
+	)
+	{
+		const size_t ND = dst.size();
+		for (size_t i = 0; i < ND; ++i)
+			dst[i] = 0.2*(na[i] + nb[i] + nc[i] + nd[i] + ne[i]);
+	}
+
+	static void middle(
+		const std::vector<double> &na,
+		const std::vector<double> &nb,
+		const std::vector<double> &nc,
+		const std::vector<double> &nd,
+		const std::vector<double> &ne,
+		const std::vector<double> &nf,
+		std::vector<double> &dst
+	)
+	{
+		const size_t ND = dst.size();
+		for (size_t i = 0; i < ND; ++i)
+			dst[i] = (na[i] + nb[i] + nc[i] + nd[i] + ne[i] + nf[i]) / 6.0;
+	}
+
+	static void middle(
+		const std::vector<double> &na,
+		const std::vector<double> &nb,
+		const std::vector<double> &nc,
+		const std::vector<double> &nd,
+		const std::vector<double> &ne,
+		const std::vector<double> &nf,
+		const std::vector<double> &ng,
+		const std::vector<double> &nh,
+		std::vector<double> &dst
+	)
+	{
+		const size_t ND = dst.size();
+		for (size_t i = 0; i < ND; ++i)
+			dst[i] = 0.125*(na[i] + nb[i] + nc[i] + nd[i] + ne[i] + nf[i] + ng[i] + nh[i]);
+	}
+
 
 private:
 	size_t STX(size_t loc_idx) const { return loc_idx * m_dim; }
@@ -380,7 +442,7 @@ class XF_CONNECTIVITY
 {
 public:
 	int x; // Length of n
-	size_t n[4]; 
+	size_t n[4];
 	size_t c[2];
 
 public:
@@ -628,7 +690,7 @@ public:
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_cellCenterCoordinates(nCoord, cCenCoord);
+		ret = computeTopology_cellCenterCoordinates(nCoord, cIncN, cCenCoord);
 		if (!ret)
 			throw(ret);
 
@@ -704,7 +766,7 @@ private:
 
 	int computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &cIncF) const;
 
-	int computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const;
+	int computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const;
 
 	int computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, std::vector<double> &dst) const;
 };

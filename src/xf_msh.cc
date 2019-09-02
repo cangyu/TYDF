@@ -192,12 +192,6 @@ void XF_FACE::repr(std::ostream & out)
 	out << "))" << std::endl;
 }
 
-void XF_ZONE::repr(std::ostream & out)
-{
-	out << std::dec;
-	out << "(" << identity() << " (" << m_zoneID << " " << m_zoneType << " " << m_zoneName << ")())" << std::endl;
-}
-
 int XF_MSH::readFromFile(const std::string & src)
 {
 	std::ifstream fin(src);
@@ -1123,11 +1117,22 @@ int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<
 	return 0;
 }
 
-int XF_MSH::computeTopology_cellVolume(const std::vector<std::vector<double>>& nCoord, std::vector<double>& dst) const
+int XF_MSH::computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<size_t>> &cIncF, std::vector<double> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfCell())
 		return -1;
+
+	// Treat differently for clearity
+	if (is3D())
+	{
+		// Tet, Prism, Wedge, Hex
+	}
+	else
+	{
+		// Tri, Quad
+
+	}
 
 	return 0;
 }

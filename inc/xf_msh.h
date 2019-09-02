@@ -545,7 +545,11 @@ public:
 
 	~XF_ZONE() = default;
 
-	void repr(std::ostream &out);
+	void repr(std::ostream &out)
+	{
+		out << std::dec;
+		out << "(" << identity() << " (" << m_zoneID << " " << m_zoneType << " " << m_zoneName << ")())" << std::endl;
+	}
 };
 
 class XF_MSH
@@ -768,7 +772,7 @@ private:
 
 	int computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const;
 
-	int computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, std::vector<double> &dst) const;
+	int computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<size_t>> &cIncF, std::vector<double> &dst) const;
 };
 
 #endif

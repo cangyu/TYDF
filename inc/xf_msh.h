@@ -11,6 +11,7 @@
 #include <string>
 #include <cstdint>
 #include <algorithm>
+#include <cmath>
 
 typedef enum {
 	INTERIOR = 2,

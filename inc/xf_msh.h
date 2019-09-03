@@ -273,7 +273,29 @@ public:
 
 	int &elem(size_t loc_idx) { return m_mixedElemDesc[loc_idx]; }
 
-	void repr(std::ostream &out);
+	void repr(std::ostream &out)
+	{
+		out << "(" << std::dec << identity() << " (";
+		out << std::hex;
+		out << zone() << " " << first_index() << " " << last_index() << " ";
+		out << m_type << " " << m_elem << ")";
+
+		if (m_elem != XF_CELL::MIXED)
+			out << ")" << std::endl;
+		else
+		{
+			out << "(";
+
+			const size_t N = num();
+			for (size_t i = 0; i < N; ++i)
+			{
+				if (i % 40 == 0)
+					out << std::endl;
+				out << " " << elem(i);
+			}
+			out << std::endl << "))" << std::endl;
+		}
+	}
 
 	static const std::string &cell_name(int x)
 	{

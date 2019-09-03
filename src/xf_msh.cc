@@ -221,30 +221,6 @@ XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
 		throw("Invalid specification of cell element type!");
 }
 
-void XF_CELL::repr(std::ostream & out)
-{
-	out << "(" << std::dec << identity() << " (";
-	out << std::hex;
-	out << zone() << " " << first_index() << " " << last_index() << " ";
-	out << m_type << " " << m_elem << ")";
-
-	if (m_elem != XF_CELL::MIXED)
-		out << ")" << std::endl;
-	else
-	{
-		out << "(";
-
-		const size_t N = num();
-		for (size_t i = 0; i < N; ++i)
-		{
-			if (i % 40 == 0)
-				out << std::endl;
-			out << " " << elem(i);
-		}
-		out << std::endl << "))" << std::endl;
-	}
-}
-
 XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 	XF_MAIN_RECORD(XF_SECTION::FACE, zone, first, last)
 {
@@ -323,7 +299,7 @@ XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 	m_connectivity.resize(num());
 }
 
-int XF_MSH::readFromFile(const std::string & src)
+int XF_MSH::readFromFile(const std::string &src)
 {
 	std::ifstream fin(src);
 	if (!fin)
@@ -606,7 +582,7 @@ int XF_MSH::readFromFile(const std::string & src)
 	return 0;
 }
 
-int XF_MSH::writeToFile(const std::string & dst) const
+int XF_MSH::writeToFile(const std::string &dst) const
 {
 	std::ofstream fout(dst);
 	if (!fout)
@@ -652,7 +628,7 @@ int XF_MSH::writeToFile(const std::string & dst) const
 	return 0;
 }
 
-int XF_MSH::computeTopology_nodeCoordinates(std::vector<std::vector<double>>& dst) const
+int XF_MSH::computeTopology_nodeCoordinates(std::vector<std::vector<double>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfNode())
@@ -679,7 +655,7 @@ int XF_MSH::computeTopology_nodeCoordinates(std::vector<std::vector<double>>& ds
 	return 0;
 }
 
-int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool>& dst) const
+int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfNode())
@@ -706,7 +682,7 @@ int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool>& dst) const
 	return 0;
 }
 
-int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>>& dst) const
+int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfNode())
@@ -757,7 +733,7 @@ int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>>& d
 	return 0;
 }
 
-int XF_MSH::computeTopology_nodeDependentFace(std::vector<std::vector<size_t>>& dst) const
+int XF_MSH::computeTopology_nodeDependentFace(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfNode())
@@ -790,7 +766,7 @@ int XF_MSH::computeTopology_nodeDependentFace(std::vector<std::vector<size_t>>& 
 	return 0;
 }
 
-int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>>& dst) const
+int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfNode())
@@ -831,7 +807,7 @@ int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>>& 
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceIncludedNode(std::vector<std::vector<size_t>>& dst) const
+int XF_MSH::computeTopology_faceIncludedNode(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfFace())
@@ -860,7 +836,7 @@ int XF_MSH::computeTopology_faceIncludedNode(std::vector<std::vector<size_t>>& d
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>>& dst) const
+int XF_MSH::computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfFace())
@@ -965,7 +941,7 @@ int XF_MSH::computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>>& dst) const
+int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfFace())
@@ -1014,7 +990,7 @@ int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>>& nCoord, std::vector<std::vector<double>>& dst) const
+int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfFace())
@@ -1109,7 +1085,7 @@ int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<d
 	return 0;
 }
 
-int XF_MSH::computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>>& dst) const
+int XF_MSH::computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfCell())
@@ -1148,7 +1124,7 @@ int XF_MSH::computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>>& 
 	return 0;
 }
 
-int XF_MSH::computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>>& dst) const
+int XF_MSH::computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfCell())
@@ -1181,7 +1157,7 @@ int XF_MSH::computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>>& 
 	return 0;
 }
 
-int XF_MSH::computeTopology_cellAdjacentCells(const std::vector<std::vector<size_t>>& cIncF, const std::vector<std::vector<size_t>>& fAdjC, std::vector<std::vector<size_t>>& dst) const
+int XF_MSH::computeTopology_cellAdjacentCells(const std::vector<std::vector<size_t>> &cIncF, const std::vector<std::vector<size_t>> &fAdjC, std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	const auto NC = numOfCell();

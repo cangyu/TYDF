@@ -580,26 +580,15 @@ public:
 		if (!ret)
 			throw(ret);
 
-		if (is3D())
-		{
-			for (size_t i = 0; i < numOfFace(); ++i)
-				for (int j = 0; j < 3; ++j)
-				{
-					fUNRL[i][j] = -fUNLR[i][j];
-					fNRL[i][j] = fUNRL[i][j] * fArea[i];
-					fNLR[i][j] = fUNLR[i][j] * fArea[i];
-				}
-		}
-		else
-		{
-			for (size_t i = 0; i < numOfFace(); ++i)
-				for (int j = 0; j < 2; ++j)
-				{
-					fUNRL[i][j] = -fUNLR[i][j];
-					fNRL[i][j] = fUNRL[i][j] * fArea[i];
-					fNLR[i][j] = fUNLR[i][j] * fArea[i];
-				}
-		}
+		const auto NF = numOfFace();
+		const auto ND = dimension();
+		for (size_t i = 0; i < NF; ++i)
+			for (int j = 0; j < ND; ++j)
+			{
+				fUNRL[i][j] = -fUNLR[i][j];
+				fNRL[i][j] = fUNRL[i][j] * fArea[i];
+				fNLR[i][j] = fUNLR[i][j] * fArea[i];
+			}
 
 		ret = computeTopology_cellIncludedNodes(cIncN);
 		if (!ret)
@@ -614,6 +603,10 @@ public:
 			throw(ret);
 
 		ret = computeTopology_cellFaceNormal(cIncF, fAdjC, fNLR, fNRL, cFNVec);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_cellFaceUnitNormal(cIncF, fArea, cFNVec, cFUNVec);
 		if (!ret)
 			throw(ret);
 
@@ -692,6 +685,13 @@ private:
 		const std::vector<std::vector<size_t>> &fAdjC, 
 		const std::vector<std::vector<double>> &fNLR, 
 		const std::vector<std::vector<double>> &fNRL,
+		std::vector<std::vector<double>> &dst
+	) const;
+
+	int computeTopology_cellFaceUnitNormal(
+		const std::vector<std::vector<size_t>> &cIncF,
+		const std::vector<double> &fArea,
+		const std::vector<std::vector<double>> &cFNVec,
 		std::vector<std::vector<double>> &dst
 	) const;
 

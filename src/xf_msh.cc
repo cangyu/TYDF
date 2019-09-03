@@ -75,9 +75,9 @@ static inline void line_center(const std::vector<double> &na, const std::vector<
 }
 
 static inline void triangle_center(
-	const std::vector<double> &na, 
-	const std::vector<double> &nb, 
-	const std::vector<double> &nc, 
+	const std::vector<double> &na,
+	const std::vector<double> &nb,
+	const std::vector<double> &nc,
 	std::vector<double> &dst
 )
 {
@@ -87,8 +87,8 @@ static inline void triangle_center(
 }
 
 static inline double triangle_area(
-	const std::vector<double> &na, 
-	const std::vector<double> &nb, 
+	const std::vector<double> &na,
+	const std::vector<double> &nb,
 	const std::vector<double> &nc
 )
 {
@@ -102,10 +102,10 @@ static inline double triangle_area(
 }
 
 static inline void quadrilateral_center(
-	const std::vector<double> &n1, 
-	const std::vector<double> &n2, 
-	const std::vector<double> &n3, 
-	const std::vector<double> &n4, 
+	const std::vector<double> &n1,
+	const std::vector<double> &n2,
+	const std::vector<double> &n3,
+	const std::vector<double> &n4,
 	std::vector<double> &dst
 )
 {
@@ -126,9 +126,9 @@ static inline void quadrilateral_center(
 }
 
 static inline double quadrilateral_area(
-	const std::vector<double> &n1, 
-	const std::vector<double> &n2, 
-	const std::vector<double> &n3, 
+	const std::vector<double> &n1,
+	const std::vector<double> &n2,
+	const std::vector<double> &n3,
 	const std::vector<double> &n4
 )
 {
@@ -886,7 +886,7 @@ int XF_MSH::computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>> &d
 }
 
 int XF_MSH::computeTopology_faceArea(
-	const std::vector<std::vector<double>> &nCoord, 
+	const std::vector<std::vector<double>> &nCoord,
 	std::vector<double> &dst
 ) const
 {
@@ -965,7 +965,7 @@ int XF_MSH::computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const
 }
 
 int XF_MSH::computeTopology_faceCenterCoordinates(
-	const std::vector<std::vector<double>> &nCoord, 
+	const std::vector<std::vector<double>> &nCoord,
 	std::vector<std::vector<double>> &dst
 ) const
 {
@@ -1017,7 +1017,7 @@ int XF_MSH::computeTopology_faceCenterCoordinates(
 }
 
 int XF_MSH::computeTopology_faceUnitNormalVector(
-	const std::vector<std::vector<double>> &nCoord, 
+	const std::vector<std::vector<double>> &nCoord,
 	std::vector<std::vector<double>> &dst
 ) const
 {
@@ -1187,8 +1187,8 @@ int XF_MSH::computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &
 }
 
 int XF_MSH::computeTopology_cellAdjacentCells(
-	const std::vector<std::vector<size_t>> &cIncF, 
-	const std::vector<std::vector<size_t>> &fAdjC, 
+	const std::vector<std::vector<size_t>> &cIncF,
+	const std::vector<std::vector<size_t>> &fAdjC,
 	std::vector<std::vector<size_t>> &dst
 ) const
 {
@@ -1219,9 +1219,9 @@ int XF_MSH::computeTopology_cellAdjacentCells(
 }
 
 int XF_MSH::computeTopology_cellFaceNormal(
-	const std::vector<std::vector<size_t>> &cIncF, 
-	const std::vector<std::vector<size_t>> &fAdjC, 
-	const std::vector<std::vector<double>> &fNLR, 
+	const std::vector<std::vector<size_t>> &cIncF,
+	const std::vector<std::vector<size_t>> &fAdjC,
+	const std::vector<std::vector<double>> &fNLR,
 	const std::vector<std::vector<double>> &fNRL,
 	std::vector<std::vector<double>> &dst
 ) const
@@ -1240,12 +1240,47 @@ int XF_MSH::computeTopology_cellFaceNormal(
 			auto cfi = ci[j] - 1; // Convert to 0-based index
 
 			auto c0 = fAdjC[cfi][0], c1 = fAdjC[cfi][1];
+
+			// TODO
 			if (c0 == i)
 				dst[i - 1] = fNLR[cfi];
 			else if (c1 == i)
 				dst[i - 1] = fNRL[cfi];
 			else
 				throw("Internal error.");
+		}
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_cellFaceUnitNormal(
+	const std::vector<std::vector<size_t>>& cIncF, 
+	const std::vector<double>& fArea, 
+	const std::vector<std::vector<double>>& cFNVec, 
+	std::vector<std::vector<double>>& dst
+) const
+{
+	const auto NC = numOfCell();
+	const auto ND = dimension();
+
+	// Check output array shape.
+	if (dst.size() != NC)
+		return -1;
+
+	// Normalize surface vector.
+	for (size_t i = 1; i <= NC; ++i)
+	{
+		dst[i - 1] = cFNVec[i - 1];
+		const auto &ci = cIncF[i - 1]; // Convert to 0-based index
+		for (size_t j = 0; j < ci.size(); ++j)
+		{
+			auto cfi = ci[j] - 1; // Convert to 0-based index
+			auto s = fArea[cfi];
+
+			// TODO
+			for (int k = 0; k < ND; ++k)
+				dst[i - 1][j][k] /= s;
 		}
 	}
 

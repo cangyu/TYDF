@@ -613,6 +613,10 @@ public:
 		if (!ret)
 			throw(ret);
 
+		ret = computeTopology_cellFaceNormal(cIncF, fAdjC, fNLR, fNRL, cFNVec);
+		if (!ret)
+			throw(ret);
+
 		ret = computeTopology_cellCentroidCoordinates(nCoord, cIncN, cCenCoord);
 		if (!ret)
 			throw(ret);
@@ -656,19 +660,40 @@ private:
 
 	int computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_faceArea(const std::vector<std::vector<double>> &nCoord, std::vector<double> &dst) const;
+	int computeTopology_faceArea(
+		const std::vector<std::vector<double>> &nCoord, 
+		std::vector<double> &dst
+	) const;
 
 	int computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const;
 
-	int computeTopology_faceCenterCoordinates(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const;
+	int computeTopology_faceCenterCoordinates(
+		const std::vector<std::vector<double>> &nCoord, 
+		std::vector<std::vector<double>> &dst
+	) const;
 
-	int computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const; // From left to right.
+	int computeTopology_faceUnitNormalVector(
+		const std::vector<std::vector<double>> &nCoord, 
+		std::vector<std::vector<double>> &dst
+	) const; // From left to right.
 
 	int computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>> &dst) const;
 
 	int computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_cellAdjacentCells(const std::vector<std::vector<size_t>> &cIncF, const std::vector<std::vector<size_t>> &fAdjC, std::vector<std::vector<size_t>> &dst) const;
+	int computeTopology_cellAdjacentCells(
+		const std::vector<std::vector<size_t>> &cIncF, 
+		const std::vector<std::vector<size_t>> &fAdjC, 
+		std::vector<std::vector<size_t>> &dst
+	) const;
+
+	int computeTopology_cellFaceNormal(
+		const std::vector<std::vector<size_t>> &cIncF, 
+		const std::vector<std::vector<size_t>> &fAdjC, 
+		const std::vector<std::vector<double>> &fNLR, 
+		const std::vector<std::vector<double>> &fNRL,
+		std::vector<std::vector<double>> &dst
+	) const;
 
 	int computeTopology_cellCentroidCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const;
 

@@ -245,135 +245,6 @@ public:
 
 	bool is_internal_node() const { return m_type == XF_NODE::ANY; }
 
-	static double dot_product(const std::vector<double> &na, const std::vector<double> &nb)
-	{
-		const size_t ND = na.size();
-		double ret = 0.0;
-		for (size_t i = 0; i < ND; ++i)
-			ret += na[i] * nb[i];
-		return ret;
-	}
-
-	static void cross_product(const std::vector<double> &a, const std::vector<double> &b, std::vector<double> &dst)
-	{
-		dst[0] = a[1] * b[2] - a[2] * b[1];
-		dst[1] = a[2] * b[0] - a[0] * b[2];
-		dst[2] = a[0] * b[1] - a[1] * b[0];
-	}
-
-	static void delta(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
-	{
-		const size_t ND = dst.size();
-		for (size_t i = 0; i < ND; ++i)
-			dst[i] = nb[i] - na[i];
-	}
-
-	static void normalize(const std::vector<double> &src, std::vector<double> &dst)
-	{
-		const size_t ND = dst.size();
-		double L = 0.0;
-		for (size_t i = 0; i < ND; ++i)
-			L += src[i] * src[i];
-		L = std::sqrt(L);
-		for (size_t i = 0; i < ND; ++i)
-			dst[i] = src[i] / L;
-	}
-
-	static double distance(const std::vector<double> &na, const std::vector<double> &nb)
-	{
-		const size_t ND = na.size();
-		double L = 0.0;
-		for (size_t i = 0; i < ND; ++i)
-		{
-			double di = nb[i] - na[i];
-			L += di * di;
-		}
-		return std::sqrt(L);
-	}
-
-	static void middle(
-		const std::vector<double> &na,
-		const std::vector<double> &nb,
-		std::vector<double> &dst
-	)
-	{
-		const size_t ND = dst.size();
-		for (size_t i = 0; i < ND; ++i)
-			dst[i] = 0.5*(na[i] + nb[i]);
-	}
-
-	static void middle(
-		const std::vector<double> &na,
-		const std::vector<double> &nb,
-		const std::vector<double> &nc,
-		std::vector<double> &dst
-	)
-	{
-		const size_t ND = dst.size();
-		for (size_t i = 0; i < ND; ++i)
-			dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
-	}
-
-	static void middle(
-		const std::vector<double> &na,
-		const std::vector<double> &nb,
-		const std::vector<double> &nc,
-		const std::vector<double> &nd,
-		std::vector<double> &dst
-	)
-	{
-		const size_t ND = dst.size();
-		for (size_t i = 0; i < ND; ++i)
-			dst[i] = 0.25*(na[i] + nb[i] + nc[i] + nd[i]);
-	}
-
-	static void middle(
-		const std::vector<double> &na,
-		const std::vector<double> &nb,
-		const std::vector<double> &nc,
-		const std::vector<double> &nd,
-		const std::vector<double> &ne,
-		std::vector<double> &dst
-	)
-	{
-		const size_t ND = dst.size();
-		for (size_t i = 0; i < ND; ++i)
-			dst[i] = 0.2*(na[i] + nb[i] + nc[i] + nd[i] + ne[i]);
-	}
-
-	static void middle(
-		const std::vector<double> &na,
-		const std::vector<double> &nb,
-		const std::vector<double> &nc,
-		const std::vector<double> &nd,
-		const std::vector<double> &ne,
-		const std::vector<double> &nf,
-		std::vector<double> &dst
-	)
-	{
-		const size_t ND = dst.size();
-		for (size_t i = 0; i < ND; ++i)
-			dst[i] = (na[i] + nb[i] + nc[i] + nd[i] + ne[i] + nf[i]) / 6.0;
-	}
-
-	static void middle(
-		const std::vector<double> &na,
-		const std::vector<double> &nb,
-		const std::vector<double> &nc,
-		const std::vector<double> &nd,
-		const std::vector<double> &ne,
-		const std::vector<double> &nf,
-		const std::vector<double> &ng,
-		const std::vector<double> &nh,
-		std::vector<double> &dst
-	)
-	{
-		const size_t ND = dst.size();
-		for (size_t i = 0; i < ND; ++i)
-			dst[i] = 0.125*(na[i] + nb[i] + nc[i] + nd[i] + ne[i] + nf[i] + ng[i] + nh[i]);
-	}
-
-
 private:
 	size_t STX(size_t loc_idx) const { return loc_idx * m_dim; }
 };
@@ -514,16 +385,37 @@ public:
 
 	XF_CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity[loc_idx]; }
 
-	void repr(std::ostream &out);
-
-	static double areaTriangle(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc)
+	void repr(std::ostream &out)
 	{
-		double c = XF_NODE::distance(na, nb);
-		double a = XF_NODE::distance(nb, nc);
-		double b = XF_NODE::distance(nc, na);
-		double s = 0.5*(a + b + c);
+		out << "(" << std::dec << identity() << " (";
+		out << std::hex;
+		out << zone() << " " << first_index() << " " << last_index() << " ";
+		out << bc_type() << " " << face_type() << ")(" << std::endl;
 
-		return std::sqrt(s*(s - a)*(s - b)*(s - c));
+		const int N = num();
+		if (m_face == XF_FACE::MIXED)
+		{
+			for (int i = 0; i < N; ++i)
+			{
+				const auto &loc_cnect = m_connectivity[i];
+				out << " " << loc_cnect.x;
+				for (int i = 0; i < loc_cnect.x; ++i)
+					out << " " << loc_cnect.n[i];
+				out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
+			}
+		}
+		else
+		{
+			for (int i = 0; i < N; ++i)
+			{
+				const auto &loc_cnect = m_connectivity[i];
+				for (int i = 0; i < loc_cnect.x; ++i)
+					out << " " << loc_cnect.n[i];
+				out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
+			}
+		}
+
+		out << "))" << std::endl;
 	}
 };
 
@@ -695,11 +587,15 @@ public:
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_cellCenterCoordinates(nCoord, cIncN, cCenCoord);
+		ret = computeTopology_cellAdjacentCells(cIncF, fAdjC, cAdjC);
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_cellVolume(nCoord, cVol);
+		ret = computeTopology_cellCentroidCoordinates(nCoord, cIncN, cCenCoord);
+		if (!ret)
+			throw(ret);
+
+		ret = computeTopology_cellVolume(nCoord, cIncN, cIncF, cVol);
 		if (!ret)
 			throw(ret);
 
@@ -724,27 +620,6 @@ private:
 		m_content.clear();
 	}
 
-	void eat(std::istream &in, char c)
-	{
-		char tmp;
-
-		do {
-			in >> tmp;
-		} while (tmp != c);
-	}
-
-	void skipWhite(std::istream &in)
-	{
-		char tmp;
-
-		do {
-			in >> tmp;
-		} while (tmp == ' ' || tmp == '\t' || tmp == '\n');
-
-		if (!in.eof())
-			in.unget();
-	}
-
 	int computeTopology_nodeCoordinates(std::vector<std::vector<double>> &dst) const;
 
 	int computeTopology_nodeBoundaryFlag(std::vector<bool> &dst) const;
@@ -767,11 +642,13 @@ private:
 
 	int computeTopology_faceUnitNormalVector(const std::vector<std::vector<double>> &nCoord, std::vector<std::vector<double>> &dst) const; // From left to right.
 
-	int computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>> &cIncN) const;
+	int computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &cIncF) const;
+	int computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const;
+	int computeTopology_cellAdjacentCells(const std::vector<std::vector<size_t>> &cIncF, const std::vector<std::vector<size_t>> &fAdjC, std::vector<std::vector<size_t>> &dst) const;
+
+	int computeTopology_cellCentroidCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const;
 
 	int computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<size_t>> &cIncF, std::vector<double> &dst) const;
 };

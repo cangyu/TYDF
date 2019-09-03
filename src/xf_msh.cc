@@ -1,5 +1,169 @@
 #include "xf_msh.h"
 
+static inline void eat(std::istream &in, char c)
+{
+	char tmp;
+
+	do {
+		in >> tmp;
+	} while (tmp != c);
+}
+
+static inline void skipWhite(std::istream &in)
+{
+	char tmp;
+
+	do {
+		in >> tmp;
+	} while (tmp == ' ' || tmp == '\t' || tmp == '\n');
+
+	if (!in.eof())
+		in.unget();
+}
+
+static inline double dot_product(const std::vector<double> &na, const std::vector<double> &nb)
+{
+	const size_t ND = na.size();
+	double ret = 0.0;
+	for (size_t i = 0; i < ND; ++i)
+		ret += na[i] * nb[i];
+	return ret;
+}
+
+static inline void cross_product(const std::vector<double> &a, const std::vector<double> &b, std::vector<double> &dst)
+{
+	dst[0] = a[1] * b[2] - a[2] * b[1];
+	dst[1] = a[2] * b[0] - a[0] * b[2];
+	dst[2] = a[0] * b[1] - a[1] * b[0];
+}
+
+static inline void delta(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+{
+	const size_t ND = dst.size();
+	for (size_t i = 0; i < ND; ++i)
+		dst[i] = nb[i] - na[i];
+}
+
+static inline void normalize(const std::vector<double> &src, std::vector<double> &dst)
+{
+	const size_t ND = dst.size();
+	double L = 0.0;
+	for (size_t i = 0; i < ND; ++i)
+		L += src[i] * src[i];
+	L = std::sqrt(L);
+	for (size_t i = 0; i < ND; ++i)
+		dst[i] = src[i] / L;
+}
+
+static inline double distance(const std::vector<double> &na, const std::vector<double> &nb)
+{
+	const size_t ND = na.size();
+	double L = 0.0;
+	for (size_t i = 0; i < ND; ++i)
+	{
+		double di = nb[i] - na[i];
+		L += di * di;
+	}
+	return std::sqrt(L);
+}
+
+static inline void line_center(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+{
+	const size_t ND = dst.size();
+	for (size_t i = 0; i < ND; ++i)
+		dst[i] = 0.5*(na[i] + nb[i]);
+}
+
+static inline void triangle_center(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc, std::vector<double> &dst)
+{
+	const size_t ND = dst.size();
+	for (size_t i = 0; i < ND; ++i)
+		dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
+}
+
+static inline double triangle_area(const std::vector<double> &na, const std::vector<double> &nb, const std::vector<double> &nc)
+{
+	double c = distance(na, nb);
+	double a = distance(nb, nc);
+	double b = distance(nc, na);
+	double p = 0.5*(a + b + c);
+
+	// Heron's formula
+	return std::sqrt(p*(p - a)*(p - b)*(p - c));
+}
+
+static inline void quadrilateral_center(const std::vector<double> &n1, const std::vector<double> &n2, const std::vector<double> &n3, const std::vector<double> &n4, std::vector<double> &dst)
+{
+	// 1, 2, 3, 4 are in anti-clockwise direction.
+	const double S123 = triangle_area(n1, n2, n3);
+	const double S134 = triangle_area(n1, n3, n4);
+
+	auto rc123(dst), rc134(dst);
+	triangle_center(n1, n2, n3, rc123);
+	triangle_center(n1, n3, n4, rc134);
+
+	const double alpha = S123 / (S123 + S134);
+	const double beta = 1.0 - alpha;
+
+	const size_t ND = dst.size();
+	for (size_t i = 0; i < ND; ++i)
+		dst[i] = alpha * rc123[i] + beta * rc134[i];
+}
+
+static inline double quadrilateral_area(const std::vector<double> &n1, const std::vector<double> &n2, const std::vector<double> &n3, const std::vector<double> &n4)
+{
+	// 1, 2, 3, 4 are in anti-clockwise direction.
+	const double S123 = triangle_area(n1, n2, n3);
+	const double S134 = triangle_area(n1, n3, n4);
+	return S123 + S134;
+}
+
+static void middle(
+	const std::vector<double> &na,
+	const std::vector<double> &nb,
+	const std::vector<double> &nc,
+	const std::vector<double> &nd,
+	const std::vector<double> &ne,
+	std::vector<double> &dst
+)
+{
+	const size_t ND = dst.size();
+	for (size_t i = 0; i < ND; ++i)
+		dst[i] = 0.2*(na[i] + nb[i] + nc[i] + nd[i] + ne[i]);
+}
+
+static void middle(
+	const std::vector<double> &na,
+	const std::vector<double> &nb,
+	const std::vector<double> &nc,
+	const std::vector<double> &nd,
+	const std::vector<double> &ne,
+	const std::vector<double> &nf,
+	std::vector<double> &dst
+)
+{
+	const size_t ND = dst.size();
+	for (size_t i = 0; i < ND; ++i)
+		dst[i] = (na[i] + nb[i] + nc[i] + nd[i] + ne[i] + nf[i]) / 6.0;
+}
+
+static void middle(
+	const std::vector<double> &na,
+	const std::vector<double> &nb,
+	const std::vector<double> &nc,
+	const std::vector<double> &nd,
+	const std::vector<double> &ne,
+	const std::vector<double> &nf,
+	const std::vector<double> &ng,
+	const std::vector<double> &nh,
+	std::vector<double> &dst
+)
+{
+	const size_t ND = dst.size();
+	for (size_t i = 0; i < ND; ++i)
+		dst[i] = 0.125*(na[i] + nb[i] + nc[i] + nd[i] + ne[i] + nf[i] + ng[i] + nh[i]);
+}
+
 XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
 	XF_MAIN_RECORD(XF_SECTION::CELL, zone, first, last)
 {
@@ -157,39 +321,6 @@ XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
 	}
 
 	m_connectivity.resize(num());
-}
-
-void XF_FACE::repr(std::ostream & out)
-{
-	out << "(" << std::dec << identity() << " (";
-	out << std::hex;
-	out << zone() << " " << first_index() << " " << last_index() << " ";
-	out << bc_type() << " " << face_type() << ")(" << std::endl;
-
-	const int N = num();
-	if (m_face == XF_FACE::MIXED)
-	{
-		for (int i = 0; i < N; ++i)
-		{
-			const auto &loc_cnect = m_connectivity[i];
-			out << " " << loc_cnect.x;
-			for (int i = 0; i < loc_cnect.x; ++i)
-				out << " " << loc_cnect.n[i];
-			out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
-		}
-	}
-	else
-	{
-		for (int i = 0; i < N; ++i)
-		{
-			const auto &loc_cnect = m_connectivity[i];
-			for (int i = 0; i < loc_cnect.x; ++i)
-				out << " " << loc_cnect.n[i];
-			out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
-		}
-	}
-
-	out << "))" << std::endl;
 }
 
 int XF_MSH::readFromFile(const std::string & src)
@@ -749,7 +880,7 @@ int XF_MSH::computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>>& d
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				const auto &cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - cur_first);
 				dst[i - 1].assign(cnct.c, cnct.c + 2); // Contents of dst[i-1] are 1-based for actual cell, 0 stands for boundary, right-hand convention is preserved.
 			}
 		}
@@ -758,7 +889,7 @@ int XF_MSH::computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>>& d
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCoord, std::vector<double>& dst) const
+int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCoord, std::vector<double> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfFace())
@@ -779,31 +910,20 @@ int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCo
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
 				const auto &cnct = curObj->connectivity(i - 1);
-				if (cnct.x == XF_FACE::LINEAR)
+				if (cnct.x == XF_FACE::LINEAR) // 2D
 				{
-					size_t na_idx = cnct.n[0] - 1;
-					size_t nb_idx = cnct.n[1] - 1;
-
-					dst[i - 1] = XF_NODE::distance(nCoord[na_idx], nCoord[nb_idx]);
+					auto na = cnct.n[0] - 1, nb = cnct.n[1] - 1;
+					dst[i - 1] = distance(nCoord[na], nCoord[nb]);
 				}
 				else if (cnct.x == XF_FACE::TRIANGULAR)
 				{
-					size_t na_idx = cnct.n[0] - 1;
-					size_t nb_idx = cnct.n[1] - 1;
-					size_t nc_idx = cnct.n[2] - 1;
-
-					dst[i - 1] = XF_FACE::areaTriangle(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
+					auto na = cnct.n[0] - 1, nb = cnct.n[1] - 1, nc = cnct.n[2] - 1;
+					dst[i - 1] = triangle_area(nCoord[na], nCoord[nb], nCoord[nc]);
 				}
 				else if (cnct.x == XF_FACE::QUADRILATERAL)
 				{
-					size_t na_idx = cnct.n[0] - 1;
-					size_t nb_idx = cnct.n[1] - 1;
-					size_t nc_idx = cnct.n[2] - 1;
-					size_t nd_idx = cnct.n[3] - 1;
-
-					double part1 = XF_FACE::areaTriangle(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx]);
-					double part2 = XF_FACE::areaTriangle(nCoord[nc_idx], nCoord[nd_idx], nCoord[na_idx]);
-					dst[i - 1] = part1 + part2;
+					auto na = cnct.n[0] - 1, nb = cnct.n[1] - 1, nc = cnct.n[2] - 1, nd = cnct.n[3] - 1;
+					dst[i - 1] = quadrilateral_area(nCoord[na], nCoord[nb], nCoord[nc], nCoord[nd]);
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
 					throw("Not supported currently!");
@@ -816,7 +936,7 @@ int XF_MSH::computeTopology_faceArea(const std::vector<std::vector<double>> &nCo
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceBoundaryFlag(std::vector<bool>& dst) const
+int XF_MSH::computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfFace())
@@ -837,10 +957,7 @@ int XF_MSH::computeTopology_faceBoundaryFlag(std::vector<bool>& dst) const
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
 				const auto &cnct = curObj->connectivity(i - 1);
-				if (cnct.c[0] == 0 || cnct.c[1] == 0)
-					dst[i - 1] = true;
-				else
-					dst[i - 1] = false;
+				dst[i - 1] = (cnct.c[0] == 0 || cnct.c[1] == 0);
 			}
 		}
 	}
@@ -873,27 +990,18 @@ int XF_MSH::computeTopology_faceCenterCoordinates(const std::vector<std::vector<
 				const auto &cnct = curObj->connectivity(i - cur_first); // Local 0-based indexing
 				if (cnct.x == XF_FACE::LINEAR)
 				{
-					size_t na_idx = cnct.n[0] - 1;
-					size_t nb_idx = cnct.n[1] - 1;
-
-					XF_NODE::middle(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
+					auto na = cnct.n[0] - 1, nb = cnct.n[1] - 1;
+					line_center(nCoord[na], nCoord[nb], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::TRIANGULAR)
 				{
-					size_t na_idx = cnct.n[0] - 1;
-					size_t nb_idx = cnct.n[1] - 1;
-					size_t nc_idx = cnct.n[2] - 1;
-
-					XF_NODE::middle(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], dst[i - 1]);
+					auto na = cnct.n[0] - 1, nb = cnct.n[1] - 1, nc = cnct.n[2] - 1;
+					triangle_center(nCoord[na], nCoord[nb], nCoord[nc], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::QUADRILATERAL)
 				{
-					size_t na_idx = cnct.n[0] - 1;
-					size_t nb_idx = cnct.n[1] - 1;
-					size_t nc_idx = cnct.n[2] - 1;
-					size_t nd_idx = cnct.n[3] - 1;
-
-					XF_NODE::middle(nCoord[na_idx], nCoord[nb_idx], nCoord[nc_idx], nCoord[nd_idx], dst[i - 1]);
+					auto na = cnct.n[0] - 1, nb = cnct.n[1] - 1, nc = cnct.n[2] - 1, nd = cnct.n[3] - 1;
+					quadrilateral_center(nCoord[na], nCoord[nb], nCoord[nc], nCoord[nd], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
 					throw("Not supported currently!");
@@ -935,7 +1043,7 @@ int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<d
 					size_t nb_idx = cnct.n[1] - 1; // Global 0-based indexing
 
 					// Delta vector
-					XF_NODE::delta(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
+					delta(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
 
 					// Rotate 90 deg in 2D plane.
 					// Surface mesh not supported currently.
@@ -944,7 +1052,7 @@ int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<d
 					dst[i - 1][1] = -tmp_x;
 
 					// Normalize
-					XF_NODE::normalize(dst[i - 1], dst[i - 1]);
+					normalize(dst[i - 1], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::TRIANGULAR)
 				{
@@ -955,14 +1063,14 @@ int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<d
 					// Delta vectors
 					auto origin(nCoord[na_idx]);
 					auto r1(nCoord[nb_idx]), r2(nCoord[nc_idx]);
-					XF_NODE::delta(origin, r1, r1);
-					XF_NODE::delta(origin, r2, r2);
+					delta(origin, r1, r1);
+					delta(origin, r2, r2);
 
 					// Cross product to find normal direction
-					XF_NODE::cross_product(r2, r1, dst[i - 1]);
+					cross_product(r2, r1, dst[i - 1]);
 
 					// Normalize
-					XF_NODE::normalize(dst[i - 1], dst[i - 1]);
+					normalize(dst[i - 1], dst[i - 1]);
 
 				}
 				else if (cnct.x == XF_FACE::QUADRILATERAL)
@@ -974,17 +1082,17 @@ int XF_MSH::computeTopology_faceUnitNormalVector(const std::vector<std::vector<d
 
 					// Delta vectors
 					auto origin(nCoord[na_idx]), r0(nCoord[nc_idx]), r1(nCoord[nb_idx]), r2(nCoord[nd_idx]);
-					XF_NODE::delta(origin, r0, r0);
-					XF_NODE::delta(origin, r1, r1);
-					XF_NODE::delta(origin, r2, r2);
+					delta(origin, r0, r0);
+					delta(origin, r1, r1);
+					delta(origin, r2, r2);
 
 					// Cross product to find normal direction
-					XF_NODE::cross_product(r0, r1, origin);
-					XF_NODE::cross_product(r2, r0, dst[i - 1]);
+					cross_product(r0, r1, origin);
+					cross_product(r2, r0, dst[i - 1]);
 
 					// Normalize
-					XF_NODE::normalize(origin, origin);
-					XF_NODE::normalize(dst[i - 1], dst[i - 1]);
+					normalize(origin, origin);
+					normalize(dst[i - 1], dst[i - 1]);
 
 					// Average
 					for (size_t j = 0; j < 3; j++)
@@ -1026,12 +1134,12 @@ int XF_MSH::computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>>& 
 				if (ccl != 0)
 				{
 					for (int j = 0; j < cnct.x; ++j)
-						dst[ccl - 1].push_back(cnct.n[j]); // Logital 1-based node index
+						dst[ccl - 1].push_back(cnct.n[j]); // Logical 1-based node index
 				}
 				if (ccr != 0)
 				{
 					for (int j = 0; j < cnct.x; ++j)
-						dst[ccr - 1].push_back(cnct.n[j]); // Logital 1-based node index
+						dst[ccr - 1].push_back(cnct.n[j]); // Logical 1-based node index
 				}
 			}
 		}
@@ -1073,45 +1181,92 @@ int XF_MSH::computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>>& 
 	return 0;
 }
 
-int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<double>>& nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>>& dst) const
+int XF_MSH::computeTopology_cellAdjacentCells(const std::vector<std::vector<size_t>>& cIncF, const std::vector<std::vector<size_t>>& fAdjC, std::vector<std::vector<size_t>>& dst) const
 {
 	// Check output array shape.
-	if (dst.size() != numOfCell())
+	const auto NC = numOfCell();
+	if (dst.size() != NC)
+		return -1;
+
+	// Derive the adjacent cells of each cell from existing connectivity.
+	for (size_t i = 1; i <= NC; ++i)
+	{
+		const auto &ci = cIncF[i - 1]; // Convert to 0-based index
+		for (size_t j = 0; j < ci.size(); ++j)
+		{
+			auto cfi = ci[j] - 1; // Convert to 0-based index
+
+			auto c0 = fAdjC[cfi][0], c1 = fAdjC[cfi][1];
+			if (c0 == i)
+				dst[i - 1].push_back(c1);
+			else if (c1 == i)
+				dst[i - 1].push_back(c0);
+			else
+				throw("Internal error.");
+		}
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_cellCentroidCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const
+{
+	// Check output array shape.
+	const auto NC = numOfCell();
+	if (dst.size() != NC)
 		return -1;
 	if (dst[0].size() != dimension())
 		return -2;
 
-	// Average vertexs of each cell
-	for (size_t i = 0; i < numOfCell(); ++i)
+	// Average vertexs of each cell.
+	// Treat differently for clearity.
+	if (is3D())
 	{
-		const auto &cnl = cIncN[i];
-		if (cnl.size() == 3) // 三角形
+		for (size_t i = 0; i < NC; ++i)
 		{
-			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1; // Convert 1-based to 0-based.
-			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], dst[i]);
+			const auto &cnl = cIncN[i];
+			if (cnl.size() == 4) // Tetrahedron
+			{
+				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1; // Convert 1-based to 0-based.
+				quadrilateral_center(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], dst[i]);
+			}
+			else if (cnl.size() == 5) // Pyramid
+			{
+				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1; // Convert 1-based to 0-based.
+				middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], dst[i]);
+			}
+			else if (cnl.size() == 6) // Wedge
+			{
+				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1; // Convert 1-based to 0-based.
+				middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], dst[i]);
+			}
+			else if (cnl.size() == 8) // Hexahedron
+			{
+				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1, n6 = cnl[6] - 1, n7 = cnl[7] - 1; // Convert 1-based to 0-based.
+				middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], nCoord[n6], nCoord[n7], dst[i]);
+			}
+			else
+				throw("Invalid cell in 3D.");
 		}
-		else if (cnl.size() == 4) // 四边形 或 四面体
+	}
+	else
+	{
+		for (size_t i = 0; i < NC; ++i)
 		{
-			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1; // Convert 1-based to 0-based.
-			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], dst[i]);
+			const auto &cnl = cIncN[i];
+			if (cnl.size() == 3) // Triangle
+			{
+				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1; // Convert 1-based to 0-based.
+				triangle_center(nCoord[n0], nCoord[n1], nCoord[n2], dst[i]);
+			}
+			else if (cnl.size() == 4) // Quadrilateral
+			{
+				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1; // Convert 1-based to 0-based.
+				quadrilateral_center(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], dst[i]);
+			}
+			else
+				throw("Invalid cell in 2D.");
 		}
-		else if (cnl.size() == 5) // 四角锥
-		{
-			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1; // Convert 1-based to 0-based.
-			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], dst[i]);
-		}
-		else if (cnl.size() == 6) // 三棱柱
-		{
-			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1; // Convert 1-based to 0-based.
-			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], dst[i]);
-		}
-		else if (cnl.size() == 8) // 六面体
-		{
-			auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1, n6 = cnl[6] - 1, n7 = cnl[7] - 1; // Convert 1-based to 0-based.
-			XF_NODE::middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], nCoord[n6], nCoord[n7], dst[i]);
-		}
-		else
-			throw("Invalid num of cell nodes.");
 	}
 
 	return 0;
@@ -1120,18 +1275,33 @@ int XF_MSH::computeTopology_cellCenterCoordinates(const std::vector<std::vector<
 int XF_MSH::computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<size_t>> &cIncF, std::vector<double> &dst) const
 {
 	// Check output array shape.
-	if (dst.size() != numOfCell())
+	const auto NC = numOfCell();
+	if (dst.size() != NC)
 		return -1;
 
 	// Treat differently for clearity
 	if (is3D())
 	{
-		// Tet, Prism, Wedge, Hex
+		// Based on the divergence theorem
+
 	}
 	else
 	{
-		// Tri, Quad
-
+		for (size_t i = 0; i < NC; ++i)
+		{
+			if (cIncN[i].size() == 3) // Triangle
+			{
+				auto na = cIncN[i][0] - 1, nb = cIncN[i][1] - 1, nc = cIncN[i][2] - 1;
+				dst[i] = triangle_area(nCoord[na], nCoord[nb], nCoord[nc]);
+			}
+			else if (cIncN[i].size() == 4) // Quadrilateral
+			{
+				auto na = cIncN[i][0] - 1, nb = cIncN[i][1] - 1, nc = cIncN[i][2] - 1, nd = cIncN[i][3] - 1;
+				dst[i] = quadrilateral_area(nCoord[na], nCoord[nb], nCoord[nc], nCoord[nd]);
+			}
+			else
+				throw("Invalid cell in 2D.");
+		}
 	}
 
 	return 0;

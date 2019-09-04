@@ -1044,11 +1044,11 @@ int XF_MSH::computeTopology_faceUnitNormalVector(
 				const auto &cnct = curObj->connectivity(i - cur_first); // Local 0-based indexing
 				if (cnct.x == XF_FACE::LINEAR)
 				{
-					size_t na_idx = cnct.n[0] - 1; // Global 0-based indexing
-					size_t nb_idx = cnct.n[1] - 1; // Global 0-based indexing
+					// Global 0-based node index
+					const size_t na = cnct.n[0] - 1, nb = cnct.n[1] - 1;
 
 					// Delta vector
-					delta(nCoord[na_idx], nCoord[nb_idx], dst[i - 1]);
+					delta(nCoord[na], nCoord[nb], dst[i - 1]);
 
 					// Rotate 90 deg in 2D plane.
 					// Surface mesh not supported currently.
@@ -1061,13 +1061,12 @@ int XF_MSH::computeTopology_faceUnitNormalVector(
 				}
 				else if (cnct.x == XF_FACE::TRIANGULAR)
 				{
-					size_t na_idx = cnct.n[0] - 1;
-					size_t nb_idx = cnct.n[1] - 1;
-					size_t nc_idx = cnct.n[2] - 1;
+					// Global 0-based node index
+					const size_t na = cnct.n[0] - 1, nb = cnct.n[1] - 1, nc = cnct.n[2] - 1;
 
 					// Delta vectors
-					auto origin(nCoord[na_idx]);
-					auto r1(nCoord[nb_idx]), r2(nCoord[nc_idx]);
+					auto origin(nCoord[na]);
+					auto r1(nCoord[nb]), r2(nCoord[nc]);
 					delta(origin, r1, r1);
 					delta(origin, r2, r2);
 
@@ -1076,32 +1075,27 @@ int XF_MSH::computeTopology_faceUnitNormalVector(
 
 					// Normalize
 					normalize(dst[i - 1], dst[i - 1]);
-
 				}
 				else if (cnct.x == XF_FACE::QUADRILATERAL)
 				{
-					size_t na_idx = cnct.n[0] - 1;
-					size_t nb_idx = cnct.n[1] - 1;
-					size_t nc_idx = cnct.n[2] - 1;
-					size_t nd_idx = cnct.n[3] - 1;
+					// Global 0-based node index
+					const size_t na = cnct.n[0] - 1, nb = cnct.n[1] - 1, nc = cnct.n[2] - 1, nd = cnct.n[3] - 1;
 
-					// Delta vectors
-					auto origin(nCoord[na_idx]), r0(nCoord[nc_idx]), r1(nCoord[nb_idx]), r2(nCoord[nd_idx]);
-					delta(origin, r0, r0);
-					delta(origin, r1, r1);
-					delta(origin, r2, r2);
+					// Reference to node coordinates
+					const auto &n5(nCoord[na]), &n6(nCoord[nb]), &n7(nCoord[nc]), &n8(nCoord[nd]);
 
-					// Cross product to find normal direction
-					cross_product(r0, r1, origin);
-					cross_product(r2, r0, dst[i - 1]);
+					// See (5.12) of Jiri Blazek's CFD book.
+					const double dxa = n8[0] - n6[0], dxb = n7[0] - n5[0];
+					const double dya = n8[1] - n6[1], dyb = n7[1] - n5[1];
+					const double dza = n8[2] - n6[2], dzb = n7[2] - n5[2];
+
+					// See (5.13) of Jiri Blazek's CFD book.
+					dst[i - 1][0] = 0.5*(dza * dyb - dya * dzb);
+					dst[i - 1][1] = 0.5*(dxa * dzb - dza * dxb);
+					dst[i - 1][2] = 0.5*(dya * dxb - dxa * dyb);
 
 					// Normalize
-					normalize(origin, origin);
 					normalize(dst[i - 1], dst[i - 1]);
-
-					// Average
-					for (size_t j = 0; j < 3; j++)
-						dst[i - 1][j] = 0.5 * (dst[i - 1][j] + origin[j]);
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
 					throw("Not supported currently!");

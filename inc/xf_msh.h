@@ -608,11 +608,14 @@ public:
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_cellCentroidCoordinates(nCoord, cIncN, cCenCoord);
+		if (is3D())
+			ret = computeTopology_cellVolume3D(cIncF, fCenCoord, cFNVec, cVol);
+		else
+			ret = computeTopology_cellVolume2D(nCoord, cIncN, cIncF, cVol);
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_cellVolume(nCoord, cIncN, cIncF, cVol);
+		ret = computeTopology_cellCentroidCoordinates(nCoord, cIncN, cCenCoord);
 		if (!ret)
 			throw(ret);
 
@@ -690,9 +693,21 @@ private:
 		std::vector<std::vector<std::vector<double>>> &dst
 	) const;
 
-	int computeTopology_cellCentroidCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const;
+	int computeTopology_cellVolume2D(
+		const std::vector<std::vector<double>> &nCoord,
+		const std::vector<std::vector<size_t>> &cIncN,
+		const std::vector<std::vector<size_t>> &cIncF,
+		std::vector<double> &dst
+	) const;
 
-	int computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<size_t>> &cIncF, std::vector<double> &dst) const;
+	int computeTopology_cellVolume3D(
+		const std::vector<std::vector<size_t>> &cIncF,
+		const std::vector<std::vector<double>> &fCenCoord,
+		const std::vector<std::vector<std::vector<double>>> &cFNVec,
+		std::vector<double> &dst
+	)const;
+
+	int computeTopology_cellCentroidCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const;
 };
 
 #endif

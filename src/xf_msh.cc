@@ -1284,6 +1284,77 @@ int XF_MSH::computeTopology_cellFaceUnitNormal(
 	return 0;
 }
 
+int XF_MSH::computeTopology_cellVolume2D(
+	const std::vector<std::vector<double>> &nCoord,
+	const std::vector<std::vector<size_t>> &cIncN,
+	const std::vector<std::vector<size_t>> &cIncF,
+	std::vector<double> &dst
+) const
+{
+	const size_t NC = numOfCell();
+
+	// Check output array shape.
+	if (dst.size() != NC)
+		return -1;
+	// Should be called in 2D mode.
+	if (is3D())
+		return -2;
+
+	// Calculate cell volume directly.
+	for (size_t i = 0; i < NC; ++i)
+	{
+		if (cIncN[i].size() == 3) // Triangle
+		{
+			auto na = cIncN[i][0] - 1, nb = cIncN[i][1] - 1, nc = cIncN[i][2] - 1;
+			dst[i] = triangle_area(nCoord[na], nCoord[nb], nCoord[nc]);
+		}
+		else if (cIncN[i].size() == 4) // Quadrilateral
+		{
+			auto na = cIncN[i][0] - 1, nb = cIncN[i][1] - 1, nc = cIncN[i][2] - 1, nd = cIncN[i][3] - 1;
+			dst[i] = quadrilateral_area(nCoord[na], nCoord[nb], nCoord[nc], nCoord[nd]);
+		}
+		else
+			throw("Invalid cell in 2D.");
+	}
+
+	return 0;
+}
+
+int XF_MSH::computeTopology_cellVolume3D(
+	const std::vector<std::vector<size_t>> &cIncF,
+	const std::vector<std::vector<double>> &fCenCoord,
+	const std::vector<std::vector<std::vector<double>>> &cFNVec,
+	std::vector<double>& dst
+) const
+{
+	const size_t NC = numOfCell();
+
+	// Check output array shape.
+	if (dst.size() != NC)
+		return -1;
+	// Should be called in 3D mode.
+	if (!is3D())
+		return -2;
+
+	// Based on the divergence theorem.
+	// See (5.15) of Jiri Blazek's CFD book.
+	for (size_t i = 0; i < NC; ++i)
+	{
+		dst[i] = 0.0;
+		const auto &cf = cIncF[i];
+		const auto &cfn = cFNVec[i];
+		const size_t NCF = cf.size();
+		for (size_t j = 0; j < NCF; ++j)
+		{
+			const auto cfi = cf[j] - 1; // Convert to 0-based index
+			dst[i] += dot_product(fCenCoord[cfi], cfn[j]);
+		}
+		dst[i] /= 3.0;
+	}
+
+	return 0;
+}
+
 int XF_MSH::computeTopology_cellCentroidCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const
 {
 	// Check output array shape.
@@ -1347,37 +1418,3 @@ int XF_MSH::computeTopology_cellCentroidCoordinates(const std::vector<std::vecto
 	return 0;
 }
 
-int XF_MSH::computeTopology_cellVolume(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<size_t>> &cIncF, std::vector<double> &dst) const
-{
-	// Check output array shape.
-	const auto NC = numOfCell();
-	if (dst.size() != NC)
-		return -1;
-
-	// Treat differently for clearity
-	if (is3D())
-	{
-		// Based on the divergence theorem
-
-	}
-	else
-	{
-		for (size_t i = 0; i < NC; ++i)
-		{
-			if (cIncN[i].size() == 3) // Triangle
-			{
-				auto na = cIncN[i][0] - 1, nb = cIncN[i][1] - 1, nc = cIncN[i][2] - 1;
-				dst[i] = triangle_area(nCoord[na], nCoord[nb], nCoord[nc]);
-			}
-			else if (cIncN[i].size() == 4) // Quadrilateral
-			{
-				auto na = cIncN[i][0] - 1, nb = cIncN[i][1] - 1, nc = cIncN[i][2] - 1, nd = cIncN[i][3] - 1;
-				dst[i] = quadrilateral_area(nCoord[na], nCoord[nb], nCoord[nc], nCoord[nd]);
-			}
-			else
-				throw("Invalid cell in 2D.");
-		}
-	}
-
-	return 0;
-}

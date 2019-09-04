@@ -1223,11 +1223,13 @@ int XF_MSH::computeTopology_cellFaceNormal(
 	const std::vector<std::vector<size_t>> &fAdjC,
 	const std::vector<std::vector<double>> &fNLR,
 	const std::vector<std::vector<double>> &fNRL,
-	std::vector<std::vector<double>> &dst
+	std::vector<std::vector<std::vector<double>>> &dst
 ) const
 {
+	const size_t NC = numOfCell();
+	const auto ND = dimension();
+
 	// Check output array shape.
-	const auto NC = numOfCell();
 	if (dst.size() != NC)
 		return -1;
 
@@ -1235,34 +1237,37 @@ int XF_MSH::computeTopology_cellFaceNormal(
 	for (size_t i = 1; i <= NC; ++i)
 	{
 		const auto &ci = cIncF[i - 1]; // Convert to 0-based index
-		for (size_t j = 0; j < ci.size(); ++j)
+		const size_t NCF = ci.size();
+		std::vector<std::vector<double>> cur_cell_face_normal(NCF, std::vector<double>(ND, 0.0));
+		for (size_t j = 0; j < NCF; ++j)
 		{
 			auto cfi = ci[j] - 1; // Convert to 0-based index
-
 			auto c0 = fAdjC[cfi][0], c1 = fAdjC[cfi][1];
 
-			// TODO
 			if (c0 == i)
-				dst[i - 1] = fNLR[cfi];
+				cur_cell_face_normal[j] = fNLR[cfi];
 			else if (c1 == i)
-				dst[i - 1] = fNRL[cfi];
+				cur_cell_face_normal[j] = fNRL[cfi];
 			else
 				throw("Internal error.");
 		}
+		dst[i - 1] = cur_cell_face_normal;
 	}
 
 	return 0;
 }
 
 int XF_MSH::computeTopology_cellFaceUnitNormal(
-	const std::vector<std::vector<size_t>>& cIncF, 
-	const std::vector<double>& fArea, 
-	const std::vector<std::vector<double>>& cFNVec, 
-	std::vector<std::vector<double>>& dst
+	const std::vector<std::vector<size_t>> &cIncF,
+	const std::vector<double> &fArea,
+	const std::vector<std::vector<std::vector<double>>> &cFNVec,
+	std::vector<std::vector<std::vector<double>>> &dst
 ) const
 {
 	const auto NC = numOfCell();
 	const auto ND = dimension();
+
+	dst = cFNVec;
 
 	// Check output array shape.
 	if (dst.size() != NC)
@@ -1271,14 +1276,12 @@ int XF_MSH::computeTopology_cellFaceUnitNormal(
 	// Normalize surface vector.
 	for (size_t i = 1; i <= NC; ++i)
 	{
-		dst[i - 1] = cFNVec[i - 1];
 		const auto &ci = cIncF[i - 1]; // Convert to 0-based index
-		for (size_t j = 0; j < ci.size(); ++j)
+		const size_t NCF = ci.size();
+		for (size_t j = 0; j < NCF; ++j)
 		{
 			auto cfi = ci[j] - 1; // Convert to 0-based index
 			auto s = fArea[cfi];
-
-			// TODO
 			for (int k = 0; k < ND; ++k)
 				dst[i - 1][j][k] /= s;
 		}

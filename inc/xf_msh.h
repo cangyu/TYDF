@@ -476,22 +476,20 @@ private:
 	int m_dim;
 
 public:
-	XF_MSH() :
-		m_totalNodeNum(0),
-		m_totalCellNum(0),
-		m_totalFaceNum(0),
-		m_is3D(false),
-		m_dim(3),
-		m_content(0, nullptr)
+	XF_MSH() :m_content(0, nullptr)
 	{
+		m_totalNodeNum = 0;
+		m_totalCellNum = 0;
+		m_totalFaceNum = 0;
+		m_is3D = false;
+		m_dim = 3;
 	}
 
 	~XF_MSH()
 	{
 		if (!m_content.empty())
 		{
-			const size_t N = m_content.size();
-			for (size_t i = 0; i < N; ++i)
+			for (size_t i = 0; i < m_content.size(); ++i)
 				delete m_content[i];
 		}
 	}
@@ -530,8 +528,8 @@ public:
 		std::vector<std::vector<size_t>> &cIncN, // Included nodes of each cell.
 		std::vector<std::vector<size_t>> &cIncF, // Included faces of each cell.
 		std::vector<std::vector<size_t>> &cAdjC, // Adjacent cells of each cell, the order is in accordance with cIncF.
-		std::vector<std::vector<double>> &cFUNVec, // Positive unit normal vector of each included face of each cell, the order is in accordance with cIncF.
-		std::vector<std::vector<double>> &cFNVec // Positive normal vector of each included face of each cell, the order is in accordance with cIncF, magnitude equals to face area.
+		std::vector<std::vector<std::vector<double>>> &cFUNVec, // Positive unit normal vector of each included face of each cell, the order is in accordance with cIncF.
+		std::vector<std::vector<std::vector<double>>> &cFNVec // Positive normal vector of each included face of each cell, the order is in accordance with cIncF, magnitude equals to face area.
 	) const
 	{
 		int ret = 0;
@@ -622,10 +620,7 @@ public:
 	}
 
 private:
-	void add_entry(XF_SECTION *e)
-	{
-		m_content.push_back(e);
-	}
+	void add_entry(XF_SECTION *e) { m_content.push_back(e); }
 
 	void clear_entry()
 	{
@@ -654,19 +649,19 @@ private:
 	int computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>> &dst) const;
 
 	int computeTopology_faceArea(
-		const std::vector<std::vector<double>> &nCoord, 
+		const std::vector<std::vector<double>> &nCoord,
 		std::vector<double> &dst
 	) const;
 
 	int computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const;
 
 	int computeTopology_faceCenterCoordinates(
-		const std::vector<std::vector<double>> &nCoord, 
+		const std::vector<std::vector<double>> &nCoord,
 		std::vector<std::vector<double>> &dst
 	) const;
 
 	int computeTopology_faceUnitNormalVector(
-		const std::vector<std::vector<double>> &nCoord, 
+		const std::vector<std::vector<double>> &nCoord,
 		std::vector<std::vector<double>> &dst
 	) const; // From left to right.
 
@@ -675,24 +670,24 @@ private:
 	int computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &dst) const;
 
 	int computeTopology_cellAdjacentCells(
-		const std::vector<std::vector<size_t>> &cIncF, 
-		const std::vector<std::vector<size_t>> &fAdjC, 
+		const std::vector<std::vector<size_t>> &cIncF,
+		const std::vector<std::vector<size_t>> &fAdjC,
 		std::vector<std::vector<size_t>> &dst
 	) const;
 
 	int computeTopology_cellFaceNormal(
-		const std::vector<std::vector<size_t>> &cIncF, 
-		const std::vector<std::vector<size_t>> &fAdjC, 
-		const std::vector<std::vector<double>> &fNLR, 
+		const std::vector<std::vector<size_t>> &cIncF,
+		const std::vector<std::vector<size_t>> &fAdjC,
+		const std::vector<std::vector<double>> &fNLR,
 		const std::vector<std::vector<double>> &fNRL,
-		std::vector<std::vector<double>> &dst
+		std::vector<std::vector<std::vector<double>>> &dst
 	) const;
 
 	int computeTopology_cellFaceUnitNormal(
 		const std::vector<std::vector<size_t>> &cIncF,
 		const std::vector<double> &fArea,
-		const std::vector<std::vector<double>> &cFNVec,
-		std::vector<std::vector<double>> &dst
+		const std::vector<std::vector<std::vector<double>>> &cFNVec,
+		std::vector<std::vector<std::vector<double>>> &dst
 	) const;
 
 	int computeTopology_cellCentroidCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const;

@@ -1312,29 +1312,20 @@ int XF_MSH::computeTopology_cellCentroidCoordinates(
 		return -2;
 
 	// Based on the divergence theorem.
+	// (5.17) of Jiri Blazek's CFD book.
 	for (size_t i = 0; i < NC; ++i)
 	{
-		// Clear
 		std::fill(dst[i].begin(), dst[i].end(), 0.0);
-
-		// Local reference
 		const auto &cf = cIncF[i];
 		const auto &cfn = cFNVec[i];
 		const size_t NCF = cf.size();
-
-		// (5.17) of Jiri Blazek's CFD book.
 		for (size_t j = 0; j < NCF; ++j)
 		{
-			// Convert to 0-based index
-			const auto cfi = cf[j] - 1;
-
-			// Local weight
-			const double w = dot_product(fCenCoord[cfi], cfn[j]);
-
+			const auto cfi = cf[j] - 1; // Convert to 0-based index	
+			const double w = dot_product(fCenCoord[cfi], cfn[j]); // Local weight
 			for (int k = 0; k < ND; ++k)
 				dst[i][k] += w * fCenCoord[cfi][k];
 		}
-
 		const double cde = (1.0 + ND) * cVol[i];
 		for (int k = 0; k < ND; ++k)
 			dst[i][k] /= cde;

@@ -21,7 +21,10 @@ static inline void skipWhite(std::istream &in)
 		in.unget();
 }
 
-static inline double dot_product(const std::vector<double> &na, const std::vector<double> &nb)
+static inline double dot_product(
+	const std::vector<double> &na,
+	const std::vector<double> &nb
+)
 {
 	const size_t ND = na.size();
 	double ret = 0.0;
@@ -30,21 +33,32 @@ static inline double dot_product(const std::vector<double> &na, const std::vecto
 	return ret;
 }
 
-static inline void cross_product(const std::vector<double> &a, const std::vector<double> &b, std::vector<double> &dst)
+static inline void cross_product(
+	const std::vector<double> &a,
+	const std::vector<double> &b,
+	std::vector<double> &dst
+)
 {
 	dst[0] = a[1] * b[2] - a[2] * b[1];
 	dst[1] = a[2] * b[0] - a[0] * b[2];
 	dst[2] = a[0] * b[1] - a[1] * b[0];
 }
 
-static inline void delta(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+static inline void delta(
+	const std::vector<double> &na,
+	const std::vector<double> &nb,
+	std::vector<double> &dst
+)
 {
 	const size_t ND = dst.size();
 	for (size_t i = 0; i < ND; ++i)
 		dst[i] = nb[i] - na[i];
 }
 
-static inline void normalize(const std::vector<double> &src, std::vector<double> &dst)
+static inline void normalize(
+	const std::vector<double> &src,
+	std::vector<double> &dst
+)
 {
 	const size_t ND = dst.size();
 	double L = 0.0;
@@ -55,7 +69,10 @@ static inline void normalize(const std::vector<double> &src, std::vector<double>
 		dst[i] = src[i] / L;
 }
 
-static inline double distance(const std::vector<double> &na, const std::vector<double> &nb)
+static inline double distance(
+	const std::vector<double> &na,
+	const std::vector<double> &nb
+)
 {
 	const size_t ND = na.size();
 	double L = 0.0;
@@ -67,7 +84,11 @@ static inline double distance(const std::vector<double> &na, const std::vector<d
 	return std::sqrt(L);
 }
 
-static inline void line_center(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+static inline void line_center(
+	const std::vector<double> &na,
+	const std::vector<double> &nb,
+	std::vector<double> &dst
+)
 {
 	const size_t ND = dst.size();
 	for (size_t i = 0; i < ND; ++i)
@@ -136,52 +157,6 @@ static inline double quadrilateral_area(
 	const double S123 = triangle_area(n1, n2, n3);
 	const double S134 = triangle_area(n1, n3, n4);
 	return S123 + S134;
-}
-
-static void middle(
-	const std::vector<double> &na,
-	const std::vector<double> &nb,
-	const std::vector<double> &nc,
-	const std::vector<double> &nd,
-	const std::vector<double> &ne,
-	std::vector<double> &dst
-)
-{
-	const size_t ND = dst.size();
-	for (size_t i = 0; i < ND; ++i)
-		dst[i] = 0.2*(na[i] + nb[i] + nc[i] + nd[i] + ne[i]);
-}
-
-static void middle(
-	const std::vector<double> &na,
-	const std::vector<double> &nb,
-	const std::vector<double> &nc,
-	const std::vector<double> &nd,
-	const std::vector<double> &ne,
-	const std::vector<double> &nf,
-	std::vector<double> &dst
-)
-{
-	const size_t ND = dst.size();
-	for (size_t i = 0; i < ND; ++i)
-		dst[i] = (na[i] + nb[i] + nc[i] + nd[i] + ne[i] + nf[i]) / 6.0;
-}
-
-static void middle(
-	const std::vector<double> &na,
-	const std::vector<double> &nb,
-	const std::vector<double> &nc,
-	const std::vector<double> &nd,
-	const std::vector<double> &ne,
-	const std::vector<double> &nf,
-	const std::vector<double> &ng,
-	const std::vector<double> &nh,
-	std::vector<double> &dst
-)
-{
-	const size_t ND = dst.size();
-	for (size_t i = 0; i < ND; ++i)
-		dst[i] = 0.125*(na[i] + nb[i] + nc[i] + nd[i] + ne[i] + nf[i] + ng[i] + nh[i]);
 }
 
 XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
@@ -721,7 +696,7 @@ int XF_MSH::computeTopology_nodeAdjacentNodes(std::vector<std::vector<size_t>> &
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				const auto &cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - cur_first);
 				for (int j = 0; j < cnct.x; ++j)
 				{
 					int node_idx = cnct.n[j];
@@ -773,7 +748,7 @@ int XF_MSH::computeTopology_nodeDependentFaces(std::vector<std::vector<size_t>> 
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				const auto &cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - cur_first);
 				for (int j = 0; j < cnct.x; ++j)
 				{
 					int node_idx = cnct.n[j]; // 1-based
@@ -806,7 +781,7 @@ int XF_MSH::computeTopology_nodeDependentCells(std::vector<std::vector<size_t>> 
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				const auto &cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - cur_first);
 				for (int j = 0; j < cnct.x; ++j)
 				{
 					int node_idx = cnct.n[j]; // 1-based
@@ -847,7 +822,7 @@ int XF_MSH::computeTopology_faceIncludedNodes(std::vector<std::vector<size_t>> &
 
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				const auto &cnct = curObj->connectivity(i - 1);
+				const auto &cnct = curObj->connectivity(i - cur_first);
 				dst[i - 1].assign(cnct.n, cnct.n + cnct.x); // Contents of dst[i-1] are 1-based, right-hand convention is preserved.
 			}
 		}
@@ -877,7 +852,9 @@ int XF_MSH::computeTopology_faceAdjacentCells(std::vector<std::vector<size_t>> &
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
 				const auto &cnct = curObj->connectivity(i - cur_first);
-				dst[i - 1].assign(cnct.c, cnct.c + 2); // Contents of dst[i-1] are 1-based for actual cell, 0 stands for boundary, right-hand convention is preserved.
+
+				// Contents of dst[i-1] are 1-based for actual cell, 0 stands for boundary, right-hand convention is preserved.
+				dst[i - 1].assign(cnct.c, cnct.c + 2);
 			}
 		}
 	}
@@ -1284,43 +1261,7 @@ int XF_MSH::computeTopology_cellFaceUnitNormal(
 	return 0;
 }
 
-int XF_MSH::computeTopology_cellVolume2D(
-	const std::vector<std::vector<double>> &nCoord,
-	const std::vector<std::vector<size_t>> &cIncN,
-	const std::vector<std::vector<size_t>> &cIncF,
-	std::vector<double> &dst
-) const
-{
-	const size_t NC = numOfCell();
-
-	// Check output array shape.
-	if (dst.size() != NC)
-		return -1;
-	// Should be called in 2D mode.
-	if (is3D())
-		return -2;
-
-	// Calculate cell volume directly.
-	for (size_t i = 0; i < NC; ++i)
-	{
-		if (cIncN[i].size() == 3) // Triangle
-		{
-			auto na = cIncN[i][0] - 1, nb = cIncN[i][1] - 1, nc = cIncN[i][2] - 1;
-			dst[i] = triangle_area(nCoord[na], nCoord[nb], nCoord[nc]);
-		}
-		else if (cIncN[i].size() == 4) // Quadrilateral
-		{
-			auto na = cIncN[i][0] - 1, nb = cIncN[i][1] - 1, nc = cIncN[i][2] - 1, nd = cIncN[i][3] - 1;
-			dst[i] = quadrilateral_area(nCoord[na], nCoord[nb], nCoord[nc], nCoord[nd]);
-		}
-		else
-			throw("Invalid cell in 2D.");
-	}
-
-	return 0;
-}
-
-int XF_MSH::computeTopology_cellVolume3D(
+int XF_MSH::computeTopology_cellVolume(
 	const std::vector<std::vector<size_t>> &cIncF,
 	const std::vector<std::vector<double>> &fCenCoord,
 	const std::vector<std::vector<std::vector<double>>> &cFNVec,
@@ -1328,13 +1269,11 @@ int XF_MSH::computeTopology_cellVolume3D(
 ) const
 {
 	const size_t NC = numOfCell();
+	const double ND = 1.0*dimension();
 
 	// Check output array shape.
 	if (dst.size() != NC)
 		return -1;
-	// Should be called in 3D mode.
-	if (!is3D())
-		return -2;
 
 	// Based on the divergence theorem.
 	// See (5.15) of Jiri Blazek's CFD book.
@@ -1349,72 +1288,57 @@ int XF_MSH::computeTopology_cellVolume3D(
 			const auto cfi = cf[j] - 1; // Convert to 0-based index
 			dst[i] += dot_product(fCenCoord[cfi], cfn[j]);
 		}
-		dst[i] /= 3.0;
+		dst[i] /= ND;
 	}
 
 	return 0;
 }
 
-int XF_MSH::computeTopology_cellCentroidCoordinates(const std::vector<std::vector<double>> &nCoord, const std::vector<std::vector<size_t>> &cIncN, std::vector<std::vector<double>> &dst) const
+int XF_MSH::computeTopology_cellCentroidCoordinates(
+	const std::vector<std::vector<size_t>> &cIncF,
+	const std::vector<std::vector<double>> &fCenCoord,
+	const std::vector<std::vector<std::vector<double>>> &cFNVec,
+	const std::vector<double> &cVol,
+	std::vector<std::vector<double>> &dst
+) const
 {
+	const size_t NC = numOfCell();
+	const auto ND = dimension();
+
 	// Check output array shape.
-	const auto NC = numOfCell();
 	if (dst.size() != NC)
 		return -1;
-	if (dst[0].size() != dimension())
+	if (dst[0].size() != ND)
 		return -2;
 
-	// Average vertexs of each cell.
-	// Treat differently for clearity.
-	if (is3D())
+	// Based on the divergence theorem.
+	for (size_t i = 0; i < NC; ++i)
 	{
-		for (size_t i = 0; i < NC; ++i)
+		// Clear
+		std::fill(dst[i].begin(), dst[i].end(), 0.0);
+
+		// Local reference
+		const auto &cf = cIncF[i];
+		const auto &cfn = cFNVec[i];
+		const size_t NCF = cf.size();
+
+		// (5.17) of Jiri Blazek's CFD book.
+		for (size_t j = 0; j < NCF; ++j)
 		{
-			const auto &cnl = cIncN[i];
-			if (cnl.size() == 4) // Tetrahedron
-			{
-				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1; // Convert 1-based to 0-based.
-				quadrilateral_center(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], dst[i]);
-			}
-			else if (cnl.size() == 5) // Pyramid
-			{
-				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1; // Convert 1-based to 0-based.
-				middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], dst[i]);
-			}
-			else if (cnl.size() == 6) // Wedge
-			{
-				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1; // Convert 1-based to 0-based.
-				middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], dst[i]);
-			}
-			else if (cnl.size() == 8) // Hexahedron
-			{
-				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1, n4 = cnl[4] - 1, n5 = cnl[5] - 1, n6 = cnl[6] - 1, n7 = cnl[7] - 1; // Convert 1-based to 0-based.
-				middle(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], nCoord[n4], nCoord[n5], nCoord[n6], nCoord[n7], dst[i]);
-			}
-			else
-				throw("Invalid cell in 3D.");
+			// Convert to 0-based index
+			const auto cfi = cf[j] - 1;
+
+			// Local weight
+			const double w = dot_product(fCenCoord[cfi], cfn[j]);
+
+			for (int k = 0; k < ND; ++k)
+				dst[i][k] += w * fCenCoord[cfi][k];
 		}
-	}
-	else
-	{
-		for (size_t i = 0; i < NC; ++i)
-		{
-			const auto &cnl = cIncN[i];
-			if (cnl.size() == 3) // Triangle
-			{
-				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1; // Convert 1-based to 0-based.
-				triangle_center(nCoord[n0], nCoord[n1], nCoord[n2], dst[i]);
-			}
-			else if (cnl.size() == 4) // Quadrilateral
-			{
-				auto n0 = cnl[0] - 1, n1 = cnl[1] - 1, n2 = cnl[2] - 1, n3 = cnl[3] - 1; // Convert 1-based to 0-based.
-				quadrilateral_center(nCoord[n0], nCoord[n1], nCoord[n2], nCoord[n3], dst[i]);
-			}
-			else
-				throw("Invalid cell in 2D.");
-		}
+
+		const double cde = (1.0 + ND) * cVol[i];
+		for (int k = 0; k < ND; ++k)
+			dst[i][k] /= cde;
 	}
 
 	return 0;
 }
-

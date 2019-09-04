@@ -702,7 +702,7 @@ int XF_MSH::computeTopology_nodeBoundaryFlag(std::vector<bool> &dst) const
 	return 0;
 }
 
-int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>> &dst) const
+int XF_MSH::computeTopology_nodeAdjacentNodes(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfNode())
@@ -753,7 +753,7 @@ int XF_MSH::computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>> &d
 	return 0;
 }
 
-int XF_MSH::computeTopology_nodeDependentFace(std::vector<std::vector<size_t>> &dst) const
+int XF_MSH::computeTopology_nodeDependentFaces(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfNode())
@@ -786,7 +786,7 @@ int XF_MSH::computeTopology_nodeDependentFace(std::vector<std::vector<size_t>> &
 	return 0;
 }
 
-int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>> &dst) const
+int XF_MSH::computeTopology_nodeDependentCells(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfNode())
@@ -827,7 +827,7 @@ int XF_MSH::computeTopology_nodeDependentCell(std::vector<std::vector<size_t>> &
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceIncludedNode(std::vector<std::vector<size_t>> &dst) const
+int XF_MSH::computeTopology_faceIncludedNodes(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfFace())
@@ -856,7 +856,7 @@ int XF_MSH::computeTopology_faceIncludedNode(std::vector<std::vector<size_t>> &d
 	return 0;
 }
 
-int XF_MSH::computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>> &dst) const
+int XF_MSH::computeTopology_faceAdjacentCells(std::vector<std::vector<size_t>> &dst) const
 {
 	// Check output array shape.
 	if (dst.size() != numOfFace())

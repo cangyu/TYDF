@@ -542,23 +542,23 @@ public:
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_nodeAdjacentNode(nAdjN);
+		ret = computeTopology_nodeAdjacentNodes(nAdjN);
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_nodeDependentFace(nDepF);
+		ret = computeTopology_nodeDependentFaces(nDepF);
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_nodeDependentCell(nDepC);
+		ret = computeTopology_nodeDependentCells(nDepC);
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_faceIncludedNode(fIncN);
+		ret = computeTopology_faceIncludedNodes(fIncN);
 		if (!ret)
 			throw(ret);
 
-		ret = computeTopology_faceAdjacentCell(fAdjC);
+		ret = computeTopology_faceAdjacentCells(fAdjC);
 		if (!ret)
 			throw(ret);
 
@@ -638,15 +638,15 @@ private:
 
 	int computeTopology_nodeBoundaryFlag(std::vector<bool> &dst) const;
 
-	int computeTopology_nodeAdjacentNode(std::vector<std::vector<size_t>> &dst) const;
+	int computeTopology_nodeAdjacentNodes(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_nodeDependentFace(std::vector<std::vector<size_t>> &dst) const;
+	int computeTopology_nodeDependentFaces(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_nodeDependentCell(std::vector<std::vector<size_t>> &dst) const;
+	int computeTopology_nodeDependentCells(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_faceIncludedNode(std::vector<std::vector<size_t>> &dst) const;
+	int computeTopology_faceIncludedNodes(std::vector<std::vector<size_t>> &dst) const;
 
-	int computeTopology_faceAdjacentCell(std::vector<std::vector<size_t>> &dst) const;
+	int computeTopology_faceAdjacentCells(std::vector<std::vector<size_t>> &dst) const;
 
 	int computeTopology_faceArea(
 		const std::vector<std::vector<double>> &nCoord,

@@ -1,7 +1,8 @@
 .vscode/
 .vs/
 
-blessed*.msh
+*blessed*.fmt
+*blessed*.msh
 
 *.o
 *.out

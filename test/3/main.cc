@@ -1,7 +1,7 @@
 #include "plot3d.h"
 
 // 3D single-block grid
-void test1()
+int test1()
 {
 	PLOT3D p3d;
 	int ret = 0;
@@ -13,6 +13,8 @@ void test1()
 	ret = p3d.writeToFile("xyz_blessed.fmt");
 	if (ret != 0)
 		throw std::runtime_error("Failed to write grid to file.");
+
+	return ret;
 }
 
 int main(int argc, char *argv[])

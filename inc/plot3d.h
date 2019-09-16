@@ -2,29 +2,144 @@
 #define __PLOT3D_H__
 
 #include <vector>
+#include <string>
 
 class PLOT3D_BLK
 {
 private:
-	size_t m_nI, m_nJ, m_nK;
-	bool m_3d;
-	int m_dim;
-	double *m_coord;
-	size_t m_nIJ, m_nIJK;
+	template<typename T>
+	class Array
+	{
+	private:
+		size_t m_Nx, m_Ny, m_Nz;
+		std::vector<T> m_data;
+		size_t m_NXY;
+
+	public:
+		Array(size_t nx, size_t ny, const T &val) :
+			m_Nx(nx),
+			m_Ny(ny),
+			m_Nz(1),
+			m_data(nx*ny, val)
+		{
+			if (nx == 0 || ny == 0)
+			{
+				std::string msg("Invalid size: nx=" + std::to_string(nx) + ", ny=" + std::to_string(ny));
+				throw std::runtime_error(msg);
+			}
+
+			m_NXY = nx * ny;
+		}
+
+		Array(size_t nx, size_t ny, size_t nz, const T &val) :
+			m_Nx(nx),
+			m_Ny(ny),
+			m_Nz(nz),
+			m_data(nx*ny*nz, val)
+		{
+			if (nx == 0 || ny == 0 || nz == 0)
+			{
+				std::string msg("Invalid size: nx=" + std::to_string(nx) + ", ny=" + std::to_string(ny) + ", nz=" + std::to_string(nz));
+				throw std::runtime_error(msg);
+			}
+
+			m_NXY = nx * ny;
+		}
+
+		~Array() = default;
+
+		size_t nI() const
+		{
+			return m_Nx;
+		}
+
+		size_t nJ() const
+		{
+			return m_Ny;
+		}
+
+		size_t nK() const
+		{
+			return m_Nz;
+		}
+
+	private:
+		size_t idx(size_t i, size_t j) const
+		{
+			return i + m_Nx * j; // 0-based
+		}
+
+		size_t idx(size_t i, size_t j, size_t k) const
+		{
+			return i + m_Nx * j + m_NXY * k; // 0-based
+		}
+
+	public:
+		/******************************* 2D *******************************/
+		// 0-based indexing
+		T& at(size_t i, size_t j)
+		{
+			return m_data[idx(i, j)];
+		}
+
+		T at(size_t i, size_t j) const
+		{
+			return m_data[idx(i, j)];
+		}
+
+		// 1-based indexing
+		T& operator()(size_t i, size_t j)
+		{
+			return at(i - 1, j - 1);
+		}
+
+		T operator()(size_t i, size_t j) const
+		{
+			return at(i - 1, j - 1);
+		}
+
+		/******************************* 3D *******************************/
+		// 0-based indexing
+		T& at(size_t i, size_t j, size_t k)
+		{
+			return m_data[idx(i, j, k)];
+		}
+
+		T at(size_t i, size_t j, size_t k) const
+		{
+			return m_data[idx(i, j, k)];
+		}
+
+		// 1-based indexing
+		T& operator()(size_t i, size_t j, size_t k)
+		{
+			return at(i - 1, j - 1, k - 1);
+		}
+
+		T operator()(size_t i, size_t j, size_t k) const
+		{
+			return at(i - 1, j - 1, k - 1);
+		}
+	};
 
 public:
+	typedef Array<double> *pCoordBlk;
+
 	PLOT3D_BLK(size_t nI, size_t nJ) :
 		m_nI(nI),
 		m_nJ(nJ),
 		m_nK(1),
 		m_3d(false),
-		m_dim(2),
-		m_coord(new double[2 * nI*nJ])
+		m_dim(2)
 	{
 		if (nI == 0 || nJ == 0)
-			throw("Invalid size.");
+			throw std::runtime_error("Invalid size.");
 
 		m_nIJK = m_nIJ = m_nI * m_nJ;
+
+		m_x = new Array<double>(nI, nJ, 0.0);
+		m_y = new Array<double>(nI, nJ, 0.0);
+		m_z = nullptr;
 	}
 
 	PLOT3D_BLK(size_t nI, size_t nJ, size_t nK) :
@@ -32,19 +147,27 @@ public:
 		m_nJ(nJ),
 		m_nK(nK),
 		m_3d(true),
-		m_dim(3),
-		m_coord(new double[3 * nI*nJ*nK])
+		m_dim(3)
 	{
-		if (nI < 2 || nJ < 2 || nK < 2)
-			throw("Invalid size.");
+		if (nI == 0 || nJ == 0 || nK == 0)
+			throw std::runtime_error("Invalid size.");
 
 		m_nIJ = m_nI * m_nJ;
 		m_nIJK = m_nI * m_nJ * m_nK;
+
+		m_x = new Array<double>(nI, nJ, nK, 0.0);
+		m_y = new Array<double>(nI, nJ, nK, 0.0);
+		m_z = new Array<double>(nI, nJ, nK, 0.0);
 	}
 
 	~PLOT3D_BLK()
 	{
-		delete[] m_coord;
+		if (m_x)
+			delete m_x;
+		if (m_y)
+			delete m_y;
+		if (m_z)
+			delete m_z;
 	}
 
 	bool is3D() const
@@ -66,7 +189,7 @@ public:
 	{
 		size_t ret = 0;
 
-		if (is3D)
+		if (m_3d)
 			ret = (m_nI - 1)*(m_nJ - 1)*(m_nK - 1);
 		else
 			ret = (m_nI - 1)*(m_nJ - 1);
@@ -78,7 +201,7 @@ public:
 	{
 		size_t ret = 0;
 
-		if (is3D)
+		if (m_3d)
 		{
 			ret += (m_nI - 1) * (m_nJ - 1) * m_nK;
 			ret += (m_nJ - 1) * (m_nK - 1) * m_nI;
@@ -97,7 +220,7 @@ public:
 	{
 		size_t ret = 0;
 
-		if (is3D)
+		if (m_3d)
 		{
 			ret += (m_nI - 1) * (m_nJ - 1);
 			ret += (m_nJ - 1) * (m_nK - 1);
@@ -119,55 +242,43 @@ public:
 		return face_num() - boundary_face_num();
 	}
 
-	size_t IMAX() const
+	size_t nI() const
 	{
 		return m_nI;
 	}
 
-	size_t JMAX() const
+	size_t nJ() const
 	{
 		return m_nJ;
 	}
 
-	size_t KMAX() const
+	size_t nK() const
 	{
 		return m_nK;
 	}
 
-	// 0-based
-	double *at(size_t i, size_t j)
+	pCoordBlk x()
 	{
-		return m_coord + STX(i, j);
+		return m_x;
 	}
 
-	double *at(size_t i, size_t j, size_t k)
+	pCoordBlk y()
 	{
-		return m_coord + STX(i, j, k);
+		return m_y;
 	}
 
-	// 1-based
-	double *operator()(size_t i, size_t j)
+	pCoordBlk z()
 	{
-		return at(i - 1, j - 1);
-	}
-
-	double *operator()(size_t i, size_t j, size_t k)
-	{
-		return at(i - 1, j - 1, k - 1);
+		return m_z;
 	}
 
 private:
-	size_t STX(size_t i, size_t j) const
-	{
-		return 2 * (i + j * m_nI);
-	}
-
-	size_t STX(size_t i, size_t j, size_t k) const
-	{
-		return 3 * (i + j * m_nI + k * m_nIJ);
-	}
+	size_t m_nI, m_nJ, m_nK;
+	bool m_3d;
+	int m_dim;
+	pCoordBlk m_x, m_y, m_z;
+	size_t m_nIJ, m_nIJK;
 };
-
 
 class PLOT3D
 {
@@ -178,9 +289,20 @@ private:
 	std::vector<PLOT3D_BLK*> m_blk;
 
 public:
-	PLOT3D() {}
+	PLOT3D()
+	{
+		m_nBLK = 0;
+		m_3d = true;
+		m_dim = 3;
+		m_blk.resize(0, nullptr);
+	}
 
-	~PLOT3D() {}
+	~PLOT3D()
+	{
+		for (size_t i = 0; i < m_blk.size(); ++i)
+			if (m_blk[i])
+				delete m_blk[i];
+	}
 
 	bool is3D() const
 	{
@@ -192,10 +314,14 @@ public:
 		return m_dim;
 	}
 
-	size_t blk_num() const
+	size_t nBLK() const
 	{
 		return m_nBLK;
 	}
+
+	int readFromFile(const std::string &src);
+
+	int writeToFile(const std::string &src) const;
 };
 
 #endif

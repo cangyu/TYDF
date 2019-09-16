@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <stdexcept>
 
 class PLOT3D_BLK
 {

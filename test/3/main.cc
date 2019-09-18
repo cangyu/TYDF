@@ -1,7 +1,7 @@
 #include "plot3d.h"
 
 // 3D single-block grid
-int test1()
+int test0()
 {
 	PLOT3D p3d;
 	int ret = 0;
@@ -19,7 +19,7 @@ int test1()
 
 int main(int argc, char *argv[])
 {
-	test1();
+	test0();
 
 	return 0;
 }

@@ -1,16 +1,13 @@
-#include <iostream>
-#include <cstddef>
 #include "xf_msh.h"
 
 using namespace std;
 
-const string INPUT_MESH_PATH("./fluent.msh");
-const string OUTPUT_MESH_PATH("./blessed.msh");
-
-XF_MSH msh;
-
-int main(int argc, char *argv[])
+int test0()
 {
+	const string INPUT_MESH_PATH("fluent.msh");
+	const string OUTPUT_MESH_PATH("blessed.msh");
+
+	XF_MSH msh;
 	int ret = 0;
 
 	cout << "Reading mesh: \"" << INPUT_MESH_PATH << "\" ..." << endl;
@@ -28,4 +25,11 @@ int main(int argc, char *argv[])
 		cout << "Failure: " << ret << endl;
 
 	return ret;
+}
+
+int main(int argc, char *argv[])
+{
+	test0();
+
+	return 0;
 }

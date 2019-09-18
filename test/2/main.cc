@@ -1,7 +1,7 @@
 #include "plot3d.h"
 
 // 2D grid in 3D form
-void test1()
+void test0()
 {
 	PLOT3D p3d;
 	int ret = 0;
@@ -16,7 +16,7 @@ void test1()
 }
 
 // 2D grid in 2D form
-void test2()
+void test1()
 {
 	PLOT3D p3d;
 	int ret = 0;
@@ -32,8 +32,8 @@ void test2()
 
 int main(int argc, char *argv[])
 {
+	test0();
 	test1();
-	test2();
 
 	return 0;
 }

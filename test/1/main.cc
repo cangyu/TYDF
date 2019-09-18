@@ -1,20 +1,18 @@
-#include "topology.h"
 #include "xf_msh.h"
-
 
 using namespace std;
 
-const string MESH_PATH("./fluent.msh");
-const string OUTPUT_PATH("./blessed.msh");
-
-XF_MSH msh;
-
-int main(int argc, char *argv[])
+int test0()
 {
+	const string MESH_PATH("fluent.msh");
+	const string OUTPUT_PATH("blessed.msh");
+
+	int ret = 0;
+	XF_MSH msh;
+
 	cout << "Reading mesh: \"" << MESH_PATH << "\" ..." << endl;
 
-	int ret = msh.readFromFile(MESH_PATH);
-	
+	ret = msh.readFromFile(MESH_PATH);
 	if (!ret)
 		cout << "\"" << MESH_PATH << "\" read successfully!" << endl;
 	else
@@ -22,5 +20,12 @@ int main(int argc, char *argv[])
 
 	ret = msh.writeToFile(OUTPUT_PATH);
 
-    return 0;
+	return ret;
+}
+
+int main(int argc, char *argv[])
+{
+	test0();
+
+	return 0;
 }

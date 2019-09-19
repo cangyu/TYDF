@@ -1,79 +1,81 @@
 #include "xf_msh.h"
 
+typedef std::vector<double> Array1D;
+
 const std::string & XF_CELL_Enum2Name(int x)
 {
-    static const std::map<int, std::string> CELL_NAME{
-            std::pair<int, std::string>(XF_CELL::MIXED, "MIXED"),
-            std::pair<int, std::string>(XF_CELL::TRIANGULAR, "TRIANGULAR"),
-            std::pair<int, std::string>(XF_CELL::TETRAHEDRAL, "TETRAHEDRAL"),
-            std::pair<int, std::string>(XF_CELL::QUADRILATERAL, "QUADRILATERAL"),
-            std::pair<int, std::string>(XF_CELL::HEXAHEDRAL, "HEXAHEDRAL"),
-            std::pair<int, std::string>(XF_CELL::PYRAMID, "PYRAMID"),
-            std::pair<int, std::string>(XF_CELL::WEDGE, "WEDGE"),
-            std::pair<int, std::string>(XF_CELL::POLYHEDRAL, "POLYHEDRAL")
-    };
+	static const std::map<int, std::string> CELL_NAME{
+			std::pair<int, std::string>(XF_CELL::MIXED, "MIXED"),
+			std::pair<int, std::string>(XF_CELL::TRIANGULAR, "TRIANGULAR"),
+			std::pair<int, std::string>(XF_CELL::TETRAHEDRAL, "TETRAHEDRAL"),
+			std::pair<int, std::string>(XF_CELL::QUADRILATERAL, "QUADRILATERAL"),
+			std::pair<int, std::string>(XF_CELL::HEXAHEDRAL, "HEXAHEDRAL"),
+			std::pair<int, std::string>(XF_CELL::PYRAMID, "PYRAMID"),
+			std::pair<int, std::string>(XF_CELL::WEDGE, "WEDGE"),
+			std::pair<int, std::string>(XF_CELL::POLYHEDRAL, "POLYHEDRAL")
+	};
 
-    auto it = CELL_NAME.find(x);
-    if(it == CELL_NAME.end())
-        throw std::runtime_error("Unsupported Cell Enumeration: "+std::to_string(x));
-    else
-        return it->second;
+	auto it = CELL_NAME.find(x);
+	if (it == CELL_NAME.end())
+		throw std::runtime_error("Unsupported Cell Enumeration: " + std::to_string(x));
+	else
+		return it->second;
 }
 
 int XF_CELL_Name2Enum(const std::string & x)
 {
-    static const std::map<std::string, int> CELL_ENUM{
-            // MIXED
-            std::pair<std::string, int>("MIXED", XF_CELL::MIXED),
-            std::pair<std::string, int>("Mixed", XF_CELL::MIXED),
-            std::pair<std::string, int>("mixed", XF_CELL::MIXED),
-            // TRIANGULAR
-            std::pair<std::string, int>("TRIANGULAR", XF_CELL::TRIANGULAR),
-            std::pair<std::string, int>("Triangular", XF_CELL::TRIANGULAR),
-            std::pair<std::string, int>("triangular", XF_CELL::TRIANGULAR),
-            std::pair<std::string, int>("TRI", XF_CELL::TRIANGULAR),
-            std::pair<std::string, int>("Tri", XF_CELL::TRIANGULAR),
-            std::pair<std::string, int>("tri", XF_CELL::TRIANGULAR),
-            // TETRAHEDRAL
-            std::pair<std::string, int>("TETRAHEDRAL", XF_CELL::TETRAHEDRAL),
-            std::pair<std::string, int>("Tetrahedral", XF_CELL::TETRAHEDRAL),
-            std::pair<std::string, int>("tetrahedral", XF_CELL::TETRAHEDRAL),
-            std::pair<std::string, int>("TET", XF_CELL::TETRAHEDRAL),
-            std::pair<std::string, int>("Tet", XF_CELL::TETRAHEDRAL),
-            std::pair<std::string, int>("tet", XF_CELL::TETRAHEDRAL),
-            // QUADRILATERAL
-            std::pair<std::string, int>("QUADRILATERAL", XF_CELL::QUADRILATERAL),
-            std::pair<std::string, int>("Quadrilateral", XF_CELL::QUADRILATERAL),
-            std::pair<std::string, int>("quadrilateral", XF_CELL::QUADRILATERAL),
-            std::pair<std::string, int>("QUAD", XF_CELL::QUADRILATERAL),
-            std::pair<std::string, int>("Quad", XF_CELL::QUADRILATERAL),
-            std::pair<std::string, int>("quad", XF_CELL::QUADRILATERAL),
-            // HEXAHEDRAL
-            std::pair<std::string, int>("HEXAHEDRAL", XF_CELL::HEXAHEDRAL),
-            std::pair<std::string, int>("Hexahedral", XF_CELL::HEXAHEDRAL),
-            std::pair<std::string, int>("hexahedral", XF_CELL::HEXAHEDRAL),
-            std::pair<std::string, int>("HEX", XF_CELL::HEXAHEDRAL),
-            std::pair<std::string, int>("Hex", XF_CELL::HEXAHEDRAL),
-            std::pair<std::string, int>("hex", XF_CELL::HEXAHEDRAL),
-            // PYRAMID
-            std::pair<std::string, int>("PYRAMID", XF_CELL::PYRAMID),
-            std::pair<std::string, int>("Pyramid", XF_CELL::PYRAMID),
-            std::pair<std::string, int>("pyramid", XF_CELL::PYRAMID),
-            // WEDGE
-            std::pair<std::string, int>("WEDGE", XF_CELL::WEDGE),
-            std::pair<std::string, int>("Wedge", XF_CELL::WEDGE),
-            std::pair<std::string, int>("wedge", XF_CELL::WEDGE),
-            // POLYHEDRAL
-            std::pair<std::string, int>("POLYHEDRAL", XF_CELL::POLYHEDRAL),
-            std::pair<std::string, int>("Polyhedral", XF_CELL::POLYHEDRAL),
-            std::pair<std::string, int>("polyhedral", XF_CELL::POLYHEDRAL)
-    };
+	static const std::map<std::string, int> CELL_ENUM{
+		// MIXED
+		std::pair<std::string, int>("MIXED", XF_CELL::MIXED),
+		std::pair<std::string, int>("Mixed", XF_CELL::MIXED),
+		std::pair<std::string, int>("mixed", XF_CELL::MIXED),
+		// TRIANGULAR
+		std::pair<std::string, int>("TRIANGULAR", XF_CELL::TRIANGULAR),
+		std::pair<std::string, int>("Triangular", XF_CELL::TRIANGULAR),
+		std::pair<std::string, int>("triangular", XF_CELL::TRIANGULAR),
+		std::pair<std::string, int>("TRI", XF_CELL::TRIANGULAR),
+		std::pair<std::string, int>("Tri", XF_CELL::TRIANGULAR),
+		std::pair<std::string, int>("tri", XF_CELL::TRIANGULAR),
+		// TETRAHEDRAL
+		std::pair<std::string, int>("TETRAHEDRAL", XF_CELL::TETRAHEDRAL),
+		std::pair<std::string, int>("Tetrahedral", XF_CELL::TETRAHEDRAL),
+		std::pair<std::string, int>("tetrahedral", XF_CELL::TETRAHEDRAL),
+		std::pair<std::string, int>("TET", XF_CELL::TETRAHEDRAL),
+		std::pair<std::string, int>("Tet", XF_CELL::TETRAHEDRAL),
+		std::pair<std::string, int>("tet", XF_CELL::TETRAHEDRAL),
+		// QUADRILATERAL
+		std::pair<std::string, int>("QUADRILATERAL", XF_CELL::QUADRILATERAL),
+		std::pair<std::string, int>("Quadrilateral", XF_CELL::QUADRILATERAL),
+		std::pair<std::string, int>("quadrilateral", XF_CELL::QUADRILATERAL),
+		std::pair<std::string, int>("QUAD", XF_CELL::QUADRILATERAL),
+		std::pair<std::string, int>("Quad", XF_CELL::QUADRILATERAL),
+		std::pair<std::string, int>("quad", XF_CELL::QUADRILATERAL),
+		// HEXAHEDRAL
+		std::pair<std::string, int>("HEXAHEDRAL", XF_CELL::HEXAHEDRAL),
+		std::pair<std::string, int>("Hexahedral", XF_CELL::HEXAHEDRAL),
+		std::pair<std::string, int>("hexahedral", XF_CELL::HEXAHEDRAL),
+		std::pair<std::string, int>("HEX", XF_CELL::HEXAHEDRAL),
+		std::pair<std::string, int>("Hex", XF_CELL::HEXAHEDRAL),
+		std::pair<std::string, int>("hex", XF_CELL::HEXAHEDRAL),
+		// PYRAMID
+		std::pair<std::string, int>("PYRAMID", XF_CELL::PYRAMID),
+		std::pair<std::string, int>("Pyramid", XF_CELL::PYRAMID),
+		std::pair<std::string, int>("pyramid", XF_CELL::PYRAMID),
+		// WEDGE
+		std::pair<std::string, int>("WEDGE", XF_CELL::WEDGE),
+		std::pair<std::string, int>("Wedge", XF_CELL::WEDGE),
+		std::pair<std::string, int>("wedge", XF_CELL::WEDGE),
+		// POLYHEDRAL
+		std::pair<std::string, int>("POLYHEDRAL", XF_CELL::POLYHEDRAL),
+		std::pair<std::string, int>("Polyhedral", XF_CELL::POLYHEDRAL),
+		std::pair<std::string, int>("polyhedral", XF_CELL::POLYHEDRAL)
+	};
 
-    auto it = CELL_ENUM.find(x);
-    if(it == CELL_ENUM.end())
-        throw std::runtime_error("Unsupported Cell Name: "+x);
-    else
-        return it->second;
+	auto it = CELL_ENUM.find(x);
+	if (it == CELL_ENUM.end())
+		throw std::runtime_error("Unsupported Cell Name: " + x);
+	else
+		return it->second;
 }
 
 static inline void eat(std::istream &in, char c)
@@ -85,7 +87,7 @@ static inline void eat(std::istream &in, char c)
 	} while (tmp != c);
 }
 
-static inline void skipWhite(std::istream &in)
+static inline void skip_white(std::istream &in)
 {
 	char tmp;
 
@@ -97,7 +99,7 @@ static inline void skipWhite(std::istream &in)
 		in.unget();
 }
 
-static inline double dot_product(const std::vector<double> &na, const std::vector<double> &nb)
+static inline double dot_product(const Array1D &na, const Array1D &nb)
 {
 	const size_t ND = na.size();
 	double ret = 0.0;
@@ -106,21 +108,21 @@ static inline double dot_product(const std::vector<double> &na, const std::vecto
 	return ret;
 }
 
-static inline void cross_product(const std::vector<double> &a, const std::vector<double> &b, std::vector<double> &dst)
+static inline void cross_product(const Array1D &a, const Array1D &b, Array1D &dst)
 {
 	dst[0] = a[1] * b[2] - a[2] * b[1];
 	dst[1] = a[2] * b[0] - a[0] * b[2];
 	dst[2] = a[0] * b[1] - a[1] * b[0];
 }
 
-static inline void delta(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
+static inline void delta(const Array1D &na, const Array1D &nb, Array1D &dst)
 {
 	const size_t ND = dst.size();
 	for (size_t i = 0; i < ND; ++i)
 		dst[i] = nb[i] - na[i];
 }
 
-static inline void normalize(const std::vector<double> &src, std::vector<double> &dst)
+static inline void normalize(const Array1D &src, Array1D &dst)
 {
 	const size_t ND = dst.size();
 	double L = 0.0;
@@ -131,7 +133,7 @@ static inline void normalize(const std::vector<double> &src, std::vector<double>
 		dst[i] = src[i] / L;
 }
 
-static inline double distance(const std::vector<double> &na, const std::vector<double> &nb)
+static inline double distance(const Array1D &na, const Array1D &nb)
 {
 	const size_t ND = na.size();
 	double L = 0.0;
@@ -143,34 +145,21 @@ static inline double distance(const std::vector<double> &na, const std::vector<d
 	return std::sqrt(L);
 }
 
-static inline void line_center(
-	const std::vector<double> &na,
-	const std::vector<double> &nb,
-	std::vector<double> &dst
-)
+static inline void line_center(const Array1D &na, const Array1D &nb, Array1D &dst)
 {
 	const size_t ND = dst.size();
 	for (size_t i = 0; i < ND; ++i)
 		dst[i] = 0.5*(na[i] + nb[i]);
 }
 
-static inline void triangle_center(
-	const std::vector<double> &na,
-	const std::vector<double> &nb,
-	const std::vector<double> &nc,
-	std::vector<double> &dst
-)
+static inline void triangle_center(const Array1D &na, const Array1D &nb, const Array1D &nc, Array1D &dst)
 {
 	const size_t ND = dst.size();
 	for (size_t i = 0; i < ND; ++i)
 		dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
 }
 
-static inline double triangle_area(
-	const std::vector<double> &na,
-	const std::vector<double> &nb,
-	const std::vector<double> &nc
-)
+static inline double triangle_area(const Array1D &na, const Array1D &nb, const Array1D &nc)
 {
 	double c = distance(na, nb);
 	double a = distance(nb, nc);
@@ -181,13 +170,7 @@ static inline double triangle_area(
 	return std::sqrt(p*(p - a)*(p - b)*(p - c));
 }
 
-static inline void quadrilateral_center(
-	const std::vector<double> &n1,
-	const std::vector<double> &n2,
-	const std::vector<double> &n3,
-	const std::vector<double> &n4,
-	std::vector<double> &dst
-)
+static inline void quadrilateral_center(const Array1D &n1, const Array1D &n2, const Array1D &n3, const Array1D &n4, Array1D &dst)
 {
 	// 1, 2, 3, 4 are in anti-clockwise direction.
 	const double S123 = triangle_area(n1, n2, n3);
@@ -205,12 +188,7 @@ static inline void quadrilateral_center(
 		dst[i] = alpha * rc123[i] + beta * rc134[i];
 }
 
-static inline double quadrilateral_area(
-	const std::vector<double> &n1,
-	const std::vector<double> &n2,
-	const std::vector<double> &n3,
-	const std::vector<double> &n4
-)
+static inline double quadrilateral_area(const Array1D &n1, const Array1D &n2, const Array1D &n3, const Array1D &n4)
 {
 	// 1, 2, 3, 4 are in anti-clockwise direction.
 	const double S123 = triangle_area(n1, n2, n3);
@@ -363,7 +341,7 @@ int XF_MSH::readFromFile(const std::string &src)
 
 	while (!fin.eof())
 	{
-		skipWhite(fin);
+		skip_white(fin);
 		eat(fin, '(');
 		int ti;
 		fin >> std::dec >> ti;
@@ -376,7 +354,7 @@ int XF_MSH::readFromFile(const std::string &src)
 				ts.push_back(tc);
 			eat(fin, ')');
 			add_entry(new XF_COMMENT(ts));
-			skipWhite(fin);
+			skip_white(fin);
 		}
 		else if (ti == XF_SECTION::HEADER)
 		{
@@ -387,7 +365,7 @@ int XF_MSH::readFromFile(const std::string &src)
 				ts.push_back(tc);
 			eat(fin, ')');
 			add_entry(new XF_HEADER(ts));
-			skipWhite(fin);
+			skip_white(fin);
 		}
 		else if (ti == XF_SECTION::DIMENSION)
 		{
@@ -395,7 +373,7 @@ int XF_MSH::readFromFile(const std::string &src)
 			fin >> std::dec >> nd;
 			eat(fin, ')');
 			add_entry(new XF_DIMENSION(nd));
-			skipWhite(fin);
+			skip_white(fin);
 			m_dim = nd;
 			m_is3D = (nd == 3);
 		}
@@ -465,7 +443,7 @@ int XF_MSH::readFromFile(const std::string &src)
 				std::cout << "Done!" << std::endl;
 				add_entry(e);
 			}
-			skipWhite(fin);
+			skip_white(fin);
 		}
 		else if (ti == XF_SECTION::CELL)
 		{
@@ -547,7 +525,7 @@ int XF_MSH::readFromFile(const std::string &src)
 				eat(fin, ')');
 				add_entry(e);
 			}
-			skipWhite(fin);
+			skip_white(fin);
 		}
 		else if (ti == XF_SECTION::FACE)
 		{
@@ -606,7 +584,7 @@ int XF_MSH::readFromFile(const std::string &src)
 				std::cout << "Done!" << std::endl;
 				add_entry(e);
 			}
-			skipWhite(fin);
+			skip_white(fin);
 		}
 		else if (ti == XF_SECTION::ZONE)
 		{
@@ -616,7 +594,7 @@ int XF_MSH::readFromFile(const std::string &src)
 			fin >> std::dec >> zone;
 			std::string ztp;
 			fin >> ztp;
-			skipWhite(fin);
+			skip_white(fin);
 			std::string zname;
 			char t0;
 			while ((t0 = fin.get()) != ')')
@@ -626,7 +604,7 @@ int XF_MSH::readFromFile(const std::string &src)
 			eat(fin, ')');
 			auto e = new XF_ZONE(zone, ztp, zname);
 			add_entry(e);
-			skipWhite(fin);
+			skip_white(fin);
 		}
 		else
 			throw("Unsupported section index: " + std::to_string(ti) + "!");

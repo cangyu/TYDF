@@ -1,82 +1,203 @@
 #include "xf_msh.h"
 
-typedef std::vector<double> Array1D;
+const std::map<int, std::string> XF_BC::MAPPING_Idx2Str{
+	std::pair<int, std::string>(XF_BC::INTERIOR, "INTERIOR"),
+	std::pair<int, std::string>(XF_BC::WALL, "WALL"),
+	std::pair<int, std::string>(XF_BC::PRESSURE_INLET, "PRESSURE_INLET"),
+	std::pair<int, std::string>(XF_BC::PRESSURE_OUTLET, "PRESSURE_OUTLET"),
+	std::pair<int, std::string>(XF_BC::SYMMETRY, "SYMMETRY"),
+	std::pair<int, std::string>(XF_BC::PERIODIC_SHADOW, "PERIODIC_SHADOW"),
+	std::pair<int, std::string>(XF_BC::PRESSURE_FAR_FIELD, "PRESSURE_FAR_FIELD"),
+	std::pair<int, std::string>(XF_BC::VELOCITY_INLET, "VELOCITY_INLET"),
+	std::pair<int, std::string>(XF_BC::PERIODIC, "PERIODIC"),
+	std::pair<int, std::string>(XF_BC::FAN, "FAN"),
+	std::pair<int, std::string>(XF_BC::MASS_FLOW_INLET, "MASS_FLOW_INLET"),
+	std::pair<int, std::string>(XF_BC::INTERFACE, "INTERFACE"),
+	std::pair<int, std::string>(XF_BC::PARENT, "PARENT"),
+	std::pair<int, std::string>(XF_BC::OUTFLOW, "OUTFLOW"),
+	std::pair<int, std::string>(XF_BC::AXIS, "AXIS")
+};
 
-const std::string & XF_CELL_Enum2Name(int x)
-{
-	static const std::map<int, std::string> CELL_NAME{
-			std::pair<int, std::string>(XF_CELL::MIXED, "MIXED"),
-			std::pair<int, std::string>(XF_CELL::TRIANGULAR, "TRIANGULAR"),
-			std::pair<int, std::string>(XF_CELL::TETRAHEDRAL, "TETRAHEDRAL"),
-			std::pair<int, std::string>(XF_CELL::QUADRILATERAL, "QUADRILATERAL"),
-			std::pair<int, std::string>(XF_CELL::HEXAHEDRAL, "HEXAHEDRAL"),
-			std::pair<int, std::string>(XF_CELL::PYRAMID, "PYRAMID"),
-			std::pair<int, std::string>(XF_CELL::WEDGE, "WEDGE"),
-			std::pair<int, std::string>(XF_CELL::POLYHEDRAL, "POLYHEDRAL")
-	};
+const std::map<std::string, int> XF_BC::MAPPING_Str2Idx{
+	// INTERIOR
+	std::pair<std::string, int>("INTERIOR", XF_BC::INTERIOR),
+	std::pair<std::string, int>("Interior", XF_BC::INTERIOR),
+	std::pair<std::string, int>("interior", XF_BC::INTERIOR),
+	// WALL
+	std::pair<std::string, int>("WALL", XF_BC::WALL),
+	std::pair<std::string, int>("Wall", XF_BC::WALL),
+	std::pair<std::string, int>("wall", XF_BC::WALL),
+	// PRESSURE_INLET
+	std::pair<std::string, int>("PRESSURE_INLET", XF_BC::PRESSURE_INLET),
+	std::pair<std::string, int>("Pressure_Inlet", XF_BC::PRESSURE_INLET),
+	std::pair<std::string, int>("pressure_inlet", XF_BC::PRESSURE_INLET),
+	// PRESSURE_OUTLET
+	std::pair<std::string, int>("PRESSURE_OUTLET", XF_BC::PRESSURE_OUTLET),
+	std::pair<std::string, int>("Pressure_Outlet", XF_BC::PRESSURE_OUTLET),
+	std::pair<std::string, int>("pressure_outlet", XF_BC::PRESSURE_OUTLET),
+	// SYMMETRY
+	std::pair<std::string, int>("SYMMETRY", XF_BC::SYMMETRY),
+	std::pair<std::string, int>("Symmetry", XF_BC::SYMMETRY),
+	std::pair<std::string, int>("symmetry", XF_BC::SYMMETRY),
+	// PERIODIC_SHADOW
+	std::pair<std::string, int>("PERIODIC_SHADOW", XF_BC::PERIODIC_SHADOW),
+	std::pair<std::string, int>("Periodic_Shadow", XF_BC::PERIODIC_SHADOW),
+	std::pair<std::string, int>("periodic_shadow", XF_BC::PERIODIC_SHADOW),
+	// PRESSURE_FAR_FIELD
+	std::pair<std::string, int>("PRESSURE_FAR_FIELD", XF_BC::PRESSURE_FAR_FIELD),
+	std::pair<std::string, int>("Pressure_Far_Field", XF_BC::PRESSURE_FAR_FIELD),
+	std::pair<std::string, int>("pressure_far_field", XF_BC::PRESSURE_FAR_FIELD),
+	// VELOCITY_INLET
+	std::pair<std::string, int>("VELOCITY_INLET", XF_BC::VELOCITY_INLET),
+	std::pair<std::string, int>("Velocity_Inlet", XF_BC::VELOCITY_INLET),
+	std::pair<std::string, int>("velocity_inlet", XF_BC::VELOCITY_INLET),
+	// PERIODIC
+	std::pair<std::string, int>("PERIODIC", XF_BC::PERIODIC),
+	std::pair<std::string, int>("Periodic", XF_BC::PERIODIC),
+	std::pair<std::string, int>("periodic", XF_BC::PERIODIC),
+	// FAN
+	std::pair<std::string, int>("FAN", XF_BC::FAN),
+	std::pair<std::string, int>("Fan", XF_BC::FAN),
+	std::pair<std::string, int>("fan", XF_BC::FAN),
+	// MASS_FLOW_INLET
+	std::pair<std::string, int>("MASS_FLOW_INLET", XF_BC::MASS_FLOW_INLET),
+	std::pair<std::string, int>("Mass_Flow_Inlet", XF_BC::MASS_FLOW_INLET),
+	std::pair<std::string, int>("mass_flow_inlet", XF_BC::MASS_FLOW_INLET),
+	// INTERFACE
+	std::pair<std::string, int>("INTERFACE", XF_BC::INTERFACE),
+	std::pair<std::string, int>("Interface", XF_BC::INTERFACE),
+	std::pair<std::string, int>("interface", XF_BC::INTERFACE),
+	// PARENT
+	std::pair<std::string, int>("PARENT", XF_BC::PARENT),
+	std::pair<std::string, int>("Parent", XF_BC::PARENT),
+	std::pair<std::string, int>("parent", XF_BC::PARENT),
+	// OUTFLOW
+	std::pair<std::string, int>("OUTFLOW", XF_BC::OUTFLOW),
+	std::pair<std::string, int>("Outflow", XF_BC::OUTFLOW),
+	std::pair<std::string, int>("outflow", XF_BC::OUTFLOW),
+	// AXIS
+	std::pair<std::string, int>("AXIS", XF_BC::AXIS),
+	std::pair<std::string, int>("Axis", XF_BC::AXIS),
+	std::pair<std::string, int>("axis", XF_BC::AXIS)
+};
 
-	auto it = CELL_NAME.find(x);
-	if (it == CELL_NAME.end())
-		throw std::runtime_error("Unsupported Cell Enumeration: " + std::to_string(x));
-	else
-		return it->second;
-}
+const std::map<int, std::string> XF_CELL::TYPE_MAPPING_Idx2Str{
+	std::pair<int, std::string>(XF_CELL::FLUID, "FLUID"),
+	std::pair<int, std::string>(XF_CELL::SOLID, "SOLID"),
+	std::pair<int, std::string>(XF_CELL::DEAD, "DEAD")
+};
 
-int XF_CELL_Name2Enum(const std::string & x)
-{
-	static const std::map<std::string, int> CELL_ENUM{
-		// MIXED
-		std::pair<std::string, int>("MIXED", XF_CELL::MIXED),
-		std::pair<std::string, int>("Mixed", XF_CELL::MIXED),
-		std::pair<std::string, int>("mixed", XF_CELL::MIXED),
-		// TRIANGULAR
-		std::pair<std::string, int>("TRIANGULAR", XF_CELL::TRIANGULAR),
-		std::pair<std::string, int>("Triangular", XF_CELL::TRIANGULAR),
-		std::pair<std::string, int>("triangular", XF_CELL::TRIANGULAR),
-		std::pair<std::string, int>("TRI", XF_CELL::TRIANGULAR),
-		std::pair<std::string, int>("Tri", XF_CELL::TRIANGULAR),
-		std::pair<std::string, int>("tri", XF_CELL::TRIANGULAR),
-		// TETRAHEDRAL
-		std::pair<std::string, int>("TETRAHEDRAL", XF_CELL::TETRAHEDRAL),
-		std::pair<std::string, int>("Tetrahedral", XF_CELL::TETRAHEDRAL),
-		std::pair<std::string, int>("tetrahedral", XF_CELL::TETRAHEDRAL),
-		std::pair<std::string, int>("TET", XF_CELL::TETRAHEDRAL),
-		std::pair<std::string, int>("Tet", XF_CELL::TETRAHEDRAL),
-		std::pair<std::string, int>("tet", XF_CELL::TETRAHEDRAL),
-		// QUADRILATERAL
-		std::pair<std::string, int>("QUADRILATERAL", XF_CELL::QUADRILATERAL),
-		std::pair<std::string, int>("Quadrilateral", XF_CELL::QUADRILATERAL),
-		std::pair<std::string, int>("quadrilateral", XF_CELL::QUADRILATERAL),
-		std::pair<std::string, int>("QUAD", XF_CELL::QUADRILATERAL),
-		std::pair<std::string, int>("Quad", XF_CELL::QUADRILATERAL),
-		std::pair<std::string, int>("quad", XF_CELL::QUADRILATERAL),
-		// HEXAHEDRAL
-		std::pair<std::string, int>("HEXAHEDRAL", XF_CELL::HEXAHEDRAL),
-		std::pair<std::string, int>("Hexahedral", XF_CELL::HEXAHEDRAL),
-		std::pair<std::string, int>("hexahedral", XF_CELL::HEXAHEDRAL),
-		std::pair<std::string, int>("HEX", XF_CELL::HEXAHEDRAL),
-		std::pair<std::string, int>("Hex", XF_CELL::HEXAHEDRAL),
-		std::pair<std::string, int>("hex", XF_CELL::HEXAHEDRAL),
-		// PYRAMID
-		std::pair<std::string, int>("PYRAMID", XF_CELL::PYRAMID),
-		std::pair<std::string, int>("Pyramid", XF_CELL::PYRAMID),
-		std::pair<std::string, int>("pyramid", XF_CELL::PYRAMID),
-		// WEDGE
-		std::pair<std::string, int>("WEDGE", XF_CELL::WEDGE),
-		std::pair<std::string, int>("Wedge", XF_CELL::WEDGE),
-		std::pair<std::string, int>("wedge", XF_CELL::WEDGE),
-		// POLYHEDRAL
-		std::pair<std::string, int>("POLYHEDRAL", XF_CELL::POLYHEDRAL),
-		std::pair<std::string, int>("Polyhedral", XF_CELL::POLYHEDRAL),
-		std::pair<std::string, int>("polyhedral", XF_CELL::POLYHEDRAL)
-	};
+const std::map<std::string, int> XF_CELL::TYPE_MAPPING_Str2Idx{
+	// FLUID
+	std::pair<std::string, int>("FLUID", XF_CELL::FLUID),
+	std::pair<std::string, int>("Fluid", XF_CELL::FLUID),
+	std::pair<std::string, int>("fluid", XF_CELL::FLUID),
+	// SOLID
+	std::pair<std::string, int>("SOLID", XF_CELL::SOLID),
+	std::pair<std::string, int>("Solid", XF_CELL::SOLID),
+	std::pair<std::string, int>("solid", XF_CELL::SOLID),
+	// DEAD
+	std::pair<std::string, int>("DEAD", XF_CELL::DEAD),
+	std::pair<std::string, int>("Dead", XF_CELL::DEAD),
+	std::pair<std::string, int>("dead", XF_CELL::DEAD)
+};
 
-	auto it = CELL_ENUM.find(x);
-	if (it == CELL_ENUM.end())
-		throw std::runtime_error("Unsupported Cell Name: " + x);
-	else
-		return it->second;
-}
+const std::map<int, std::string> XF_CELL::ELEM_MAPPING_Idx2Str{
+		std::pair<int, std::string>(XF_CELL::MIXED, "MIXED"),
+		std::pair<int, std::string>(XF_CELL::TRIANGULAR, "TRIANGULAR"),
+		std::pair<int, std::string>(XF_CELL::TETRAHEDRAL, "TETRAHEDRAL"),
+		std::pair<int, std::string>(XF_CELL::QUADRILATERAL, "QUADRILATERAL"),
+		std::pair<int, std::string>(XF_CELL::HEXAHEDRAL, "HEXAHEDRAL"),
+		std::pair<int, std::string>(XF_CELL::PYRAMID, "PYRAMID"),
+		std::pair<int, std::string>(XF_CELL::WEDGE, "WEDGE"),
+		std::pair<int, std::string>(XF_CELL::POLYHEDRAL, "POLYHEDRAL")
+};
+
+const std::map<std::string, int> XF_CELL::ELEM_MAPPING_Str2Idx{
+	// MIXED
+	std::pair<std::string, int>("MIXED", XF_CELL::MIXED),
+	std::pair<std::string, int>("Mixed", XF_CELL::MIXED),
+	std::pair<std::string, int>("mixed", XF_CELL::MIXED),
+	// TRIANGULAR
+	std::pair<std::string, int>("TRIANGULAR", XF_CELL::TRIANGULAR),
+	std::pair<std::string, int>("Triangular", XF_CELL::TRIANGULAR),
+	std::pair<std::string, int>("triangular", XF_CELL::TRIANGULAR),
+	std::pair<std::string, int>("TRI", XF_CELL::TRIANGULAR),
+	std::pair<std::string, int>("Tri", XF_CELL::TRIANGULAR),
+	std::pair<std::string, int>("tri", XF_CELL::TRIANGULAR),
+	// TETRAHEDRAL
+	std::pair<std::string, int>("TETRAHEDRAL", XF_CELL::TETRAHEDRAL),
+	std::pair<std::string, int>("Tetrahedral", XF_CELL::TETRAHEDRAL),
+	std::pair<std::string, int>("tetrahedral", XF_CELL::TETRAHEDRAL),
+	std::pair<std::string, int>("TET", XF_CELL::TETRAHEDRAL),
+	std::pair<std::string, int>("Tet", XF_CELL::TETRAHEDRAL),
+	std::pair<std::string, int>("tet", XF_CELL::TETRAHEDRAL),
+	// QUADRILATERAL
+	std::pair<std::string, int>("QUADRILATERAL", XF_CELL::QUADRILATERAL),
+	std::pair<std::string, int>("Quadrilateral", XF_CELL::QUADRILATERAL),
+	std::pair<std::string, int>("quadrilateral", XF_CELL::QUADRILATERAL),
+	std::pair<std::string, int>("QUAD", XF_CELL::QUADRILATERAL),
+	std::pair<std::string, int>("Quad", XF_CELL::QUADRILATERAL),
+	std::pair<std::string, int>("quad", XF_CELL::QUADRILATERAL),
+	// HEXAHEDRAL
+	std::pair<std::string, int>("HEXAHEDRAL", XF_CELL::HEXAHEDRAL),
+	std::pair<std::string, int>("Hexahedral", XF_CELL::HEXAHEDRAL),
+	std::pair<std::string, int>("hexahedral", XF_CELL::HEXAHEDRAL),
+	std::pair<std::string, int>("HEX", XF_CELL::HEXAHEDRAL),
+	std::pair<std::string, int>("Hex", XF_CELL::HEXAHEDRAL),
+	std::pair<std::string, int>("hex", XF_CELL::HEXAHEDRAL),
+	// PYRAMID
+	std::pair<std::string, int>("PYRAMID", XF_CELL::PYRAMID),
+	std::pair<std::string, int>("Pyramid", XF_CELL::PYRAMID),
+	std::pair<std::string, int>("pyramid", XF_CELL::PYRAMID),
+	// WEDGE
+	std::pair<std::string, int>("WEDGE", XF_CELL::WEDGE),
+	std::pair<std::string, int>("Wedge", XF_CELL::WEDGE),
+	std::pair<std::string, int>("wedge", XF_CELL::WEDGE),
+	// POLYHEDRAL
+	std::pair<std::string, int>("POLYHEDRAL", XF_CELL::POLYHEDRAL),
+	std::pair<std::string, int>("Polyhedral", XF_CELL::POLYHEDRAL),
+	std::pair<std::string, int>("polyhedral", XF_CELL::POLYHEDRAL)
+};
+
+const std::map<int, std::string> XF_FACE::MAPPING_Idx2Str{
+	std::pair<int, std::string>(XF_FACE::MIXED, "MIXED"),
+	std::pair<int, std::string>(XF_FACE::LINEAR, "LINEAR"),
+	std::pair<int, std::string>(XF_FACE::TRIANGULAR, "TRIANGULAR"),
+	std::pair<int, std::string>(XF_FACE::QUADRILATERAL, "QUADRILATERAL"),
+	std::pair<int, std::string>(XF_FACE::POLYGONAL, "POLYGONAL")
+};
+
+const std::map<std::string, int> XF_FACE::MAPPING_Str2Idx{
+	// MIXED
+	std::pair<std::string, int>("MIXED", XF_FACE::MIXED),
+	std::pair<std::string, int>("Mixed", XF_FACE::MIXED),
+	std::pair<std::string, int>("mixed", XF_FACE::MIXED),
+	// LINEAR
+	std::pair<std::string, int>("LINEAR", XF_FACE::LINEAR),
+	std::pair<std::string, int>("Linear", XF_FACE::LINEAR),
+	std::pair<std::string, int>("linear", XF_FACE::LINEAR),
+	std::pair<std::string, int>("Line", XF_FACE::LINEAR),
+	std::pair<std::string, int>("line", XF_FACE::LINEAR),
+	// TRIANGULAR
+	std::pair<std::string, int>("TRIANGULAR", XF_FACE::TRIANGULAR),
+	std::pair<std::string, int>("Triangular", XF_FACE::TRIANGULAR),
+	std::pair<std::string, int>("triangular", XF_FACE::TRIANGULAR),
+	std::pair<std::string, int>("TRI", XF_FACE::TRIANGULAR),
+	std::pair<std::string, int>("Tri", XF_FACE::TRIANGULAR),
+	std::pair<std::string, int>("tri", XF_FACE::TRIANGULAR),
+	// QUADRILATERAL
+	std::pair<std::string, int>("QUADRILATERAL", XF_FACE::QUADRILATERAL),
+	std::pair<std::string, int>("Quadrilateral", XF_FACE::QUADRILATERAL),
+	std::pair<std::string, int>("quadrilateral", XF_FACE::QUADRILATERAL),
+	std::pair<std::string, int>("QUAD", XF_FACE::QUADRILATERAL),
+	std::pair<std::string, int>("Quad", XF_FACE::QUADRILATERAL),
+	std::pair<std::string, int>("quad", XF_FACE::QUADRILATERAL),
+	// POLYGONAL
+	std::pair<std::string, int>("POLYGONAL", XF_FACE::POLYGONAL),
+	std::pair<std::string, int>("Polygonal", XF_FACE::POLYGONAL),
+	std::pair<std::string, int>("polygonal", XF_FACE::POLYGONAL)
+};
 
 static inline void eat(std::istream &in, char c)
 {
@@ -98,6 +219,8 @@ static inline void skip_white(std::istream &in)
 	if (!in.eof())
 		in.unget();
 }
+
+typedef std::vector<double> Array1D;
 
 static inline double dot_product(const Array1D &na, const Array1D &nb)
 {
@@ -194,141 +317,6 @@ static inline double quadrilateral_area(const Array1D &n1, const Array1D &n2, co
 	const double S123 = triangle_area(n1, n2, n3);
 	const double S134 = triangle_area(n1, n3, n4);
 	return S123 + S134;
-}
-
-XF_CELL::XF_CELL(int zone, int first, int last, int type, int elem_type) :
-	XF_MAIN_RECORD(XF_SECTION::CELL, zone, first, last)
-{
-	if (type == XF_CELL::FLUID)
-		m_type = XF_CELL::FLUID;
-	else if (type == XF_CELL::SOLID)
-		m_type = XF_CELL::SOLID;
-	else if (type == XF_CELL::DEAD)
-		m_type = XF_CELL::DEAD;
-	else
-		throw("Invalid specification of cell type!");
-
-	if (elem_type == XF_CELL::MIXED)
-	{
-		m_elem = XF_CELL::MIXED;
-		m_mixedElemDesc.resize(num());
-		std::fill(m_mixedElemDesc.begin(), m_mixedElemDesc.end(), XF_CELL::MIXED);
-	}
-	else if (elem_type == XF_CELL::TRIANGULAR)
-	{
-		m_elem = XF_CELL::TRIANGULAR;
-		m_mixedElemDesc.resize(0);
-	}
-	else if (elem_type == XF_CELL::TETRAHEDRAL)
-	{
-		m_elem = XF_CELL::TETRAHEDRAL;
-		m_mixedElemDesc.resize(0);
-	}
-	else if (elem_type == XF_CELL::QUADRILATERAL)
-	{
-		m_elem = XF_CELL::QUADRILATERAL;
-		m_mixedElemDesc.resize(0);
-	}
-	else if (elem_type == XF_CELL::HEXAHEDRAL)
-	{
-		m_elem = XF_CELL::HEXAHEDRAL;
-		m_mixedElemDesc.resize(0);
-	}
-	else if (elem_type == XF_CELL::PYRAMID)
-	{
-		m_elem = XF_CELL::PYRAMID;
-		m_mixedElemDesc.resize(0);
-	}
-	else if (elem_type == XF_CELL::WEDGE)
-	{
-		m_elem = XF_CELL::WEDGE;
-		m_mixedElemDesc.resize(0);
-	}
-	else if (elem_type == XF_CELL::POLYHEDRAL)
-	{
-		m_elem = XF_CELL::POLYHEDRAL;
-		m_mixedElemDesc.resize(0);
-	}
-	else
-		throw("Invalid specification of cell element type!");
-}
-
-XF_FACE::XF_FACE(int zone, int first, int last, int bc, int face) :
-	XF_MAIN_RECORD(XF_SECTION::FACE, zone, first, last)
-{
-	switch (bc)
-	{
-	case 2:
-		m_bc = XF_BC::INTERIOR;
-		break;
-	case 3:
-		m_bc = XF_BC::WALL;
-		break;
-	case 4:
-		m_bc = XF_BC::PRESSURE_INLET;
-		break;
-	case 5:
-		m_bc = XF_BC::PRESSURE_OUTLET;
-		break;
-	case 7:
-		m_bc = XF_BC::SYMMETRY;
-		break;
-	case 8:
-		m_bc = XF_BC::PERIODIC_SHADOW;
-		break;
-	case 9:
-		m_bc = XF_BC::PRESSURE_FAR_FIELD;
-		break;
-	case 10:
-		m_bc = XF_BC::VELOCITY_INLET;
-		break;
-	case 12:
-		m_bc = XF_BC::PERIODIC;
-		break;
-	case 14:
-		m_bc = XF_BC::FAN;
-		break;
-	case 20:
-		m_bc = XF_BC::MASS_FLOW_INLET;
-		break;
-	case 24:
-		m_bc = XF_BC::INTERFACE;
-		break;
-	case 31:
-		m_bc = XF_BC::PARENT;
-		break;
-	case 36:
-		m_bc = XF_BC::OUTFLOW;
-		break;
-	case 37:
-		m_bc = XF_BC::AXIS;
-		break;
-	default:
-		throw("Invalid specification of B.C. type!");
-	}
-
-	switch (face)
-	{
-	case 0:
-		m_face = XF_FACE::MIXED;
-		break;
-	case 2:
-		m_face = XF_FACE::LINEAR;
-		break;
-	case 3:
-		m_face = XF_FACE::TRIANGULAR;
-		break;
-	case 4:
-		m_face = XF_FACE::QUADRILATERAL;
-		break;
-	case 5:
-		m_face = XF_FACE::POLYGONAL;
-		throw("Currently not supported!");
-	default:
-		throw("Invalid face-type!");
-	}
-
-	m_connectivity.resize(num());
 }
 
 int XF_MSH::readFromFile(const std::string &src)
@@ -520,7 +508,7 @@ int XF_MSH::readFromFile(const std::string &src)
 					std::cout << "Done!" << std::endl;
 				}
 				else
-					std::cout << e->num() << " " << XF_CELL_Enum2Name(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
+					std::cout << e->num() << " " << XF_CELL::ELEM_MAPPING_Idx2Str.at(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
 
 				eat(fin, ')');
 				add_entry(e);

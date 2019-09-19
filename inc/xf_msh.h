@@ -15,29 +15,41 @@
 #include <map>
 #include <utility>
 
-typedef enum {
-	INTERIOR = 2,
-	WALL = 3,
-	PRESSURE_INLET = 4,
-	INLET_VENT = 4,
-	INTAKE_FAN = 4,
-	PRESSURE_OUTLET = 5,
-	EXHAUST_FAN = 5,
-	OUTLET_VENT = 5,
-	SYMMETRY = 7,
-	PERIODIC_SHADOW = 8,
-	PRESSURE_FAR_FIELD = 9,
-	VELOCITY_INLET = 10,
-	PERIODIC = 12,
-	FAN = 14,
-	POROUS_JUMP = 14,
-	RADIATOR = 14,
-	MASS_FLOW_INLET = 20,
-	INTERFACE = 24,
-	PARENT = 31,
-	OUTFLOW = 36,
-	AXIS = 37
-} XF_BC;
+class XF_BC
+{
+public:
+	enum {
+		INTERIOR = 2,
+		WALL = 3,
+		PRESSURE_INLET = 4,
+		INLET_VENT = 4,
+		INTAKE_FAN = 4,
+		PRESSURE_OUTLET = 5,
+		EXHAUST_FAN = 5,
+		OUTLET_VENT = 5,
+		SYMMETRY = 7,
+		PERIODIC_SHADOW = 8,
+		PRESSURE_FAR_FIELD = 9,
+		VELOCITY_INLET = 10,
+		PERIODIC = 12,
+		FAN = 14,
+		POROUS_JUMP = 14,
+		RADIATOR = 14,
+		MASS_FLOW_INLET = 20,
+		INTERFACE = 24,
+		PARENT = 31,
+		OUTFLOW = 36,
+		AXIS = 37
+	};
+
+	static const std::map<int, std::string> MAPPING_Idx2Str;
+
+	static const std::map<std::string, int> MAPPING_Str2Idx;
+
+	XF_BC() = default;
+
+	~XF_BC() = default;
+};
 
 class XF_SECTION
 {
@@ -47,7 +59,10 @@ private:
 public:
 	enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
 
-	XF_SECTION(int id) : m_identity(id) {}
+	XF_SECTION(int id)
+	{
+		m_identity = id;
+	}
 
 	virtual ~XF_SECTION() = default;
 
@@ -263,7 +278,40 @@ public:
 
 	enum { MIXED = 0, TRIANGULAR = 1, TETRAHEDRAL = 2, QUADRILATERAL = 3, HEXAHEDRAL = 4, PYRAMID = 5, WEDGE = 6, POLYHEDRAL = 7 }; // Cell element type.
 
-	XF_CELL(int zone, int first, int last, int type, int elem_type);
+	static const std::map<int, std::string> TYPE_MAPPING_Idx2Str;
+
+	static const std::map<std::string, int> TYPE_MAPPING_Str2Idx;
+
+	static const std::map<int, std::string> ELEM_MAPPING_Idx2Str;
+
+	static const std::map<std::string, int> ELEM_MAPPING_Str2Idx;
+
+	XF_CELL(int zone, int first, int last, int type, int elem_type) :
+		XF_MAIN_RECORD(XF_SECTION::CELL, zone, first, last)
+	{
+		// Check cell type before assign
+		auto it1 = XF_CELL::TYPE_MAPPING_Idx2Str.find(type);
+		if (it1 == XF_CELL::TYPE_MAPPING_Idx2Str.end())
+			throw std::runtime_error("Invalid cell type: " + std::to_string(type));
+		else
+			m_type = type;
+
+		// Check cell elem before assign
+		auto it2 = XF_CELL::ELEM_MAPPING_Idx2Str.find(elem_type);
+		if (it2 == XF_CELL::ELEM_MAPPING_Idx2Str.end())
+			throw std::runtime_error("Invalid cell element type: " + std::to_string(elem_type));
+		else
+			m_elem = elem_type;
+
+		// Special treatment for mixed cell
+		if (elem_type == XF_CELL::MIXED)
+		{
+			m_mixedElemDesc.resize(num());
+			std::fill(m_mixedElemDesc.begin(), m_mixedElemDesc.end(), XF_CELL::MIXED);
+		}
+		else
+			m_mixedElemDesc.resize(0);
+	}
 
 	~XF_CELL() = default;
 
@@ -356,14 +404,41 @@ public:
 class XF_FACE : public XF_MAIN_RECORD
 {
 private:
-	XF_BC m_bc;
+	int m_bc;
 	int m_face;
 	std::vector<XF_CONNECTIVITY> m_connectivity;
 
 public:
 	enum { MIXED = 0, LINEAR = 2, TRIANGULAR = 3, QUADRILATERAL = 4, POLYGONAL = 5 };
 
-	XF_FACE(int zone, int first, int last, int bc, int face);
+	static const std::map<int, std::string> MAPPING_Idx2Str;
+
+	static const std::map<std::string, int> MAPPING_Str2Idx;
+
+	XF_FACE(int zone, int first, int last, int bc, int face) :
+		XF_MAIN_RECORD(XF_SECTION::FACE, zone, first, last)
+	{
+		// Check B.C. before assign
+		auto it1 = XF_BC::MAPPING_Idx2Str.find(bc);
+		if (it1 == XF_BC::MAPPING_Idx2Str.end())
+			throw std::runtime_error("Invalid B.C. type: " + std::to_string(bc));
+		else
+			m_bc = bc;
+
+		// Check face type before assign
+		auto it2 = XF_FACE::MAPPING_Idx2Str.find(face);
+		if (it2 == XF_FACE::MAPPING_Idx2Str.end())
+			throw std::runtime_error("Invalid face type: " + std::to_string(face));
+		else
+			m_face = face;
+
+		// Exception currently
+		if (m_face == XF_FACE::POLYGONAL)
+			throw std::runtime_error("Not supported face type: " + XF_FACE::MAPPING_Idx2Str.at(m_face));
+
+		// Resize local storage
+		m_connectivity.resize(num());
+	}
 
 	~XF_FACE() = default;
 
@@ -418,12 +493,12 @@ private:
 
 public:
 	XF_ZONE(int zone, const std::string &type, const std::string &name) :
-		XF_SECTION(XF_SECTION::ZONE),
-		m_zoneID(zone),
-		m_zoneType(type),
-		m_zoneName(name),
-		m_domainID(0)
+		XF_SECTION(XF_SECTION::ZONE)
 	{
+		m_zoneID = zone;
+		m_zoneType = type;
+		m_zoneName = name;
+		m_domainID = 0;
 	}
 
 	~XF_ZONE() = default;

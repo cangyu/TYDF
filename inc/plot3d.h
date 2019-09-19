@@ -281,13 +281,15 @@ private:
 	size_t m_nIJ, m_nIJK;
 };
 
+typedef PLOT3D_BLK *pPLOT3D_BLK;
+
 class PLOT3D
 {
 private:
 	size_t m_nBLK;
 	bool m_3d;
 	int m_dim;
-	std::vector<PLOT3D_BLK*> m_blk;
+	std::vector<pPLOT3D_BLK> m_blk;
 
 public:
 	PLOT3D()
@@ -318,6 +320,18 @@ public:
 	size_t nBLK() const
 	{
 		return m_nBLK;
+	}
+
+	// Access block through 0-based indexing
+	pPLOT3D_BLK at(size_t idx)
+	{
+		return m_blk[idx];
+	}
+
+	// Access block through 1-based indexing
+	pPLOT3D_BLK operator()(size_t idx)
+	{
+		return at(idx - 1);
 	}
 
 	int readFromFile(const std::string &src);

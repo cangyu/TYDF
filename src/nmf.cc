@@ -11,7 +11,129 @@
 
 #include "nmf.h"
 
-using namespace std;
+const std::map<int, std::string> NMF_BC::MAPPING_Idx2Str{
+	std::pair<int, std::string>(NMF_BC::COLLAPSED, "COLLAPSED"),
+	std::pair<int, std::string>(NMF_BC::ONE_TO_ONE, "ONE_TO_ONE"),
+	std::pair<int, std::string>(NMF_BC::PATCHED, "PATCHED"),
+	std::pair<int, std::string>(NMF_BC::POLE_DIR1, "POLE_DIR1"),
+	std::pair<int, std::string>(NMF_BC::POLE_DIR2, "POLE_DIR2"),
+	std::pair<int, std::string>(NMF_BC::SYM_X, "SYM_X"),
+	std::pair<int, std::string>(NMF_BC::SYM_Y, "SYM_Y"),
+	std::pair<int, std::string>(NMF_BC::SYM_Z, "SYM_Z"),
+	std::pair<int, std::string>(NMF_BC::UNPROCESSED, "UNPROCESSED"),
+	std::pair<int, std::string>(NMF_BC::WALL, "WALL"),
+	std::pair<int, std::string>(NMF_BC::SYM, "SYM")
+};
+
+const std::map<std::string, int> NMF_BC::MAPPING_Str2Idx{
+	// COLLAPSED
+	std::pair<std::string, int>("COLLAPSED", NMF_BC::COLLAPSED),
+	std::pair<std::string, int>("Collapsed", NMF_BC::COLLAPSED),
+	std::pair<std::string, int>("collapsed", NMF_BC::COLLAPSED),
+	// ONE_TO_ONE
+	std::pair<std::string, int>("ONE_TO_ONE", NMF_BC::ONE_TO_ONE),
+	std::pair<std::string, int>("One_To_One", NMF_BC::ONE_TO_ONE),
+	std::pair<std::string, int>("One_to_One", NMF_BC::ONE_TO_ONE),
+	std::pair<std::string, int>("one_to_one", NMF_BC::ONE_TO_ONE),
+	// PATCHED
+	std::pair<std::string, int>("PATCHED", NMF_BC::PATCHED),
+	std::pair<std::string, int>("Patched", NMF_BC::PATCHED),
+	std::pair<std::string, int>("patched", NMF_BC::PATCHED),
+	// POLE_DIR1
+	std::pair<std::string, int>("POLE_DIR1", NMF_BC::POLE_DIR1),
+	std::pair<std::string, int>("Pole_Dir1", NMF_BC::POLE_DIR1),
+	std::pair<std::string, int>("pole_dir1", NMF_BC::POLE_DIR1),
+	// POLE_DIR2
+	std::pair<std::string, int>("POLE_DIR2", NMF_BC::POLE_DIR2),
+	std::pair<std::string, int>("Pole_Dir2", NMF_BC::POLE_DIR2),
+	std::pair<std::string, int>("pole_dir2", NMF_BC::POLE_DIR2),
+	// SYM_X
+	std::pair<std::string, int>("SYM_X", NMF_BC::SYM_X),
+	std::pair<std::string, int>("Sym_X", NMF_BC::SYM_X),
+	std::pair<std::string, int>("Sym_x", NMF_BC::SYM_X),
+	std::pair<std::string, int>("sym_X", NMF_BC::SYM_X),
+	std::pair<std::string, int>("sym_x", NMF_BC::SYM_X),
+	// SYM_Y
+	std::pair<std::string, int>("SYM_Y", NMF_BC::SYM_Y),
+	std::pair<std::string, int>("Sym_Y", NMF_BC::SYM_Y),
+	std::pair<std::string, int>("Sym_y", NMF_BC::SYM_Y),
+	std::pair<std::string, int>("sym_Y", NMF_BC::SYM_Y),
+	std::pair<std::string, int>("sym_y", NMF_BC::SYM_Y),
+	// SYM_Z
+	std::pair<std::string, int>("SYM_Z", NMF_BC::SYM_Z),
+	std::pair<std::string, int>("Sym_Z", NMF_BC::SYM_Z),
+	std::pair<std::string, int>("Sym_z", NMF_BC::SYM_Z),
+	std::pair<std::string, int>("sym_Z", NMF_BC::SYM_Z),
+	std::pair<std::string, int>("sym_z", NMF_BC::SYM_Z),
+	// UNPROCESSED
+	std::pair<std::string, int>("UNPROCESSED", NMF_BC::UNPROCESSED),
+	std::pair<std::string, int>("Unprocessed", NMF_BC::UNPROCESSED),
+	std::pair<std::string, int>("unprocessed", NMF_BC::UNPROCESSED),
+	// WALL
+	std::pair<std::string, int>("WALL", NMF_BC::WALL),
+	std::pair<std::string, int>("Wall", NMF_BC::WALL),
+	std::pair<std::string, int>("wall", NMF_BC::WALL),
+	// SYM
+	std::pair<std::string, int>("SYM", NMF_BC::SYM),
+	std::pair<std::string, int>("Sym", NMF_BC::SYM),
+	std::pair<std::string, int>("sym", NMF_BC::SYM),
+	std::pair<std::string, int>("SYMMETRY", NMF_BC::SYM),
+	std::pair<std::string, int>("Symmetry", NMF_BC::SYM),
+	std::pair<std::string, int>("symmetry", NMF_BC::SYM)
+};
+
+/*
+	// NMF_Entry
+	vector<uint32_t> opposite_logical_desc(uint32_t bs, uint32_t fs, uint32_t lpri, uint32_t lsec, uint8_t side)
+	{
+		if (!m_rg2)
+			throw "Internal Error!";
+
+		vector<uint32_t> ret(4, 0);
+		uint32_t pri_off, sec_off;
+
+		//Calc Offset in each direction
+		if (side == 1)
+		{
+			ret[0] = m_rg2->m_blk;
+			ret[1] = m_rg2->m_face;
+			pri_off = lpri - m_rg1->m_s1;
+			sec_off = lsec - m_rg1->m_s2;
+		}
+		else if (side == 2)
+		{
+			ret[0] = m_rg1->m_blk;
+			ret[1] = m_rg1->m_face;
+			pri_off = lpri - m_rg2->m_s1;
+			sec_off = lsec - m_rg2->m_s2;
+		}
+		else
+			throw "Invalid side indication.";
+
+		//Swap on necessary, using bit manipulation
+		if (swap)
+		{
+			pri_off ^= sec_off;
+			sec_off ^= pri_off;
+			pri_off ^= sec_off;
+		}
+
+		//Mark opposite position
+		if (side == 1)
+		{
+			ret[2] = m_rg2->m_s1 + pri_off;
+			ret[3] = m_rg2->m_s2 + sec_off;
+		}
+		else
+		{
+			ret[2] = m_rg1->m_s1 + pri_off;
+			ret[3] = m_rg1->m_s2 + sec_off;
+		}
+
+		return ret;
+	}
+
+*/
 
 class NMF_BLKDim
 {

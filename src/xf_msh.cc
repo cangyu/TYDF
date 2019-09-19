@@ -1,5 +1,81 @@
 #include "xf_msh.h"
 
+const std::string & XF_CELL_Enum2Name(int x)
+{
+    static const std::map<int, std::string> CELL_NAME{
+            std::pair<int, std::string>(XF_CELL::MIXED, "MIXED"),
+            std::pair<int, std::string>(XF_CELL::TRIANGULAR, "TRIANGULAR"),
+            std::pair<int, std::string>(XF_CELL::TETRAHEDRAL, "TETRAHEDRAL"),
+            std::pair<int, std::string>(XF_CELL::QUADRILATERAL, "QUADRILATERAL"),
+            std::pair<int, std::string>(XF_CELL::HEXAHEDRAL, "HEXAHEDRAL"),
+            std::pair<int, std::string>(XF_CELL::PYRAMID, "PYRAMID"),
+            std::pair<int, std::string>(XF_CELL::WEDGE, "WEDGE"),
+            std::pair<int, std::string>(XF_CELL::POLYHEDRAL, "POLYHEDRAL")
+    };
+
+    auto it = CELL_NAME.find(x);
+    if(it == CELL_NAME.end())
+        throw std::runtime_error("Unsupported Cell Enumeration: "+std::to_string(x));
+    else
+        return it->second;
+}
+
+int XF_CELL_Name2Enum(const std::string & x)
+{
+    static const std::map<std::string, int> CELL_ENUM{
+            // MIXED
+            std::pair<std::string, int>("MIXED", XF_CELL::MIXED),
+            std::pair<std::string, int>("Mixed", XF_CELL::MIXED),
+            std::pair<std::string, int>("mixed", XF_CELL::MIXED),
+            // TRIANGULAR
+            std::pair<std::string, int>("TRIANGULAR", XF_CELL::TRIANGULAR),
+            std::pair<std::string, int>("Triangular", XF_CELL::TRIANGULAR),
+            std::pair<std::string, int>("triangular", XF_CELL::TRIANGULAR),
+            std::pair<std::string, int>("TRI", XF_CELL::TRIANGULAR),
+            std::pair<std::string, int>("Tri", XF_CELL::TRIANGULAR),
+            std::pair<std::string, int>("tri", XF_CELL::TRIANGULAR),
+            // TETRAHEDRAL
+            std::pair<std::string, int>("TETRAHEDRAL", XF_CELL::TETRAHEDRAL),
+            std::pair<std::string, int>("Tetrahedral", XF_CELL::TETRAHEDRAL),
+            std::pair<std::string, int>("tetrahedral", XF_CELL::TETRAHEDRAL),
+            std::pair<std::string, int>("TET", XF_CELL::TETRAHEDRAL),
+            std::pair<std::string, int>("Tet", XF_CELL::TETRAHEDRAL),
+            std::pair<std::string, int>("tet", XF_CELL::TETRAHEDRAL),
+            // QUADRILATERAL
+            std::pair<std::string, int>("QUADRILATERAL", XF_CELL::QUADRILATERAL),
+            std::pair<std::string, int>("Quadrilateral", XF_CELL::QUADRILATERAL),
+            std::pair<std::string, int>("quadrilateral", XF_CELL::QUADRILATERAL),
+            std::pair<std::string, int>("QUAD", XF_CELL::QUADRILATERAL),
+            std::pair<std::string, int>("Quad", XF_CELL::QUADRILATERAL),
+            std::pair<std::string, int>("quad", XF_CELL::QUADRILATERAL),
+            // HEXAHEDRAL
+            std::pair<std::string, int>("HEXAHEDRAL", XF_CELL::HEXAHEDRAL),
+            std::pair<std::string, int>("Hexahedral", XF_CELL::HEXAHEDRAL),
+            std::pair<std::string, int>("hexahedral", XF_CELL::HEXAHEDRAL),
+            std::pair<std::string, int>("HEX", XF_CELL::HEXAHEDRAL),
+            std::pair<std::string, int>("Hex", XF_CELL::HEXAHEDRAL),
+            std::pair<std::string, int>("hex", XF_CELL::HEXAHEDRAL),
+            // PYRAMID
+            std::pair<std::string, int>("PYRAMID", XF_CELL::PYRAMID),
+            std::pair<std::string, int>("Pyramid", XF_CELL::PYRAMID),
+            std::pair<std::string, int>("pyramid", XF_CELL::PYRAMID),
+            // WEDGE
+            std::pair<std::string, int>("WEDGE", XF_CELL::WEDGE),
+            std::pair<std::string, int>("Wedge", XF_CELL::WEDGE),
+            std::pair<std::string, int>("wedge", XF_CELL::WEDGE),
+            // POLYHEDRAL
+            std::pair<std::string, int>("POLYHEDRAL", XF_CELL::POLYHEDRAL),
+            std::pair<std::string, int>("Polyhedral", XF_CELL::POLYHEDRAL),
+            std::pair<std::string, int>("polyhedral", XF_CELL::POLYHEDRAL)
+    };
+
+    auto it = CELL_ENUM.find(x);
+    if(it == CELL_ENUM.end())
+        throw std::runtime_error("Unsupported Cell Name: "+x);
+    else
+        return it->second;
+}
+
 static inline void eat(std::istream &in, char c)
 {
 	char tmp;
@@ -21,10 +97,7 @@ static inline void skipWhite(std::istream &in)
 		in.unget();
 }
 
-static inline double dot_product(
-	const std::vector<double> &na,
-	const std::vector<double> &nb
-)
+static inline double dot_product(const std::vector<double> &na, const std::vector<double> &nb)
 {
 	const size_t ND = na.size();
 	double ret = 0.0;
@@ -33,32 +106,21 @@ static inline double dot_product(
 	return ret;
 }
 
-static inline void cross_product(
-	const std::vector<double> &a,
-	const std::vector<double> &b,
-	std::vector<double> &dst
-)
+static inline void cross_product(const std::vector<double> &a, const std::vector<double> &b, std::vector<double> &dst)
 {
 	dst[0] = a[1] * b[2] - a[2] * b[1];
 	dst[1] = a[2] * b[0] - a[0] * b[2];
 	dst[2] = a[0] * b[1] - a[1] * b[0];
 }
 
-static inline void delta(
-	const std::vector<double> &na,
-	const std::vector<double> &nb,
-	std::vector<double> &dst
-)
+static inline void delta(const std::vector<double> &na, const std::vector<double> &nb, std::vector<double> &dst)
 {
 	const size_t ND = dst.size();
 	for (size_t i = 0; i < ND; ++i)
 		dst[i] = nb[i] - na[i];
 }
 
-static inline void normalize(
-	const std::vector<double> &src,
-	std::vector<double> &dst
-)
+static inline void normalize(const std::vector<double> &src, std::vector<double> &dst)
 {
 	const size_t ND = dst.size();
 	double L = 0.0;
@@ -69,10 +131,7 @@ static inline void normalize(
 		dst[i] = src[i] / L;
 }
 
-static inline double distance(
-	const std::vector<double> &na,
-	const std::vector<double> &nb
-)
+static inline double distance(const std::vector<double> &na, const std::vector<double> &nb)
 {
 	const size_t ND = na.size();
 	double L = 0.0;
@@ -483,7 +542,7 @@ int XF_MSH::readFromFile(const std::string &src)
 					std::cout << "Done!" << std::endl;
 				}
 				else
-					std::cout << e->num() << " " << XF_CELL::cell_name(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
+					std::cout << e->num() << " " << XF_CELL_Enum2Name(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
 
 				eat(fin, ')');
 				add_entry(e);

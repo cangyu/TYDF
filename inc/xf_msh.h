@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <algorithm>
 #include <cmath>
+#include <map>
+#include <utility>
 
 typedef enum {
 	INTERIOR = 2,
@@ -294,40 +296,6 @@ public:
 				out << " " << elem(i);
 			}
 			out << std::endl << "))" << std::endl;
-		}
-	}
-
-	static const std::string &cell_name(int x)
-	{
-		const static std::string sMIXED("MIXED");
-		const static std::string sTRIANGULAR("TRIANGULAR");
-		const static std::string sTETRAHEDRAL("TETRAHEDRAL");
-		const static std::string sQUADRILATERAL("QUADRILATERAL");
-		const static std::string sHEXAHEDRAL("HEXAHEDRAL");
-		const static std::string sPYRAMID("PYRAMID");
-		const static std::string sWEDGE("WEDGE");
-		const static std::string sPOLYHEDRAL("POLYHEDRAL");
-
-		switch (x)
-		{
-		case XF_CELL::MIXED:
-			return sMIXED;
-		case XF_CELL::TRIANGULAR:
-			return sTRIANGULAR;
-		case XF_CELL::TETRAHEDRAL:
-			return sTETRAHEDRAL;
-		case XF_CELL::QUADRILATERAL:
-			return sQUADRILATERAL;
-		case XF_CELL::HEXAHEDRAL:
-			return sHEXAHEDRAL;
-		case XF_CELL::PYRAMID:
-			return sPYRAMID;
-		case XF_CELL::WEDGE:
-			return sWEDGE;
-		case XF_CELL::POLYHEDRAL:
-			return sPOLYHEDRAL;
-		default:
-			throw("Unsupported CELL!");
 		}
 	}
 };

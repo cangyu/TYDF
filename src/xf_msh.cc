@@ -103,14 +103,14 @@ const std::map<std::string, int> XF_CELL::TYPE_MAPPING_Str2Idx{
 };
 
 const std::map<int, std::string> XF_CELL::ELEM_MAPPING_Idx2Str{
-		std::pair<int, std::string>(XF_CELL::MIXED, "MIXED"),
-		std::pair<int, std::string>(XF_CELL::TRIANGULAR, "TRIANGULAR"),
-		std::pair<int, std::string>(XF_CELL::TETRAHEDRAL, "TETRAHEDRAL"),
-		std::pair<int, std::string>(XF_CELL::QUADRILATERAL, "QUADRILATERAL"),
-		std::pair<int, std::string>(XF_CELL::HEXAHEDRAL, "HEXAHEDRAL"),
-		std::pair<int, std::string>(XF_CELL::PYRAMID, "PYRAMID"),
-		std::pair<int, std::string>(XF_CELL::WEDGE, "WEDGE"),
-		std::pair<int, std::string>(XF_CELL::POLYHEDRAL, "POLYHEDRAL")
+	std::pair<int, std::string>(XF_CELL::MIXED, "MIXED"),
+	std::pair<int, std::string>(XF_CELL::TRIANGULAR, "TRIANGULAR"),
+	std::pair<int, std::string>(XF_CELL::TETRAHEDRAL, "TETRAHEDRAL"),
+	std::pair<int, std::string>(XF_CELL::QUADRILATERAL, "QUADRILATERAL"),
+	std::pair<int, std::string>(XF_CELL::HEXAHEDRAL, "HEXAHEDRAL"),
+	std::pair<int, std::string>(XF_CELL::PYRAMID, "PYRAMID"),
+	std::pair<int, std::string>(XF_CELL::WEDGE, "WEDGE"),
+	std::pair<int, std::string>(XF_CELL::POLYHEDRAL, "POLYHEDRAL")
 };
 
 const std::map<std::string, int> XF_CELL::ELEM_MAPPING_Str2Idx{

@@ -2,6 +2,16 @@
 #define __NMF_H__
 
 #include <vector>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <limits>
+#include <cstdint>
+#include <unordered_map>
+#include <cctype>
+#include <algorithm>
+#include <cstring>
+#include <list>
 #include <cstddef>
 #include <string>
 #include <map>
@@ -141,6 +151,7 @@ public:
 		WALL = 10,
 		SYM = 11
 	};
+
 	static const std::map<int, std::string> MAPPING_Idx2Str;
 
 	static const std::map<std::string, int> MAPPING_Str2Idx;
@@ -171,7 +182,7 @@ public:
 			m_bc = it->second;
 	}
 
-	NMF_Entry(const std::string &t, uint32_t *s1, uint32_t *s2, bool f) :
+	NMF_Entry(const std::string &t, size_t *s1, size_t *s2, bool f) :
 		m_rg1(new NMF_Range(s1)),
 		m_rg2(new NMF_Range(s2)),
 		m_swap(f)
@@ -193,7 +204,7 @@ public:
 			delete m_rg2;
 	}
 
-	NMF_BC Type() const
+	int Type() const
 	{
 		return m_bc;
 	}
@@ -224,12 +235,12 @@ public:
 			return 0;
 	}
 
-	pNMF_Range Range1()
+	pNMF_Range Range1() const
 	{
 		return m_rg1;
 	}
 
-	pNMF_Range Range2()
+	pNMF_Range Range2() const
 	{
 		return m_rg2;
 	}
@@ -257,35 +268,71 @@ private:
 	size_t m_nI;
 	size_t m_nJ;
 	size_t m_nK;
-	pPLOT3D_BLK m_obj;
 
 public:
-	NMF_Block(size_t nI, size_t nJ, size_t nK, pPLOT3D_BLK blk):
-		m_nI(nI),
-		m_nJ(nJ),
-		m_nK(nK),
-		m_obj(blk)
+	NMF_Block()
 	{
-		if (!nI || !nJ || !nK)
-			throw std::runtime_error("Invalid size.");
+        m_nI = 0;
+        m_nJ = 0;
+        m_nK = 0;
 	}
 
 	~NMF_Block() = default;
 
 	size_t IDIM() const
-	{
-		return m_nI;
-	}
+    {
+        return m_nI;
+    }
+
+    size_t &IDIM()
+    {
+        return m_nI;
+    }
 
 	size_t JDIM() const
 	{
 		return m_nJ;
 	}
 
+    size_t &JDIM()
+    {
+        return m_nJ;
+    }
+
 	size_t KDIM() const
 	{
 		return m_nK;
 	}
+
+    size_t &KDIM()
+    {
+        return m_nK;
+    }
+};
+
+class NMF
+{
+private:
+    // Raw content
+    std::vector<NMF_Block> m_blk;
+    std::vector<NMF_Entry> m_entry;
+
+    // Topology info
+    // TODO
+
+public:
+    NMF() = default;
+
+    ~NMF() = default;
+
+    size_t nBlk() const
+    {
+        return m_blk.size();
+    }
+
+    int readFromFile(const std::string &path);
+
+    int writeToFile(const std::string &path);
 };
 
 #endif

@@ -53,14 +53,6 @@ private:
 	};
 
 public:
-	NMF_Block(size_t nI, size_t nJ) :
-		m_hex((nI - 1)*(nJ - 1))
-	{
-		m_nI = nI;
-		m_nJ = nJ;
-		m_nK = 1;
-	}
-
 	NMF_Block(size_t nI, size_t nJ, size_t nK) :
 		m_hex((nI - 1)*(nJ - 1)*(nK - 1))
 	{
@@ -81,21 +73,23 @@ public:
 
 	size_t &KDIM() { return m_nK; }
 
-	int dimension() const { return KDIM() == 1 ? 2 : 3; }
-
-	bool is3D() const { return KDIM() > 1; }
-
 	size_t node_num() const
 	{
 		return IDIM() * JDIM() * KDIM();
 	}
 
+	size_t face_num() const
+	{
+		size_t ret = 0;
+		ret += (IDIM() - 1) * JDIM() * KDIM();
+		ret += IDIM() * (JDIM() - 1) * KDIM();
+		ret += IDIM() * JDIM() * (KDIM() - 1);
+		return ret;
+	}
+
 	size_t cell_num() const
 	{
-	    if(is3D())
-		    return (IDIM() - 1) * (JDIM() - 1) *(KDIM() - 1);
-	    else
-            return (IDIM() - 1) * (JDIM() - 1);
+		return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1);
 	}
 
 	HEX_CELL &cell(size_t i, size_t j)
@@ -206,8 +200,8 @@ public:
 	// Total nodes on this interface.
 	size_t node_num() const { return pri_node_num() * sec_node_num(); }
 
-	// Total faces/edges on this interface.
-	size_t face_num() const
+	// Total edges on this interface.
+	size_t edge_num() const
 	{
 		const size_t n_pri = (pri_node_num() - 1) * sec_node_num();
 		const size_t n_sec = (sec_node_num() - 1) * pri_node_num();
@@ -215,7 +209,7 @@ public:
 	}
 
 	// Total quad cells on this interface.
-	size_t cell_num() const { return (pri_node_num() - 1) * (sec_node_num() - 1); }
+	size_t face_num() const { return (pri_node_num() - 1) * (sec_node_num() - 1); }
 };
 
 class NMF_BC
@@ -304,6 +298,10 @@ public:
 
 	bool &Swap() { return m_swap; }
 
+	size_t node_num() const { return m_rg1.node_num(); }
+
+	size_t face_num() const { return m_rg1.face_num(); }
+
 	int contains(size_t bs, size_t fs, size_t lpri, size_t lsec)
 	{
 		// Left
@@ -328,8 +326,22 @@ public:
 	size_t nHex() const
 	{
 		size_t ret = 0;
-		for (const auto & e : m_blk)
-			ret += e.cell_num();
+		for (const auto & blk : m_blk)
+			ret += blk.cell_num();
+		return ret;
+	}
+
+	size_t nQuad() const
+	{
+		size_t ret = 0;
+		for (const auto & blk : m_blk)
+			ret += blk.cell_num();
+
+		// Sustract duplicated interface
+		for (const auto & e : m_entry)
+			if (e.Type() == NMF_BC::ONE_TO_ONE)
+				ret -= e.face_num();
+
 		return ret;
 	}
 

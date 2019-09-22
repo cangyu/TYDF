@@ -94,15 +94,27 @@ public:
 
 	size_t B() const { return m_blk; }
 
+	size_t &B() { return m_blk; }
+
 	size_t F() const { return m_face; }
+
+	size_t &F() { return m_face; }
 
 	size_t S1() const { return m_s1; }
 
+	size_t &S1() { return m_s1; }
+
 	size_t E1() const { return m_e1; }
+
+	size_t &E1() { return m_e1; }
 
 	size_t S2() const { return m_s2; }
 
+	size_t &S2() { return m_s2; }
+
 	size_t E2() const { return m_e2; }
+
+	size_t &E2() { return m_e2; }
 
 	// Check if given index is within this range.
 	bool constains(size_t pri, size_t sec) const
@@ -119,10 +131,7 @@ public:
 	size_t sec_node_num() const { return m_e2 - m_s2 + 1; }
 
 	// Total nodes on this interface.
-	size_t node_num() const
-	{
-		return pri_node_num() * sec_node_num();
-	}
+	size_t node_num() const { return pri_node_num() * sec_node_num(); }
 
 	// Total faces/edges on this interface.
 	size_t face_num() const
@@ -133,10 +142,7 @@ public:
 	}
 
 	// Total quad cells on this interface.
-	size_t cell_num() const
-	{
-		return (pri_node_num() - 1) * (sec_node_num() - 1);
-	}
+	size_t cell_num() const { return (pri_node_num() - 1) * (sec_node_num() - 1); }
 };
 
 class NMF_BC
@@ -205,19 +211,31 @@ public:
 
 	int Type() const { return m_bc; }
 
+	int &Type() { return m_bc; }
+
 	size_t B1() const { return m_rg1.B(); }
+
+	size_t &B1() { return m_rg1.B(); }
 
 	size_t F1() const { return m_rg1.F(); }
 
+	size_t &F1() { return m_rg1.F(); }
+
 	size_t B2() const { return m_rg2.B(); }
 
+	size_t &B2() { return m_rg2.B(); }
+
 	size_t F2() const { return m_rg2.F(); }
+
+	size_t &F2() { return m_rg2.F(); }
 
 	NMF_Range &Range1() { return m_rg1; }
 
 	NMF_Range &Range2() { return m_rg2; }
 
 	bool Swap() const { return m_swap; }
+
+	bool &Swap() { return m_swap; }
 
 	int contains(size_t bs, size_t fs, size_t lpri, size_t lsec)
 	{

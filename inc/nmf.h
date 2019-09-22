@@ -14,7 +14,108 @@
 #include <utility>
 #include <stdexcept>
 
-class NMF_Block;
+class NMF_Block
+{
+private:
+    template<typename T>
+    class Array1D : public std::vector<T>
+    {
+    public:
+        Array1D(size_t n) : std::vector<T>(n) {}
+
+        Array1D(size_t n, const T &val): std::vector<T>(n, val) {}
+
+        // 1-based indexing
+        T &operator()(size_t i) { return std::vector<T>::at(i - 1); }
+    };
+
+    class HEX_CELL
+    {
+    private:
+        size_t m_cell;
+        size_t m_node[8];
+        size_t m_face[6];
+
+    public:
+        HEX_CELL() : m_cell(0), m_node{ 0 }, m_face{ 0 } {}
+
+        size_t CellSeq() const { return m_cell; }
+
+        size_t &CellSeq() { return m_cell; }
+
+        size_t NodeSeq(int n) const { return m_node[n - 1]; } // 1-based indexing
+
+        size_t &NodeSeq(int n) { return m_node[n - 1]; } // 1-based indexing
+
+        size_t FaceSeq(int n) const { return m_face[n - 1]; } // 1-based indexing
+
+        size_t &FaceSeq(int n) { return m_face[n - 1]; } // 1-based indexing
+    };
+
+public:
+    NMF_Block(size_t nI, size_t nJ) :
+            m_hex((nI - 1)*(nJ - 1))
+    {
+        m_nI = nI;
+        m_nJ = nJ;
+        m_nK = 1;
+    }
+
+    NMF_Block(size_t nI, size_t nJ, size_t nK) :
+            m_hex((nI - 1)*(nJ - 1)*(nK - 1))
+    {
+        m_nI = nI;
+        m_nJ = nJ;
+        m_nK = nK;
+    }
+
+    size_t IDIM() const { return m_nI; }
+
+    size_t &IDIM() { return m_nI; }
+
+    size_t JDIM() const { return m_nJ; }
+
+    size_t &JDIM() { return m_nJ; }
+
+    size_t KDIM() const { return m_nK; }
+
+    size_t &KDIM() { return m_nK; }
+
+    size_t node_num() const
+    {
+        return IDIM() * JDIM() * KDIM();
+    }
+
+    size_t cell_num() const
+    {
+        return (IDIM() - 1) * (JDIM() - 1) *(KDIM() - 1);
+    }
+
+    HEX_CELL &cell(size_t i, size_t j)
+    {
+        // Convert 1-based index to 0-based
+        const size_t i0 = i - 1;
+        const size_t j0 = j - 1;
+
+        // Access
+        return m_hex.at(i0 + (m_nI - 1) * j0);
+    }
+
+    HEX_CELL &cell(size_t i, size_t j, size_t k)
+    {
+        // Convert 1-based index to 0-based
+        const size_t i0 = i - 1;
+        const size_t j0 = j - 1;
+        const size_t k0 = k - 1;
+
+        // Access
+        return m_hex.at(i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0));
+    }
+
+private:
+    size_t m_nI, m_nJ, m_nK;
+    Array1D<HEX_CELL> m_hex;
+};
 
 class NMF_Range
 {
@@ -56,8 +157,6 @@ public:
 		m_s2 = s2;
 		m_e2 = e2;
 	}
-
-	~NMF_Range() = default;
 
 	size_t B() const { return m_blk; }
 
@@ -134,10 +233,6 @@ public:
 	static const std::map<int, std::string> MAPPING_Idx2Str;
 
 	static const std::map<std::string, int> MAPPING_Str2Idx;
-
-	NMF_BC() = default;
-
-	~NMF_BC() = default;
 };
 
 class NMF_Entry
@@ -173,8 +268,6 @@ public:
 		else
 			m_bc = it->second;
 	}
-
-	~NMF_Entry() = default;
 
 	int Type() const { return m_bc; }
 
@@ -218,16 +311,7 @@ public:
 
 class NMF
 {
-private:
-	// Raw content
-	std::vector<NMF_Block> m_blk;
-	std::vector<NMF_Entry> m_entry;
-
 public:
-	NMF() = default;
-
-	~NMF() = default;
-
 	size_t nBlk() const { return m_blk.size(); }
 
 	int readFromFile(const std::string &path);
@@ -243,6 +327,10 @@ public:
 	}
 
 	int compute_topology();
+
+private:
+    std::vector<NMF_Block> m_blk;
+    std::vector<NMF_Entry> m_entry;
 };
 
 #endif

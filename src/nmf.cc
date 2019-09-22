@@ -82,108 +82,6 @@ const std::map<std::string, int> NMF_BC::MAPPING_Str2Idx{
 	std::pair<std::string, int>("outflow", NMF_BC::OUTFLOW)
 };
 
-template<typename T>
-class Array1D : public std::vector<T>
-{
-public:
-	Array1D(size_t n) : std::vector<T>(n) {}
-
-	// 1-based indexing
-	T &operator()(size_t i) { return at(i - 1); }
-};
-
-class HEX_CELL
-{
-private:
-	size_t cell_idx;
-	size_t node_idx[8];
-	size_t face_idx[6];
-
-public:
-	HEX_CELL() : cell_idx(0), node_idx{ 0 }, face_idx{ 0 }{}
-
-	size_t CellIndex() const { return cell_idx; }
-
-	size_t &CellIndex() { return cell_idx; }
-
-	size_t NodeIndex(int n) const { return node_idx[n - 1]; }
-
-	size_t &NodeIndex(int n) { return node_idx[n - 1]; }
-
-	size_t FaceIndex(int n) const { return face_idx[n - 1]; }
-
-	size_t &FaceIndex(int n) { return face_idx[n - 1]; }
-};
-
-class NMF_Block
-{
-private:
-	size_t m_nI, m_nJ, m_nK;
-	Array1D<HEX_CELL> m_hex;
-
-public:
-	NMF_Block(size_t nI, size_t nJ) :
-		m_hex((nI - 1)*(nJ - 1))
-	{
-		m_nI = nI;
-		m_nJ = nJ;
-		m_nK = 1;
-	}
-
-	NMF_Block(size_t nI, size_t nJ, size_t nK) :
-		m_hex((nI - 1)*(nJ - 1)*(nK - 1))
-	{
-		m_nI = nI;
-		m_nJ = nJ;
-		m_nK = nK;
-	}
-
-	~NMF_Block() = default;
-
-	size_t IDIM() const { return m_nI; }
-
-	size_t &IDIM() { return m_nI; }
-
-	size_t JDIM() const { return m_nJ; }
-
-	size_t &JDIM() { return m_nJ; }
-
-	size_t KDIM() const { return m_nK; }
-
-	size_t &KDIM() { return m_nK; }
-
-	size_t node_num() const
-	{
-		return IDIM() * JDIM() * KDIM();
-	}
-
-	size_t cell_num() const
-	{
-		return (IDIM() - 1) * (JDIM() - 1) *(KDIM() - 1);
-	}
-
-	HEX_CELL &cell(size_t i, size_t j)
-	{
-		// Convert 1-based index to 0-based
-		const size_t i0 = i - 1;
-		const size_t j0 = j - 1;
-
-		// Access
-		return m_hex.at(i0 + (m_nI - 1) * j0);
-	}
-
-	HEX_CELL &cell(size_t i, size_t j, size_t k)
-	{
-		// Convert 1-based index to 0-based
-		const size_t i0 = i - 1;
-		const size_t j0 = j - 1;
-		const size_t k0 = k - 1;
-
-		// Access
-		return m_hex.at(i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0));
-	}
-};
-
 int NMF::readFromFile(const std::string &path)
 {
 	std::string s;
@@ -206,8 +104,8 @@ int NMF::readFromFile(const std::string &path)
 	if (NumOfBlk == 0)
 		throw std::runtime_error("Invalid num of blocks: " + std::to_string(NumOfBlk));
 
-	m_blk.resize(NumOfBlk);
-	for (size_t i = 0; i < NumOfBlk; i++)
+	m_blk.clear();
+	for (size_t i = 1; i <= NumOfBlk; i++)
 	{
 		size_t idx, i_max, j_max, k_max;
 		std::getline(mfp, s, '\n');
@@ -215,8 +113,8 @@ int NMF::readFromFile(const std::string &path)
 		ss << s;
 		ss >> idx >> i_max >> j_max >> k_max;
 
-		if (!idx || idx > NumOfBlk)
-			throw std::runtime_error("Invalid index of block: " + std::to_string(idx));
+		if (idx != i)
+			throw std::runtime_error("Invalid order of block: " + std::to_string(idx));
 		if (i_max == 0)
 			throw std::runtime_error("Invalid I dimension: " + std::to_string(i_max));
 		if (j_max == 0)
@@ -224,9 +122,7 @@ int NMF::readFromFile(const std::string &path)
 		if (k_max == 0)
 			throw std::runtime_error("Invalid K dimension: " + std::to_string(k_max));
 
-		m_blk[idx - 1].IDIM() = i_max;
-		m_blk[idx - 1].JDIM() = j_max;
-		m_blk[idx - 1].KDIM() = k_max;
+		m_blk.emplace_back(i_max, j_max, k_max);
 	}
 
 	//Skip separators
@@ -339,14 +235,14 @@ int NMF::compute_topology()
 		{
 			for (size_t j = 1; j < cJ; ++j)
 				for (size_t i = 1; i < cI; ++i)
-					blk.cell(i, j).CellIndex() = cnt++;
+					blk.cell(i, j).CellSeq() = cnt++;
 		}
 		else
 		{
 			for (size_t k = 1; k < cK; ++k)
 				for (size_t j = 1; j < cJ; ++j)
 					for (size_t i = 1; i < cI; ++i)
-						blk.cell(i, j, k).CellIndex() = cnt++;
+						blk.cell(i, j, k).CellSeq() = cnt++;
 		}
 	}
 	

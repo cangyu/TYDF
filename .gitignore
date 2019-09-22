@@ -1,8 +1,9 @@
 .vscode/
 .vs/
+.idea/
+cmake-build-debug/
 
-*blessed*.fmt
-*blessed*.msh
+*blessed*
 
 *.o
 *.out

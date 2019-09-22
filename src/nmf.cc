@@ -245,7 +245,7 @@ int NMF::compute_topology()
 						blk.cell(i, j, k).CellSeq() = cnt++;
 		}
 	}
-	
+
 	const size_t totalCellNum = nHex();
 	assert(cnt - 1 == totalCellNum);
 

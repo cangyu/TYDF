@@ -14,10 +14,58 @@
 #include <list>
 #include <cstddef>
 #include <string>
+#include <sstream>
 #include <map>
 #include <utility>
 #include <stdexcept>
-#include "plot3d.h"
+
+class NMF_Block
+{
+private:
+    size_t m_nI;
+    size_t m_nJ;
+    size_t m_nK;
+
+public:
+    NMF_Block()
+    {
+        m_nI = 0;
+        m_nJ = 0;
+        m_nK = 0;
+    }
+
+    ~NMF_Block() = default;
+
+    size_t IDIM() const
+    {
+        return m_nI;
+    }
+
+    size_t &IDIM()
+    {
+        return m_nI;
+    }
+
+    size_t JDIM() const
+    {
+        return m_nJ;
+    }
+
+    size_t &JDIM()
+    {
+        return m_nJ;
+    }
+
+    size_t KDIM() const
+    {
+        return m_nK;
+    }
+
+    size_t &KDIM()
+    {
+        return m_nK;
+    }
+};
 
 class NMF_Range
 {
@@ -64,7 +112,7 @@ public:
 
 	size_t B() const
 	{
-		return m_blk;
+        return m_blk;
 	}
 
 	size_t F() const
@@ -149,7 +197,9 @@ public:
 		SYM_Z = 8,
 		UNPROCESSED = 9,
 		WALL = 10,
-		SYM = 11
+		SYM = 11,
+		INFLOW = 12,
+		OUTFLOW = 13
 	};
 
 	static const std::map<int, std::string> MAPPING_Idx2Str;
@@ -165,13 +215,13 @@ class NMF_Entry
 {
 private:
 	int m_bc;
-	pNMF_Range m_rg1, m_rg2;
+	NMF_Range m_rg1, m_rg2;
 	bool m_swap;
 
 public:
 	NMF_Entry(const std::string &t, size_t *s) :
-		m_rg1(new NMF_Range(s)),
-		m_rg2(nullptr),
+		m_rg1(s),
+		m_rg2(),
 		m_swap(false)
 	{
 		// Check before assign
@@ -183,8 +233,8 @@ public:
 	}
 
 	NMF_Entry(const std::string &t, size_t *s1, size_t *s2, bool f) :
-		m_rg1(new NMF_Range(s1)),
-		m_rg2(new NMF_Range(s2)),
+		m_rg1(s1),
+		m_rg2(s2),
 		m_swap(f)
 	{
 		// Check before assign
@@ -195,14 +245,7 @@ public:
 			m_bc = it->second;
 	}
 
-	~NMF_Entry()
-	{
-		if (m_rg1)
-			delete m_rg1;
-
-		if (m_rg2)
-			delete m_rg2;
-	}
+	~NMF_Entry() = default;
 
 	int Type() const
 	{
@@ -211,36 +254,36 @@ public:
 
 	size_t B1() const
 	{
-		return m_rg1->B();
+		return m_rg1.B();
 	}
 
 	size_t F1() const
 	{
-		return m_rg1->F();
+		return m_rg1.F();
 	}
 
 	size_t B2() const
 	{
-		if (m_rg2)
-			return m_rg2->B();
+		if (Type() == NMF_BC::ONE_TO_ONE)
+			return m_rg2.B();
 		else
 			return 0;
 	}
 
 	size_t F2() const
 	{
-		if (m_rg2)
-			return m_rg2->F();
+		if (Type() == NMF_BC::ONE_TO_ONE)
+			return m_rg2.F();
 		else
 			return 0;
 	}
 
-	pNMF_Range Range1() const
+	NMF_Range &Range1()
 	{
 		return m_rg1;
 	}
 
-	pNMF_Range Range2() const
+	NMF_Range &Range2()
 	{
 		return m_rg2;
 	}
@@ -253,61 +296,13 @@ public:
 	int contains(size_t bs, size_t fs, size_t lpri, size_t lsec)
 	{
 		// Left
-		if (B1() == bs && F1() == fs && Range1()->constains(lpri, lsec))
+		if (B1() == bs && F1() == fs && Range1().constains(lpri, lsec))
 			return 1;
-		else if (B2() == bs && F2() == fs && Range2()->constains(lpri, lsec))
+		else if (B2() == bs && F2() == fs && Range2().constains(lpri, lsec))
 			return 2;
 		else
 			return 0;
 	}
-};
-
-class NMF_Block
-{
-private:
-	size_t m_nI;
-	size_t m_nJ;
-	size_t m_nK;
-
-public:
-	NMF_Block()
-	{
-        m_nI = 0;
-        m_nJ = 0;
-        m_nK = 0;
-	}
-
-	~NMF_Block() = default;
-
-	size_t IDIM() const
-    {
-        return m_nI;
-    }
-
-    size_t &IDIM()
-    {
-        return m_nI;
-    }
-
-	size_t JDIM() const
-	{
-		return m_nJ;
-	}
-
-    size_t &JDIM()
-    {
-        return m_nJ;
-    }
-
-	size_t KDIM() const
-	{
-		return m_nK;
-	}
-
-    size_t &KDIM()
-    {
-        return m_nK;
-    }
 };
 
 class NMF
@@ -333,6 +328,8 @@ public:
     int readFromFile(const std::string &path);
 
     int writeToFile(const std::string &path);
+
+    int compute_topology();
 };
 
 #endif

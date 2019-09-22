@@ -22,49 +22,31 @@
 class NMF_Block
 {
 private:
-    size_t m_nI;
-    size_t m_nJ;
-    size_t m_nK;
+	size_t m_nI;
+	size_t m_nJ;
+	size_t m_nK;
 
 public:
-    NMF_Block()
-    {
-        m_nI = 0;
-        m_nJ = 0;
-        m_nK = 0;
-    }
+	NMF_Block()
+	{
+		m_nI = 0;
+		m_nJ = 0;
+		m_nK = 0;
+	}
 
-    ~NMF_Block() = default;
+	~NMF_Block() = default;
 
-    size_t IDIM() const
-    {
-        return m_nI;
-    }
+	size_t IDIM() const { return m_nI; }
 
-    size_t &IDIM()
-    {
-        return m_nI;
-    }
+	size_t &IDIM() { return m_nI; }
 
-    size_t JDIM() const
-    {
-        return m_nJ;
-    }
+	size_t JDIM() const { return m_nJ; }
 
-    size_t &JDIM()
-    {
-        return m_nJ;
-    }
+	size_t &JDIM() { return m_nJ; }
 
-    size_t KDIM() const
-    {
-        return m_nK;
-    }
+	size_t KDIM() const { return m_nK; }
 
-    size_t &KDIM()
-    {
-        return m_nK;
-    }
+	size_t &KDIM() { return m_nK; }
 };
 
 class NMF_Range
@@ -110,35 +92,17 @@ public:
 
 	~NMF_Range() = default;
 
-	size_t B() const
-	{
-        return m_blk;
-	}
+	size_t B() const { return m_blk; }
 
-	size_t F() const
-	{
-		return m_face;
-	}
+	size_t F() const { return m_face; }
 
-	size_t S1() const
-	{
-		return m_s1;
-	}
+	size_t S1() const { return m_s1; }
 
-	size_t E1() const
-	{
-		return m_e1;
-	}
+	size_t E1() const { return m_e1; }
 
-	size_t S2() const
-	{
-		return m_s2;
-	}
+	size_t S2() const { return m_s2; }
 
-	size_t E2() const
-	{
-		return m_e2;
-	}
+	size_t E2() const { return m_e2; }
 
 	// Check if given index is within this range.
 	bool constains(size_t pri, size_t sec) const
@@ -149,16 +113,10 @@ public:
 	}
 
 	// Nodes in primary direction.
-	size_t pri_node_num() const
-	{
-		return m_e1 - m_s1 + 1;
-	}
+	size_t pri_node_num() const { return m_e1 - m_s1 + 1; }
 
 	// Nodes in secondary direction.
-	size_t sec_node_num() const
-	{
-		return m_e2 - m_s2 + 1;
-	}
+	size_t sec_node_num() const { return m_e2 - m_s2 + 1; }
 
 	// Total nodes on this interface.
 	size_t node_num() const
@@ -180,8 +138,6 @@ public:
 		return (pri_node_num() - 1) * (sec_node_num() - 1);
 	}
 };
-
-typedef NMF_Range *pNMF_Range;
 
 class NMF_BC
 {
@@ -247,51 +203,21 @@ public:
 
 	~NMF_Entry() = default;
 
-	int Type() const
-	{
-		return m_bc;
-	}
+	int Type() const { return m_bc; }
 
-	size_t B1() const
-	{
-		return m_rg1.B();
-	}
+	size_t B1() const { return m_rg1.B(); }
 
-	size_t F1() const
-	{
-		return m_rg1.F();
-	}
+	size_t F1() const { return m_rg1.F(); }
 
-	size_t B2() const
-	{
-		if (Type() == NMF_BC::ONE_TO_ONE)
-			return m_rg2.B();
-		else
-			return 0;
-	}
+	size_t B2() const { return m_rg2.B(); }
 
-	size_t F2() const
-	{
-		if (Type() == NMF_BC::ONE_TO_ONE)
-			return m_rg2.F();
-		else
-			return 0;
-	}
+	size_t F2() const { return m_rg2.F(); }
 
-	NMF_Range &Range1()
-	{
-		return m_rg1;
-	}
+	NMF_Range &Range1() { return m_rg1; }
 
-	NMF_Range &Range2()
-	{
-		return m_rg2;
-	}
+	NMF_Range &Range2() { return m_rg2; }
 
-	bool Swap() const
-	{
-		return m_swap;
-	}
+	bool Swap() const { return m_swap; }
 
 	int contains(size_t bs, size_t fs, size_t lpri, size_t lsec)
 	{
@@ -308,28 +234,25 @@ public:
 class NMF
 {
 private:
-    // Raw content
-    std::vector<NMF_Block> m_blk;
-    std::vector<NMF_Entry> m_entry;
+	// Raw content
+	std::vector<NMF_Block> m_blk;
+	std::vector<NMF_Entry> m_entry;
 
-    // Topology info
-    // TODO
+	// Topology info
+	// TODO
 
 public:
-    NMF() = default;
+	NMF() = default;
 
-    ~NMF() = default;
+	~NMF() = default;
 
-    size_t nBlk() const
-    {
-        return m_blk.size();
-    }
+	size_t nBlk() const { return m_blk.size(); }
 
-    int readFromFile(const std::string &path);
+	int readFromFile(const std::string &path);
 
-    int writeToFile(const std::string &path);
+	int writeToFile(const std::string &path);
 
-    int compute_topology();
+	int compute_topology();
 };
 
 #endif

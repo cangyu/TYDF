@@ -1,3 +1,4 @@
+#include <iostream>
 #include "nmf.h"
 
 int test0()
@@ -7,6 +8,9 @@ int test0()
 	NMF mapping;
 	mapping.readFromFile("mapping0.nmf");
 	mapping.writeToFile("mapping0_blessed.nmf");
+
+	mapping.compute_topology();
+
 	return 0;
 }
 

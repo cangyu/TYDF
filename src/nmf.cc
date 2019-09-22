@@ -1,7 +1,7 @@
+#include <cassert>
 #include "nmf.h"
 
-const std::map<int, std::string> NMF_BC::MAPPING_Idx2Str
-{
+const std::map<int, std::string> NMF_BC::MAPPING_Idx2Str{
 	std::pair<int, std::string>(NMF_BC::COLLAPSED, "COLLAPSED"),
 	std::pair<int, std::string>(NMF_BC::ONE_TO_ONE, "ONE_TO_ONE"),
 	std::pair<int, std::string>(NMF_BC::PATCHED, "PATCHED"),
@@ -15,11 +15,9 @@ const std::map<int, std::string> NMF_BC::MAPPING_Idx2Str
 	std::pair<int, std::string>(NMF_BC::SYM, "SYM"),
 	std::pair<int, std::string>(NMF_BC::INFLOW, "INFLOW"),
 	std::pair<int, std::string>(NMF_BC::OUTFLOW, "OUTFLOW")
-
 };
 
-const std::map<std::string, int> NMF_BC::MAPPING_Str2Idx
-{
+const std::map<std::string, int> NMF_BC::MAPPING_Str2Idx{
 	// COLLAPSED
 	std::pair<std::string, int>("COLLAPSED", NMF_BC::COLLAPSED),
 	std::pair<std::string, int>("Collapsed", NMF_BC::COLLAPSED),
@@ -82,6 +80,108 @@ const std::map<std::string, int> NMF_BC::MAPPING_Str2Idx
 	std::pair<std::string, int>("OUTFLOW", NMF_BC::OUTFLOW),
 	std::pair<std::string, int>("Outflow", NMF_BC::OUTFLOW),
 	std::pair<std::string, int>("outflow", NMF_BC::OUTFLOW)
+};
+
+template<typename T>
+class Array1D : public std::vector<T>
+{
+public:
+	Array1D(size_t n) : std::vector<T>(n) {}
+
+	// 1-based indexing
+	T &operator()(size_t i) { return at(i - 1); }
+};
+
+class HEX_CELL
+{
+private:
+	size_t cell_idx;
+	size_t node_idx[8];
+	size_t face_idx[6];
+
+public:
+	HEX_CELL() : cell_idx(0), node_idx{ 0 }, face_idx{ 0 }{}
+
+	size_t CellIndex() const { return cell_idx; }
+
+	size_t &CellIndex() { return cell_idx; }
+
+	size_t NodeIndex(int n) const { return node_idx[n - 1]; }
+
+	size_t &NodeIndex(int n) { return node_idx[n - 1]; }
+
+	size_t FaceIndex(int n) const { return face_idx[n - 1]; }
+
+	size_t &FaceIndex(int n) { return face_idx[n - 1]; }
+};
+
+class NMF_Block
+{
+private:
+	size_t m_nI, m_nJ, m_nK;
+	Array1D<HEX_CELL> m_hex;
+
+public:
+	NMF_Block(size_t nI, size_t nJ) :
+		m_hex((nI - 1)*(nJ - 1))
+	{
+		m_nI = nI;
+		m_nJ = nJ;
+		m_nK = 1;
+	}
+
+	NMF_Block(size_t nI, size_t nJ, size_t nK) :
+		m_hex((nI - 1)*(nJ - 1)*(nK - 1))
+	{
+		m_nI = nI;
+		m_nJ = nJ;
+		m_nK = nK;
+	}
+
+	~NMF_Block() = default;
+
+	size_t IDIM() const { return m_nI; }
+
+	size_t &IDIM() { return m_nI; }
+
+	size_t JDIM() const { return m_nJ; }
+
+	size_t &JDIM() { return m_nJ; }
+
+	size_t KDIM() const { return m_nK; }
+
+	size_t &KDIM() { return m_nK; }
+
+	size_t node_num() const
+	{
+		return IDIM() * JDIM() * KDIM();
+	}
+
+	size_t cell_num() const
+	{
+		return (IDIM() - 1) * (JDIM() - 1) *(KDIM() - 1);
+	}
+
+	HEX_CELL &cell(size_t i, size_t j)
+	{
+		// Convert 1-based index to 0-based
+		const size_t i0 = i - 1;
+		const size_t j0 = j - 1;
+
+		// Access
+		return m_hex.at(i0 + (m_nI - 1) * j0);
+	}
+
+	HEX_CELL &cell(size_t i, size_t j, size_t k)
+	{
+		// Convert 1-based index to 0-based
+		const size_t i0 = i - 1;
+		const size_t j0 = j - 1;
+		const size_t k0 = k - 1;
+
+		// Access
+		return m_hex.at(i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0));
+	}
 };
 
 int NMF::readFromFile(const std::string &path)
@@ -226,6 +326,38 @@ int NMF::writeToFile(const std::string &path)
 
 int NMF::compute_topology()
 {
-	// TODO
+	// Indexing of cells
+	size_t cnt = 1;
+	for (size_t n = 0; n < nBlk(); ++n)
+	{
+		auto & blk = m_blk[n];
+		const size_t cI = blk.IDIM();
+		const size_t cJ = blk.JDIM();
+		const size_t cK = blk.KDIM();
+
+		if (cK == 0) // 2D
+		{
+			for (size_t j = 1; j < cJ; ++j)
+				for (size_t i = 1; i < cI; ++i)
+					blk.cell(i, j).CellIndex() = cnt++;
+		}
+		else
+		{
+			for (size_t k = 1; k < cK; ++k)
+				for (size_t j = 1; j < cJ; ++j)
+					for (size_t i = 1; i < cI; ++i)
+						blk.cell(i, j, k).CellIndex() = cnt++;
+		}
+	}
+	
+	const size_t totalCellNum = nHex();
+	assert(cnt - 1 == totalCellNum);
+
+	// Indexing of faces
+	cnt = 1;
+
+	// Indexing of nodes
+	cnt = 1;
+
 	return 0;
 }

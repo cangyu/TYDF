@@ -2,52 +2,19 @@
 #define __NMF_H__
 
 #include <vector>
-#include <iostream>
 #include <fstream>
+#include <sstream>
 #include <iomanip>
 #include <limits>
-#include <cstdint>
-#include <unordered_map>
 #include <cctype>
 #include <algorithm>
-#include <cstring>
-#include <list>
 #include <cstddef>
 #include <string>
-#include <sstream>
 #include <map>
 #include <utility>
 #include <stdexcept>
 
-class NMF_Block
-{
-private:
-	size_t m_nI;
-	size_t m_nJ;
-	size_t m_nK;
-
-public:
-	NMF_Block()
-	{
-		m_nI = 0;
-		m_nJ = 0;
-		m_nK = 0;
-	}
-
-	~NMF_Block() = default;
-
-	size_t IDIM() const { return m_nI; }
-
-	size_t &IDIM() { return m_nI; }
-
-	size_t JDIM() const { return m_nJ; }
-
-	size_t &JDIM() { return m_nJ; }
-
-	size_t KDIM() const { return m_nK; }
-
-	size_t &KDIM() { return m_nK; }
-};
+class NMF_Block;
 
 class NMF_Range
 {
@@ -256,9 +223,6 @@ private:
 	std::vector<NMF_Block> m_blk;
 	std::vector<NMF_Entry> m_entry;
 
-	// Topology info
-	// TODO
-
 public:
 	NMF() = default;
 
@@ -269,6 +233,14 @@ public:
 	int readFromFile(const std::string &path);
 
 	int writeToFile(const std::string &path);
+
+	size_t nHex() const
+	{
+		size_t ret = 0;
+		for (const auto & e : m_blk)
+			ret += e.cell_num();
+		return ret;
+	}
 
 	int compute_topology();
 };

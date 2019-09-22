@@ -81,6 +81,10 @@ public:
 
 	size_t &KDIM() { return m_nK; }
 
+	int dimension() const { return KDIM() == 1 ? 2 : 3; }
+
+	bool is3D() const { return KDIM() > 1; }
+
 	size_t node_num() const
 	{
 		return IDIM() * JDIM() * KDIM();
@@ -88,7 +92,10 @@ public:
 
 	size_t cell_num() const
 	{
-		return (IDIM() - 1) * (JDIM() - 1) *(KDIM() - 1);
+	    if(is3D())
+		    return (IDIM() - 1) * (JDIM() - 1) *(KDIM() - 1);
+	    else
+            return (IDIM() - 1) * (JDIM() - 1);
 	}
 
 	HEX_CELL &cell(size_t i, size_t j)

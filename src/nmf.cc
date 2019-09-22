@@ -224,26 +224,25 @@ int NMF::compute_topology()
 {
 	// Indexing of cells
 	size_t cnt = 1;
-	for (size_t n = 0; n < nBlk(); ++n)
-	{
-		auto & blk = m_blk[n];
+	for (auto & blk : m_blk)
+    {
 		const size_t cI = blk.IDIM();
 		const size_t cJ = blk.JDIM();
 		const size_t cK = blk.KDIM();
 
-		if (cK == 0) // 2D
-		{
-			for (size_t j = 1; j < cJ; ++j)
-				for (size_t i = 1; i < cI; ++i)
-					blk.cell(i, j).CellSeq() = cnt++;
-		}
+		if (blk.is3D())
+        {
+            for (size_t k = 1; k < cK; ++k)
+                for (size_t j = 1; j < cJ; ++j)
+                    for (size_t i = 1; i < cI; ++i)
+                        blk.cell(i, j, k).CellSeq() = cnt++;
+        }
 		else
-		{
-			for (size_t k = 1; k < cK; ++k)
-				for (size_t j = 1; j < cJ; ++j)
-					for (size_t i = 1; i < cI; ++i)
-						blk.cell(i, j, k).CellSeq() = cnt++;
-		}
+        {
+            for (size_t j = 1; j < cJ; ++j)
+                for (size_t i = 1; i < cI; ++i)
+                    blk.cell(i, j).CellSeq() = cnt++;
+        }
 	}
 
 	const size_t totalCellNum = nHex();

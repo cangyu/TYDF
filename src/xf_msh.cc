@@ -377,12 +377,12 @@ int XF_MSH::readFromFile(const std::string &src)
 				fin >> std::hex;
 				fin >> tmp;
 				if (tmp != 1)
-					throw("Invalid \"first-index\" in NODE declaration!");
+					throw std::runtime_error("Invalid \"first-index\" in NODE declaration!");
 				fin >> m_totalNodeNum;
 				std::cout << "Total number of nodes: " << m_totalNodeNum << std::endl;
 				fin >> tmp;
 				if (tmp != 0)
-					throw("Invalid \"type\" in NODE declaration!");
+					throw std::runtime_error("Invalid \"type\" in NODE declaration!");
 				char ndc = fin.get();
 				if (ndc != ')')
 				{
@@ -404,7 +404,7 @@ int XF_MSH::readFromFile(const std::string &src)
 				std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
 
 				if (nd != dimension())
-					throw("Inconsistent with previous DIMENSION declaration!");
+					throw std::runtime_error("Inconsistent with previous DIMENSION declaration!");
 
 				if (nd == 3)
 				{
@@ -445,12 +445,12 @@ int XF_MSH::readFromFile(const std::string &src)
 				fin >> std::hex;
 				fin >> tmp;
 				if (tmp != 1)
-					throw("Invalid \"first-index\" in CELL declaration!");
+					throw std::runtime_error("Invalid \"first-index\" in CELL declaration!");
 				fin >> m_totalCellNum;
 				std::cout << "Total number of cells: " << m_totalCellNum << std::endl;
 				fin >> tmp;
 				if (tmp != 0)
-					throw("Invalid \"type\" in CELL declaration!");
+					throw std::runtime_error("Invalid \"type\" in CELL declaration!");
 				char ndc = fin.get();
 				if (ndc != ')')
 				{
@@ -501,7 +501,7 @@ int XF_MSH::readFromFile(const std::string &src)
 							e->elem(i_loc) = XF_CELL::POLYHEDRAL;
 							break;
 						default:
-							throw("Invalid cell type!");
+							throw std::runtime_error("Invalid cell type!");
 						}
 					}
 					eat(fin, ')');
@@ -526,7 +526,7 @@ int XF_MSH::readFromFile(const std::string &src)
 				int tmp;
 				fin >> tmp;
 				if (tmp != 1)
-					throw("Invalid \"first-index\" in FACE declaration!");
+					throw std::runtime_error("Invalid \"first-index\" in FACE declaration!");
 				fin >> m_totalFaceNum;
 				std::cout << "Total number of faces: " << m_totalFaceNum << std::endl;
 				fin >> tmp;
@@ -595,7 +595,7 @@ int XF_MSH::readFromFile(const std::string &src)
 			skip_white(fin);
 		}
 		else
-			throw("Unsupported section index: " + std::to_string(ti) + "!");
+			throw std::runtime_error("Unsupported section index: " + std::to_string(ti));
 	}
 
 	fin.close();
@@ -927,9 +927,9 @@ int XF_MSH::computeTopology_faceArea(
 					dst[i - 1] = quadrilateral_area(nCoord[na], nCoord[nb], nCoord[nc], nCoord[nd]);
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
-					throw("Not supported currently!");
+					throw std::runtime_error("Not supported currently!");
 				else
-					throw("Internal error!");
+					throw std::runtime_error("Internal error!");
 			}
 		}
 	}
@@ -1008,9 +1008,9 @@ int XF_MSH::computeTopology_faceCenterCoordinates(
 					quadrilateral_center(nCoord[na], nCoord[nb], nCoord[nc], nCoord[nd], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
-					throw("Not supported currently!");
+					throw std::runtime_error("Not supported currently!");
 				else
-					throw("Internal error!");
+					throw std::runtime_error("Internal error!");
 			}
 		}
 	}
@@ -1100,9 +1100,9 @@ int XF_MSH::computeTopology_faceUnitNormalVector(
 					normalize(dst[i - 1], dst[i - 1]);
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
-					throw("Not supported currently!");
+					throw std::runtime_error("Not supported currently!");
 				else
-					throw("Internal error!");
+					throw std::runtime_error("Internal error!");
 			}
 		}
 	}
@@ -1207,7 +1207,7 @@ int XF_MSH::computeTopology_cellAdjacentCells(
 			else if (c1 == i)
 				dst[i - 1].push_back(c0);
 			else
-				throw("Internal error.");
+				throw std::runtime_error("Internal error.");
 		}
 	}
 
@@ -1245,7 +1245,7 @@ int XF_MSH::computeTopology_cellFaceNormal(
 			else if (c1 == i)
 				cur_cell_face_normal[j] = fNRL[cfi];
 			else
-				throw("Internal error.");
+				throw std::runtime_error("Internal error.");
 		}
 		dst[i - 1] = cur_cell_face_normal;
 	}

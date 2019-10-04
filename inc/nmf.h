@@ -32,9 +32,9 @@ private:
 	class HEX_CELL
 	{
 	private:
-		size_t m_cell;
-		size_t m_node[8];
-		size_t m_face[6];
+		size_t m_cell; // 1-based sequence
+		size_t m_node[8]; // 1-based sequence
+		size_t m_face[6]; // 1-based sequence
 
 	public:
 		HEX_CELL() : m_cell(0), m_node{ 0 }, m_face{ 0 } {}
@@ -73,10 +73,7 @@ public:
 
 	size_t &KDIM() { return m_nK; }
 
-	size_t node_num() const
-	{
-		return IDIM() * JDIM() * KDIM();
-	}
+	size_t node_num() const { return IDIM() * JDIM() * KDIM(); }
 
 	size_t face_num() const
 	{
@@ -87,10 +84,7 @@ public:
 		return ret;
 	}
 
-	size_t cell_num() const
-	{
-		return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1);
-	}
+	size_t cell_num() const { return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1); }
 
 	HEX_CELL &cell(size_t i, size_t j)
 	{

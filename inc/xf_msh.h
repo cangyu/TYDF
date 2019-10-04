@@ -14,6 +14,7 @@
 #include <cmath>
 #include <map>
 #include <utility>
+#include <stdexcept>
 
 class XF_BC
 {
@@ -59,47 +60,32 @@ private:
 public:
 	enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
 
-	XF_SECTION(int id)
-	{
-		m_identity = id;
-	}
+	XF_SECTION(int id) : m_identity(id) {}
 
 	virtual ~XF_SECTION() = default;
 
 	virtual void repr(std::ostream &out) = 0;
 
-	int identity() const { return m_identity; }
-};
-
-class XF_COMMENT : public XF_SECTION
-{
-private:
-	std::string m_info;
-
-public:
-	XF_COMMENT(const std::string &info) : XF_SECTION(XF_SECTION::COMMENT), m_info(info) {}
-
-	~XF_COMMENT() = default;
-
-	const std::string &str() const { return m_info; }
-
-	void repr(std::ostream &out)
+	int identity() const
 	{
-		out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl;
+		return m_identity;
 	}
 };
 
-class XF_HEADER :public XF_SECTION
+class XF_STR : public XF_SECTION
 {
 private:
 	std::string m_msg;
 
 public:
-	XF_HEADER(const std::string &msg) : XF_SECTION(XF_SECTION::HEADER), m_msg(msg) {}
+	XF_STR(int id, const std::string &msg) : XF_SECTION(id), m_msg(msg) {}
 
-	~XF_HEADER() = default;
+	virtual ~XF_STR() = default;
 
-	const std::string &str() const { return m_msg; }
+	const std::string &str() const
+	{
+		return m_msg;
+	}
 
 	void repr(std::ostream &out)
 	{
@@ -107,31 +93,71 @@ public:
 	}
 };
 
-class XF_DIMENSION :public XF_SECTION
+class XF_COMMENT : public XF_STR
 {
-private:
+public:
+	XF_COMMENT(const std::string &info) : XF_STR(XF_SECTION::COMMENT, info) {}
+
+	~XF_COMMENT() = default;
+};
+
+class XF_HEADER :public XF_STR
+{
+public:
+	XF_HEADER(const std::string &info) : XF_STR(XF_SECTION::HEADER, info) {}
+
+	~XF_HEADER() = default;
+};
+
+class XF_DIM
+{
+protected:
 	bool m_is3D;
 	int m_dim;
 
 public:
-	XF_DIMENSION(int dim) :
-		XF_SECTION(XF_SECTION::DIMENSION)
+	XF_DIM(int dim)
 	{
 		if (dim == 2)
 			m_is3D = false;
 		else if (dim == 3)
 			m_is3D = true;
 		else
-			throw("Invalid dimension!");
+			throw std::runtime_error("Invalid dimension: " + std::to_string(dim));
 
 		m_dim = dim;
 	}
 
+	XF_DIM(bool is3d)
+	{
+		m_is3D = is3d;
+		m_dim = is3d ? 3 : 2;
+	}
+
+	~XF_DIM() = default;
+
+	bool is3D() const
+	{
+		return m_is3D;
+	}
+
+	int dimension() const
+	{
+		return m_dim;
+	}
+};
+
+class XF_DIMENSION :public XF_SECTION, public XF_DIM
+{
+public:
+	XF_DIMENSION(int dim) : XF_SECTION(XF_SECTION::DIMENSION), XF_DIM(dim) {}
+
 	~XF_DIMENSION() = default;
 
-	int ND() const { return m_dim; }
-
-	bool is3D() const { return m_is3D; }
+	int ND() const
+	{
+		return dimension();
+	}
 
 	void repr(std::ostream &out)
 	{
@@ -153,33 +179,44 @@ public:
 		m_last(last)
 	{
 		if (m_first > m_last)
-			throw("Invalid node index!");
+			throw std::runtime_error("Invalid node index!");
 	}
 
 	virtual ~XF_MAIN_RECORD() = default;
 
-	int zone() const { return m_zone; }
+	int zone() const
+	{
+		return m_zone;
+	}
 
-	int first_index() const { return m_first; }
+	int first_index() const
+	{
+		return m_first;
+	}
 
-	int last_index() const { return m_last; }
+	int last_index() const
+	{
+		return m_last;
+	}
 
-	int num() const { return (m_last - m_first + 1); }
+	int num() const
+	{
+		return (m_last - m_first + 1);
+	}
 };
 
-class XF_NODE :public XF_MAIN_RECORD
+class XF_NODE :public XF_MAIN_RECORD, public XF_DIM
 {
 private:
 	int m_type;
-	bool m_is3D;
-	int m_dim;
 	std::vector<double> m_node;
 
 public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
 
 	XF_NODE(int zone, int first, int last, int type, int ND) :
-		XF_MAIN_RECORD(XF_SECTION::NODE, zone, first, last)
+		XF_MAIN_RECORD(XF_SECTION::NODE, zone, first, last),
+		XF_DIM(ND)
 	{
 		if (type == 0)
 			m_type = XF_NODE::VIRTUAL;
@@ -188,15 +225,7 @@ public:
 		else if (type == 2)
 			m_type = XF_NODE::BOUNDARY;
 		else
-			throw("Invalid description of node type!");
-
-		if (ND == 2)
-			m_is3D = false;
-		else if (ND == 3)
-			m_is3D = true;
-		else
-			throw("Invalid specification of node dimension!");
-		m_dim = ND;
+			throw std::runtime_error("Invalid description of node type!");
 
 		m_node.resize(ND * num());
 		std::fill(m_node.begin(), m_node.end(), 0.0);
@@ -204,11 +233,15 @@ public:
 
 	~XF_NODE() = default;
 
-	int type() const { return m_type; }
+	int type() const
+	{
+		return m_type;
+	}
 
-	int ND() const { return m_dim; }
-
-	bool is3D() const { return m_is3D; }
+	int ND() const
+	{
+		return dimension();
+	}
 
 	void get_coordinate(size_t loc_idx, std::vector<double> &dst) const
 	{
@@ -256,14 +289,26 @@ public:
 		out << "))" << std::endl;
 	}
 
-	bool is_virtual_node() const { return m_type == XF_NODE::VIRTUAL; }
+	bool is_virtual_node() const
+	{
+		return m_type == XF_NODE::VIRTUAL;
+	}
 
-	bool is_boundary_node() const { return m_type == XF_NODE::BOUNDARY; }
+	bool is_boundary_node() const
+	{
+		return m_type == XF_NODE::BOUNDARY;
+	}
 
-	bool is_internal_node() const { return m_type == XF_NODE::ANY; }
+	bool is_internal_node() const
+	{
+		return m_type == XF_NODE::ANY;
+	}
 
 private:
-	size_t STX(size_t loc_idx) const { return loc_idx * m_dim; }
+	size_t STX(size_t loc_idx) const
+	{
+		return loc_idx * m_dim;
+	}
 };
 
 class XF_CELL :public XF_MAIN_RECORD
@@ -315,13 +360,25 @@ public:
 
 	~XF_CELL() = default;
 
-	int type() const { return m_type; }
+	int type() const
+	{
+		return m_type;
+	}
 
-	int element_type() const { return m_elem; }
+	int element_type() const
+	{
+		return m_elem;
+	}
 
-	int elem(size_t loc_idx) const { return m_mixedElemDesc[loc_idx]; }
+	int elem(size_t loc_idx) const
+	{
+		return m_mixedElemDesc[loc_idx];
+	}
 
-	int &elem(size_t loc_idx) { return m_mixedElemDesc[loc_idx]; }
+	int &elem(size_t loc_idx)
+	{
+		return m_mixedElemDesc[loc_idx];
+	}
 
 	void repr(std::ostream &out)
 	{
@@ -442,13 +499,25 @@ public:
 
 	~XF_FACE() = default;
 
-	int bc_type() const { return m_bc; }
+	int bc_type() const
+	{
+		return m_bc;
+	}
 
-	int face_type() const { return m_face; }
+	int face_type() const
+	{
+		return m_face;
+	}
 
-	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const { return m_connectivity[loc_idx]; }
+	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const
+	{
+		return m_connectivity[loc_idx];
+	}
 
-	XF_CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity[loc_idx]; }
+	XF_CONNECTIVITY &connectivity(size_t loc_idx)
+	{
+		return m_connectivity[loc_idx];
+	}
 
 	void repr(std::ostream &out)
 	{
@@ -503,6 +572,26 @@ public:
 
 	~XF_ZONE() = default;
 
+	int zone() const
+	{
+		return m_zoneID;
+	}
+
+	const std::string &zone_type() const
+	{
+		return m_zoneType;
+	}
+
+	const std::string &zone_name() const
+	{
+		return m_zoneName;
+	}
+
+	int domain() const
+	{
+		return m_domainID;
+	}
+
 	void repr(std::ostream &out)
 	{
 		out << std::dec;
@@ -510,22 +599,20 @@ public:
 	}
 };
 
-class XF_MSH
+class XF_MSH : public XF_DIM
 {
 private:
 	std::vector<XF_SECTION*> m_content;
 	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
-	bool m_is3D;
-	int m_dim;
 
 public:
-	XF_MSH() :m_content(0, nullptr)
+	XF_MSH() :
+		XF_DIM(3),
+		m_content(0, nullptr)
 	{
 		m_totalNodeNum = 0;
 		m_totalCellNum = 0;
 		m_totalFaceNum = 0;
-		m_is3D = false;
-		m_dim = 3;
 	}
 
 	~XF_MSH()
@@ -541,15 +628,20 @@ public:
 
 	int writeToFile(const std::string &dst) const;
 
-	bool is3D() const { return m_is3D; }
+	size_t numOfNode() const
+	{
+		return m_totalNodeNum;
+	}
 
-	int dimension() const { return m_dim; }
+	size_t numOfFace() const
+	{
+		return m_totalFaceNum;
+	}
 
-	size_t numOfNode() const { return m_totalNodeNum; }
-
-	size_t numOfFace() const { return m_totalFaceNum; }
-
-	size_t numOfCell() const { return m_totalCellNum; }
+	size_t numOfCell() const
+	{
+		return m_totalCellNum;
+	}
 
 	int computeTopology(
 		std::vector<std::vector<double>> &nCoord, // Coordinates of each node.

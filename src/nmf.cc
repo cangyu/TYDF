@@ -247,11 +247,11 @@ int NMF::compute_topology()
 		const size_t cJ = blk.JDIM();
 		const size_t cK = blk.KDIM();
 
-		// TODO
+		
 
 	}
 	const size_t totalFaceNum = nQuad();
-	assert(cnt == totalFaceNum);
+	//assert(cnt == totalFaceNum);
 
 	// Indexing of nodes
 	cnt = 0;

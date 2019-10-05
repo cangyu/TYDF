@@ -1,8 +1,6 @@
 #ifndef __XF_MSH_H__
 #define __XF_MSH_H__
 
-#include <istream>
-#include <ostream>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -15,6 +13,131 @@
 #include <map>
 #include <utility>
 #include <stdexcept>
+
+template<typename T>
+class XF_Array1D : public std::vector<T>
+{
+public:
+	XF_Array1D(size_t n = 0) : std::vector<T>(n) {}
+
+	XF_Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
+
+	~XF_Array1D() = default;
+
+	// 1-based indexing
+	T &operator()(size_t i)
+	{
+		return std::vector<T>::at(i - 1);
+	}
+
+	T operator()(size_t i) const
+	{
+		return std::vector<T>::at(i - 1);
+	}
+};
+
+template<typename T>
+class XF_Array2D
+{
+private:
+	std::vector<T> m_data;
+	size_t m_Nx, m_Ny;
+
+public:
+	XF_Array2D(size_t nx = 0, size_t ny = 0) : m_Nx(nx), m_Ny(ny), m_data(nx * ny) {}
+
+	XF_Array2D(size_t nx, size_t ny, const T &val) : m_Nx(nx), m_Ny(ny), m_data(nx * ny, val) {}
+
+	~XF_Array2D() = default;
+
+	void resize(size_t nI, size_t nJ)
+	{
+		m_Nx = nI;
+		m_Ny = nJ;
+		m_data.resize(nI * nJ);
+	}
+
+	// 0-based indexing
+	T &at(size_t i, size_t j)
+	{
+		return m_data[idx(i, j)];
+	}
+
+	T at(size_t i, size_t j) const
+	{
+		return m_data[idx(i, j)];
+	}
+
+	// 1-based indexing
+	T &operator()(size_t i, size_t j)
+	{
+		return at(i - 1, j - 1);
+	}
+
+	T operator()(size_t i, size_t j) const
+	{
+		return at(i - 1, j - 1);
+	}
+
+private:
+	// Internal 0-based indexing interface.
+	size_t idx(size_t i, size_t j) const
+	{
+		return i + m_Nx * j;
+	}
+};
+
+template<typename T>
+class XF_Array3D
+{
+private:
+	std::vector<T> m_data;
+	size_t m_Nx, m_Ny, m_Nz;
+
+public:
+	XF_Array3D(size_t nx = 0, size_t ny = 0, size_t nz = 0) : m_Nx(nx), m_Ny(ny), m_Nz(nz), m_data(nx * ny * nz) {}
+
+	XF_Array3D(size_t nx, size_t ny, size_t nz, const T &val) : m_Nx(nx), m_Ny(ny), m_Nz(nz), m_data(nx * ny * nz, val) {}
+
+	~XF_Array3D() = default;
+
+	void resize(size_t nI, size_t nJ, size_t nK)
+	{
+		m_Nx = nI;
+		m_Ny = nJ;
+		m_Nz = nK;
+		m_data.resize(nI * nJ * nK);
+	}
+
+	// 0-based indexing
+	T &at(size_t i, size_t j, size_t k)
+	{
+		return m_data[idx(i, j, k)];
+	}
+
+	T at(size_t i, size_t j, size_t k) const
+	{
+		return m_data[idx(i, j, k)];
+	}
+
+	// 1-based indexing
+	T &operator()(size_t i, size_t j, size_t k)
+	{
+		return at(i - 1, j - 1, k - 1);
+	}
+
+	T operator()(size_t i, size_t j, size_t k) const
+	{
+		return at(i - 1, j - 1, k - 1);
+	}
+
+private:
+	// Internal 0-based indexing interface.
+	size_t idx(size_t i, size_t j, size_t k) const
+	{
+		return i + m_Nx * (j + m_Ny * k);
+	}
+};
 
 class XF_BC
 {
@@ -72,13 +195,13 @@ public:
 	}
 };
 
-class XF_STR : public XF_SECTION
+class XF_STR
 {
 private:
 	std::string m_msg;
 
 public:
-	XF_STR(int id, const std::string &msg) : XF_SECTION(id), m_msg(msg) {}
+	XF_STR(const std::string &msg) : m_msg(msg) {}
 
 	virtual ~XF_STR() = default;
 
@@ -86,6 +209,14 @@ public:
 	{
 		return m_msg;
 	}
+};
+
+class XF_COMMENT : public XF_SECTION, public XF_STR
+{
+public:
+	XF_COMMENT(const std::string &info) : XF_SECTION(XF_SECTION::COMMENT), XF_STR(info) {}
+
+	~XF_COMMENT() = default;
 
 	void repr(std::ostream &out)
 	{
@@ -93,20 +224,17 @@ public:
 	}
 };
 
-class XF_COMMENT : public XF_STR
+class XF_HEADER : public XF_SECTION, public XF_STR
 {
 public:
-	XF_COMMENT(const std::string &info) : XF_STR(XF_SECTION::COMMENT, info) {}
-
-	~XF_COMMENT() = default;
-};
-
-class XF_HEADER :public XF_STR
-{
-public:
-	XF_HEADER(const std::string &info) : XF_STR(XF_SECTION::HEADER, info) {}
+	XF_HEADER(const std::string &info) : XF_SECTION(XF_SECTION::HEADER), XF_STR(info) {}
 
 	~XF_HEADER() = default;
+
+	void repr(std::ostream &out)
+	{
+		out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl;
+	}
 };
 
 class XF_DIM
@@ -165,15 +293,14 @@ public:
 	}
 };
 
-class XF_MAIN_RECORD :public XF_SECTION
+class XF_RANGE
 {
 protected:
 	int m_zone;
 	int m_first, m_last;
 
 public:
-	XF_MAIN_RECORD(int id, int zone, int first, int last) :
-		XF_SECTION(id),
+	XF_RANGE(int zone, int first, int last) :
 		m_zone(zone),
 		m_first(first),
 		m_last(last)
@@ -182,7 +309,7 @@ public:
 			throw std::runtime_error("Invalid node index!");
 	}
 
-	virtual ~XF_MAIN_RECORD() = default;
+	virtual ~XF_RANGE() = default;
 
 	int zone() const
 	{
@@ -205,7 +332,7 @@ public:
 	}
 };
 
-class XF_NODE :public XF_MAIN_RECORD, public XF_DIM
+class XF_NODE :public XF_SECTION, public XF_RANGE, public XF_DIM
 {
 private:
 	int m_type;
@@ -215,7 +342,8 @@ public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
 
 	XF_NODE(int zone, int first, int last, int type, int ND) :
-		XF_MAIN_RECORD(XF_SECTION::NODE, zone, first, last),
+		XF_SECTION(XF_SECTION::NODE),
+		XF_RANGE(zone, first, last),
 		XF_DIM(ND)
 	{
 		if (type == 0)
@@ -311,7 +439,7 @@ private:
 	}
 };
 
-class XF_CELL :public XF_MAIN_RECORD
+class XF_CELL :public XF_SECTION, public XF_RANGE
 {
 private:
 	int m_type;
@@ -332,7 +460,8 @@ public:
 	static const std::map<std::string, int> ELEM_MAPPING_Str2Idx;
 
 	XF_CELL(int zone, int first, int last, int type, int elem_type) :
-		XF_MAIN_RECORD(XF_SECTION::CELL, zone, first, last)
+		XF_SECTION(XF_SECTION::CELL),
+		XF_RANGE(zone, first, last)
 	{
 		// Check cell type before assign
 		auto it1 = XF_CELL::TYPE_MAPPING_Idx2Str.find(type);
@@ -458,7 +587,7 @@ public:
 	}
 };
 
-class XF_FACE : public XF_MAIN_RECORD
+class XF_FACE : public XF_SECTION, public XF_RANGE
 {
 private:
 	int m_bc;
@@ -473,7 +602,8 @@ public:
 	static const std::map<std::string, int> MAPPING_Str2Idx;
 
 	XF_FACE(int zone, int first, int last, int bc, int face) :
-		XF_MAIN_RECORD(XF_SECTION::FACE, zone, first, last)
+		XF_SECTION(XF_SECTION::FACE),
+		XF_RANGE(zone, first, last)
 	{
 		// Check B.C. before assign
 		auto it1 = XF_BC::MAPPING_Idx2Str.find(bc);
@@ -602,8 +732,46 @@ public:
 class XF_MSH : public XF_DIM
 {
 private:
+	struct NODE_ELEM
+	{
+		double coordinate[3];
+		bool atBdry;
+
+		double &x() { return coordinate[0]; }
+
+		double &y() { return coordinate[1]; }
+
+		double &z() { return coordinate[2]; }
+	};
+
+	struct FACE_ELEM
+	{
+		int type;
+		XF_Array1D<double> center;
+		double area;
+		XF_Array1D<size_t> node;
+		size_t leftCell, rightCell;
+		bool atBdry;
+	};
+
+	struct CELL_ELEM
+	{
+		int type;
+		XF_Array1D<double> center;
+		double volume;
+		XF_Array1D<size_t> face;
+		XF_Array1D<size_t> adjCell;
+		XF_Array2D<double> unitNormal;
+	};
+
+	// Raw
 	std::vector<XF_SECTION*> m_content;
 	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
+
+	// Derived
+	XF_Array1D<NODE_ELEM> m_node;
+	XF_Array1D<FACE_ELEM> m_face;
+	XF_Array1D<CELL_ELEM> m_cell;
 
 public:
 	XF_MSH() :
@@ -628,217 +796,41 @@ public:
 
 	int writeToFile(const std::string &dst) const;
 
-	size_t numOfNode() const
-	{
-		return m_totalNodeNum;
-	}
+	size_t numOfNode() const { return m_totalNodeNum; }
 
-	size_t numOfFace() const
-	{
-		return m_totalFaceNum;
-	}
+	size_t numOfFace() const { return m_totalFaceNum; }
 
-	size_t numOfCell() const
-	{
-		return m_totalCellNum;
-	}
+	size_t numOfCell() const { return m_totalCellNum; }
 
-	int computeTopology(
-		std::vector<std::vector<double>> &nCoord, // Coordinates of each node.
-		std::vector<bool> &nBdryFlag, // If located at boundary of each node.
-		std::vector<std::vector<size_t>> &nAdjN, // Adjacent nodes of each node.
-		std::vector<std::vector<size_t>> &nDepF, // Dependent faces of each node.
-		std::vector<std::vector<size_t>> &nDepC, // Dependent cells of each node.
-		std::vector<std::vector<size_t>> &fIncN, // Included nodes of each face, the order of nodes follows right-hand convention.
-		std::vector<std::vector<size_t>> &fAdjC, // Adjacent cells of each face, the order of nodes follows right-hand convention.
-		std::vector<double> &fArea, // Area of each face.
-		std::vector<bool> &fBdryFlag, // If located at boundary of each face.
-		std::vector<std::vector<double>> &fCenCoord, // Coordinates of each face centre.
-		std::vector<std::vector<double>> &fUNLR, // Unit normal vector of each face, from c0/cl to c1/cr.
-		std::vector<std::vector<double>> &fUNRL, // Unit normal vector of each face, from c1/cr to c0/cl.
-		std::vector<std::vector<double>> &fNLR, // Normal vector of each face, from c0/cl to c1/cr, magnitude equals to face area.
-		std::vector<std::vector<double>> &fNRL, // Normal vector of each face, from c1/cr to c0/cl, magnitude equals to face area.
-		std::vector<std::vector<double>> &cCenCoord, // Coordinates of each cell centre.
-		std::vector<double> &cVol, // Volumn of each face.
-		std::vector<std::vector<size_t>> &cIncN, // Included nodes of each cell.
-		std::vector<std::vector<size_t>> &cIncF, // Included faces of each cell.
-		std::vector<std::vector<size_t>> &cAdjC, // Adjacent cells of each cell, the order is in accordance with cIncF.
-		std::vector<std::vector<std::vector<double>>> &cFUNVec, // Positive unit normal vector of each included face of each cell, the order is in accordance with cIncF.
-		std::vector<std::vector<std::vector<double>>> &cFNVec // Positive normal vector of each included face of each cell, the order is in accordance with cIncF, magnitude equals to face area.
-	) const
-	{
-		int ret = 0;
+	NODE_ELEM &node(size_t idx) { return m_node(idx); }
 
-		ret = computeTopology_nodeCoordinates(nCoord);
-		if (!ret)
-			throw(ret);
+	FACE_ELEM &face(size_t idx) { return m_face(idx); }
 
-		ret = computeTopology_nodeBoundaryFlag(nBdryFlag);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_nodeAdjacentNodes(nAdjN);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_nodeDependentFaces(nDepF);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_nodeDependentCells(nDepC);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_faceIncludedNodes(fIncN);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_faceAdjacentCells(fAdjC);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_faceArea(nCoord, fArea);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_faceBoundaryFlag(fBdryFlag);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_faceCenterCoordinates(nCoord, fCenCoord);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_faceUnitNormalVector(nCoord, fUNLR);
-		if (!ret)
-			throw(ret);
-
-		const auto NF = numOfFace();
-		const auto ND = dimension();
-		for (size_t i = 0; i < NF; ++i)
-			for (int j = 0; j < ND; ++j)
-			{
-				fUNRL[i][j] = -fUNLR[i][j];
-				fNRL[i][j] = fUNRL[i][j] * fArea[i];
-				fNLR[i][j] = fUNLR[i][j] * fArea[i];
-			}
-
-		ret = computeTopology_cellIncludedNodes(cIncN);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_cellIncludedFaces(cIncF);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_cellAdjacentCells(cIncF, fAdjC, cAdjC);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_cellFaceNormal(cIncF, fAdjC, fNLR, fNRL, cFNVec);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_cellFaceUnitNormal(cIncF, fArea, cFNVec, cFUNVec);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_cellVolume(cIncF, fCenCoord, cFNVec, cVol);
-		if (!ret)
-			throw(ret);
-
-		ret = computeTopology_cellCentroidCoordinates(cIncF, fCenCoord, cFNVec, cVol, cCenCoord);
-		if (!ret)
-			throw(ret);
-
-		return ret;
-	}
+	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
 
 private:
-	void add_entry(XF_SECTION *e) { m_content.push_back(e); }
+	void add_entry(XF_SECTION *e)
+	{
+		m_content.push_back(e);
+	}
 
 	void clear_entry()
 	{
 		// Release previous contents
-		const size_t N = m_content.size();
-		for (size_t i = 0; i < N; ++i)
-			if (m_content[i])
-				delete m_content[i];
+		for (auto &ptr : m_content)
+			if (ptr)
+			{
+				delete ptr;
+				ptr = nullptr;
+			}
 
 		// Clear container
 		m_content.clear();
 	}
 
-	int computeTopology_nodeCoordinates(std::vector<std::vector<double>> &dst) const;
+	void raw2derived();
 
-	int computeTopology_nodeBoundaryFlag(std::vector<bool> &dst) const;
-
-	int computeTopology_nodeAdjacentNodes(std::vector<std::vector<size_t>> &dst) const;
-
-	int computeTopology_nodeDependentFaces(std::vector<std::vector<size_t>> &dst) const;
-
-	int computeTopology_nodeDependentCells(std::vector<std::vector<size_t>> &dst) const;
-
-	int computeTopology_faceIncludedNodes(std::vector<std::vector<size_t>> &dst) const;
-
-	int computeTopology_faceAdjacentCells(std::vector<std::vector<size_t>> &dst) const;
-
-	int computeTopology_faceArea(
-		const std::vector<std::vector<double>> &nCoord,
-		std::vector<double> &dst
-	) const;
-
-	int computeTopology_faceBoundaryFlag(std::vector<bool> &dst) const;
-
-	int computeTopology_faceCenterCoordinates(
-		const std::vector<std::vector<double>> &nCoord,
-		std::vector<std::vector<double>> &dst
-	) const;
-
-	int computeTopology_faceUnitNormalVector(
-		const std::vector<std::vector<double>> &nCoord,
-		std::vector<std::vector<double>> &dst
-	) const; // From left to right.
-
-	int computeTopology_cellIncludedNodes(std::vector<std::vector<size_t>> &dst) const;
-
-	int computeTopology_cellIncludedFaces(std::vector<std::vector<size_t>> &dst) const;
-
-	int computeTopology_cellAdjacentCells(
-		const std::vector<std::vector<size_t>> &cIncF,
-		const std::vector<std::vector<size_t>> &fAdjC,
-		std::vector<std::vector<size_t>> &dst
-	) const;
-
-	int computeTopology_cellFaceNormal(
-		const std::vector<std::vector<size_t>> &cIncF,
-		const std::vector<std::vector<size_t>> &fAdjC,
-		const std::vector<std::vector<double>> &fNLR,
-		const std::vector<std::vector<double>> &fNRL,
-		std::vector<std::vector<std::vector<double>>> &dst
-	) const;
-
-	int computeTopology_cellFaceUnitNormal(
-		const std::vector<std::vector<size_t>> &cIncF,
-		const std::vector<double> &fArea,
-		const std::vector<std::vector<std::vector<double>>> &cFNVec,
-		std::vector<std::vector<std::vector<double>>> &dst
-	) const;
-
-	int computeTopology_cellVolume(
-		const std::vector<std::vector<size_t>> &cIncF,
-		const std::vector<std::vector<double>> &fCenCoord,
-		const std::vector<std::vector<std::vector<double>>> &cFNVec,
-		std::vector<double> &dst
-	)const;
-
-	int computeTopology_cellCentroidCoordinates(
-		const std::vector<std::vector<size_t>> &cIncF,
-		const std::vector<std::vector<double>> &fCenCoord,
-		const std::vector<std::vector<std::vector<double>>> &cFNVec,
-		const std::vector<double> &cVol,
-		std::vector<std::vector<double>> &dst
-	) const;
+	void derived2raw();
 };
 
 #endif

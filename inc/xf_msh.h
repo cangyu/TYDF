@@ -1,17 +1,19 @@
 #ifndef __XF_MSH_H__
 #define __XF_MSH_H__
 
+#include <istream>
+#include <ostream>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <string>
 #include <vector>
 #include <set>
-#include <string>
+#include <map>
+#include <utility>
 #include <cstdint>
 #include <algorithm>
 #include <cmath>
-#include <map>
-#include <utility>
 #include <stdexcept>
 
 template<typename T>
@@ -189,10 +191,7 @@ public:
 
 	virtual void repr(std::ostream &out) = 0;
 
-	int identity() const
-	{
-		return m_identity;
-	}
+	int identity() const { return m_identity; }
 };
 
 class XF_STR
@@ -205,10 +204,7 @@ public:
 
 	virtual ~XF_STR() = default;
 
-	const std::string &str() const
-	{
-		return m_msg;
-	}
+	const std::string &str() const { return m_msg; }
 };
 
 class XF_COMMENT : public XF_SECTION, public XF_STR
@@ -256,23 +252,13 @@ public:
 		m_dim = dim;
 	}
 
-	XF_DIM(bool is3d)
-	{
-		m_is3D = is3d;
-		m_dim = is3d ? 3 : 2;
-	}
+	XF_DIM(bool is3d) : m_is3D(is3d), m_dim(is3d ? 3 : 2) {}
 
 	~XF_DIM() = default;
 
-	bool is3D() const
-	{
-		return m_is3D;
-	}
+	bool is3D() const { return m_is3D; }
 
-	int dimension() const
-	{
-		return m_dim;
-	}
+	int dimension() const { return m_dim; }
 };
 
 class XF_DIMENSION :public XF_SECTION, public XF_DIM
@@ -282,10 +268,7 @@ public:
 
 	~XF_DIMENSION() = default;
 
-	int ND() const
-	{
-		return dimension();
-	}
+	int ND() const { return dimension(); }
 
 	void repr(std::ostream &out)
 	{
@@ -311,25 +294,13 @@ public:
 
 	virtual ~XF_RANGE() = default;
 
-	int zone() const
-	{
-		return m_zone;
-	}
+	int zone() const { return m_zone; }
 
-	int first_index() const
-	{
-		return m_first;
-	}
+	int first_index() const { return m_first; }
 
-	int last_index() const
-	{
-		return m_last;
-	}
+	int last_index() const { return m_last; }
 
-	int num() const
-	{
-		return (m_last - m_first + 1);
-	}
+	int num() const { return (last_index() - first_index() + 1); }
 };
 
 class XF_NODE :public XF_SECTION, public XF_RANGE, public XF_DIM
@@ -361,17 +332,18 @@ public:
 
 	~XF_NODE() = default;
 
-	int type() const
-	{
-		return m_type;
-	}
+	int type() const { return m_type; }
 
-	int ND() const
-	{
-		return dimension();
-	}
+	int ND() const { return dimension(); }
 
 	void get_coordinate(size_t loc_idx, std::vector<double> &dst) const
+	{
+		size_t stx = STX(loc_idx);
+		for (int i = 0; i < m_dim; ++i)
+			dst[i] = m_node[stx + i];
+	}
+
+	void get_coordinate(size_t loc_idx, double *dst) const
 	{
 		size_t stx = STX(loc_idx);
 		for (int i = 0; i < m_dim; ++i)
@@ -537,7 +509,7 @@ public:
 class XF_CONNECTIVITY
 {
 public:
-	int x; // Length of n
+	int x; // Num of nodes
 	size_t n[4];
 	size_t c[2];
 
@@ -629,22 +601,16 @@ public:
 
 	~XF_FACE() = default;
 
-	int bc_type() const
-	{
-		return m_bc;
-	}
+	int bc_type() const { return m_bc; }
 
-	int face_type() const
-	{
-		return m_face;
-	}
+	int face_type() const { return m_face; }
 
-	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const
+	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const // 0-based local indexing
 	{
 		return m_connectivity[loc_idx];
 	}
 
-	XF_CONNECTIVITY &connectivity(size_t loc_idx)
+	XF_CONNECTIVITY &connectivity(size_t loc_idx) // 0-based local indexing
 	{
 		return m_connectivity[loc_idx];
 	}
@@ -747,7 +713,7 @@ private:
 	struct FACE_ELEM
 	{
 		int type;
-		XF_Array1D<double> center;
+		double center[3];
 		double area;
 		XF_Array1D<size_t> node;
 		size_t leftCell, rightCell;
@@ -757,7 +723,7 @@ private:
 	struct CELL_ELEM
 	{
 		int type;
-		XF_Array1D<double> center;
+		double center[3];
 		double volume;
 		XF_Array1D<size_t> face;
 		XF_Array1D<size_t> adjCell;

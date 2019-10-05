@@ -268,10 +268,27 @@ static inline double distance(const Array1D &na, const Array1D &nb)
 	return std::sqrt(L);
 }
 
+static inline double distance(double *na, double *nb)
+{
+	double L = 0.0;
+	for (size_t i = 0; i < 3; ++i)
+	{
+		double di = nb[i] - na[i];
+		L += di * di;
+	}
+	return std::sqrt(L);
+}
+
 static inline void line_center(const Array1D &na, const Array1D &nb, Array1D &dst)
 {
 	const size_t ND = dst.size();
 	for (size_t i = 0; i < ND; ++i)
+		dst[i] = 0.5*(na[i] + nb[i]);
+}
+
+static inline void line_center(double *na, double *nb, double *dst)
+{
+	for (size_t i = 0; i < 3; ++i)
 		dst[i] = 0.5*(na[i] + nb[i]);
 }
 
@@ -282,7 +299,24 @@ static inline void triangle_center(const Array1D &na, const Array1D &nb, const A
 		dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
 }
 
+static inline void triangle_center(double *na, double *nb, double *nc, double *dst)
+{
+	for (size_t i = 0; i < 3; ++i)
+		dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
+}
+
 static inline double triangle_area(const Array1D &na, const Array1D &nb, const Array1D &nc)
+{
+	double c = distance(na, nb);
+	double a = distance(nb, nc);
+	double b = distance(nc, na);
+	double p = 0.5*(a + b + c);
+
+	// Heron's formula
+	return std::sqrt(p*(p - a)*(p - b)*(p - c));
+}
+
+static inline double triangle_area(double *na, double *nb, double *nc)
 {
 	double c = distance(na, nb);
 	double a = distance(nb, nc);
@@ -311,7 +345,32 @@ static inline void quadrilateral_center(const Array1D &n1, const Array1D &n2, co
 		dst[i] = alpha * rc123[i] + beta * rc134[i];
 }
 
+static inline void quadrilateral_center(double *n1, double *n2, double *n3, double *n4, double *dst)
+{
+	// 1, 2, 3, 4 are in anti-clockwise direction.
+	const double S123 = triangle_area(n1, n2, n3);
+	const double S134 = triangle_area(n1, n3, n4);
+
+	double rc123[3], rc134[3];
+	triangle_center(n1, n2, n3, rc123);
+	triangle_center(n1, n3, n4, rc134);
+
+	const double alpha = S123 / (S123 + S134);
+	const double beta = 1.0 - alpha;
+
+	for (size_t i = 0; i < 3; ++i)
+		dst[i] = alpha * rc123[i] + beta * rc134[i];
+}
+
 static inline double quadrilateral_area(const Array1D &n1, const Array1D &n2, const Array1D &n3, const Array1D &n4)
+{
+	// 1, 2, 3, 4 are in anti-clockwise direction.
+	const double S123 = triangle_area(n1, n2, n3);
+	const double S134 = triangle_area(n1, n3, n4);
+	return S123 + S134;
+}
+
+static inline double quadrilateral_area(double *n1, double *n2, double *n3, double *n4)
 {
 	// 1, 2, 3, 4 are in anti-clockwise direction.
 	const double S123 = triangle_area(n1, n2, n3);
@@ -606,7 +665,9 @@ int XF_MSH::readFromFile(const std::string &src)
 
 	// Re-orginize grid connectivities in a much easier way,
 	// and compute some derived quantities.
+	std::cout << "Converting into high-level representation ..." << std::endl;
 	raw2derived();
+	std::cout << "Done!" << std::endl;
 
 	// Finalize
 	return 0;
@@ -667,7 +728,105 @@ void XF_MSH::raw2derived()
 	m_face.resize(numOfFace());
 	m_cell.resize(numOfCell());
 
+	// Init
+	for (auto &e : m_node)
+	{
+		e.z() = 0.0;
+		e.atBdry = false;
+	}
 
+	// Parse
+	for (auto curPtr : m_content)
+	{
+		// Node
+		if (curPtr->identity() == XF_SECTION::NODE)
+		{
+			auto curObj = dynamic_cast<XF_NODE*>(curPtr);
+
+			// Node type within this zone
+			const bool flag = curObj->is_boundary_node();
+
+			// 1-based global node index
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				// Node Coordinates
+				curObj->get_coordinate(i - cur_first, node(i).coordinate);
+
+				// Node on boundary or not
+				node(i).atBdry = flag;
+			}
+		}
+
+		// Face
+		if (curPtr->identity() == XF_SECTION::FACE)
+		{
+			auto curObj = dynamic_cast<XF_FACE*>(curPtr);
+
+			// 1-based global face index
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			// Face type of this zone
+			const int ft = curObj->face_type();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				const auto &cnct = curObj->connectivity(i - cur_first);
+
+				// Face type
+				if (cnct.x != ft)
+					throw std::runtime_error("Internal error!");
+				else
+					face(i).type = ft;
+
+				// Nodes within this face, 1-based node index are stored, right-hand convention is preserved.
+				face(i).node.assign(cnct.n, cnct.n + cnct.x);
+
+				// Adjacent cells, 1-based cell index are stored, 0 stands for boundary, right-hand convention is preserved.
+				face(i).leftCell = cnct.cl();
+				face(i).rightCell = cnct.cr();
+
+				// Face on boundary or not
+				face(i).atBdry = (cnct.c0() == 0 || cnct.c1() == 0);
+
+				//Face area & center
+				if (cnct.x == XF_FACE::LINEAR)
+				{
+					auto na = cnct.n[0], nb = cnct.n[1];
+					auto p1 = node(na).coordinate, p2 = node(nb).coordinate;
+
+					face(i).area = distance(p1, p2);
+					line_center(p1, p2, face(i).center);
+				}
+				else if (cnct.x == XF_FACE::TRIANGULAR)
+				{
+					auto na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2];
+					auto p1 = node(na).coordinate, p2 = node(nb).coordinate, p3 = node(nc).coordinate;
+
+					face(i).area = triangle_area(p1, p2, p3);
+					triangle_center(p1, p2, p3, face(i).center);
+				}
+				else if (cnct.x == XF_FACE::QUADRILATERAL)
+				{
+					auto na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2], nd = cnct.n[3];
+					auto p1 = node(na).coordinate, p2 = node(nb).coordinate, p3 = node(nc).coordinate, p4 = node(nd).coordinate;
+
+					face(i).area = quadrilateral_area(p1, p2, p3, p4);
+					quadrilateral_center(p1, p2, p3, p4, face(i).center);
+				}
+				else if (cnct.x == XF_FACE::POLYGONAL)
+					throw std::runtime_error("Not supported currently!");
+				else
+					throw std::runtime_error("Internal error!");
+			}
+		}
+
+		// Cell
+		// TODO
+	}
 }
 
 void XF_MSH::derived2raw()

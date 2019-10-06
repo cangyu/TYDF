@@ -704,9 +704,7 @@ private:
 		bool atBdry;
 
 		double &x() { return coordinate[0]; }
-
 		double &y() { return coordinate[1]; }
-
 		double &z() { return coordinate[2]; }
 	};
 
@@ -718,6 +716,7 @@ private:
 		XF_Array1D<size_t> node;
 		size_t leftCell, rightCell;
 		bool atBdry;
+		double n_LR[3], n_RL[3]; // Surface unit normal
 	};
 
 	struct CELL_ELEM

@@ -238,10 +238,23 @@ static inline void cross_product(const Array1D &a, const Array1D &b, Array1D &ds
 	dst[2] = a[0] * b[1] - a[1] * b[0];
 }
 
+static inline void cross_product(double *a, double *b, double *dst)
+{
+	dst[0] = a[1] * b[2] - a[2] * b[1];
+	dst[1] = a[2] * b[0] - a[0] * b[2];
+	dst[2] = a[0] * b[1] - a[1] * b[0];
+}
+
 static inline void delta(const Array1D &na, const Array1D &nb, Array1D &dst)
 {
 	const size_t ND = dst.size();
 	for (size_t i = 0; i < ND; ++i)
+		dst[i] = nb[i] - na[i];
+}
+
+static inline void delta(double *na, double *nb, double *dst)
+{
+	for (size_t i = 0; i < 3; ++i)
 		dst[i] = nb[i] - na[i];
 }
 
@@ -253,6 +266,16 @@ static inline void normalize(const Array1D &src, Array1D &dst)
 		L += src[i] * src[i];
 	L = std::sqrt(L);
 	for (size_t i = 0; i < ND; ++i)
+		dst[i] = src[i] / L;
+}
+
+static inline void normalize(double *src, double *dst)
+{
+	double L = 0.0;
+	for (size_t i = 0; i < 3; ++i)
+		L += src[i] * src[i];
+	L = std::sqrt(L);
+	for (size_t i = 0; i < 3; ++i)
 		dst[i] = src[i] / L;
 }
 
@@ -292,6 +315,17 @@ static inline void line_center(double *na, double *nb, double *dst)
 		dst[i] = 0.5*(na[i] + nb[i]);
 }
 
+static inline void line_normal(double *na, double *nb, double *dst, double *dst_r)
+{
+	delta(na, nb, dst);
+	std::swap(dst[0], dst[1]);
+	dst[1] = -dst[1];
+	normalize(dst, dst);
+
+	for(size_t i = 0; i < 3; ++i)
+		dst_r[i] = -dst[i];
+}
+
 static inline void triangle_center(const Array1D &na, const Array1D &nb, const Array1D &nc, Array1D &dst)
 {
 	const size_t ND = dst.size();
@@ -325,6 +359,19 @@ static inline double triangle_area(double *na, double *nb, double *nc)
 
 	// Heron's formula
 	return std::sqrt(p*(p - a)*(p - b)*(p - c));
+}
+
+static inline void triangle_normal(double *na, double *nb, double *nc, double *dst, double *dst_r)
+{
+	// Order of nodes follows the right-hand convention.
+	double rab[3], rac[3];
+	delta(na, nb, rab);
+	delta(na, nc, rac);
+	cross_product(rac, rab, dst); // Take cross product to find normal direction
+	normalize(dst, dst); // Normalize
+
+	for(size_t i = 0; i < 3; ++i)
+		dst_r[i] = -dst[i];
 }
 
 static inline void quadrilateral_center(const Array1D &n1, const Array1D &n2, const Array1D &n3, const Array1D &n4, Array1D &dst)
@@ -376,6 +423,25 @@ static inline double quadrilateral_area(double *n1, double *n2, double *n3, doub
 	const double S123 = triangle_area(n1, n2, n3);
 	const double S134 = triangle_area(n1, n3, n4);
 	return S123 + S134;
+}
+
+static inline void quadrilateral_normal(double *n1, double *n2, double *n3, double *n4, double *dst, double *dst_r)
+{
+	// See (5.12) of Jiri Blazek's CFD book.
+	const double dxa = n4[0] - n2[0], dxb = n3[0] - n1[0];
+	const double dya = n4[1] - n2[1], dyb = n3[1] - n1[1];
+	const double dza = n4[2] - n2[2], dzb = n3[2] - n1[2];
+
+	// See (5.13) of Jiri Blazek's CFD book.
+	dst[0] = 0.5*(dza * dyb - dya * dzb);
+	dst[1] = 0.5*(dxa * dzb - dza * dxb);
+	dst[2] = 0.5*(dya * dxb - dxa * dyb);
+
+	// Normalize
+	normalize(dst, dst);
+
+	for(size_t i = 0; i < 3; ++i)
+		dst_r[i] = -dst[i];
 }
 
 int XF_MSH::readFromFile(const std::string &src)
@@ -734,6 +800,16 @@ void XF_MSH::raw2derived()
 		e.z() = 0.0;
 		e.atBdry = false;
 	}
+	for (auto &e : m_face)
+	{
+		e.center[2] = 0.0;
+		e.n_LR[2] = 0.0;
+		e.n_RL[2] = 0.0;
+	}
+	for (auto &e : m_cell)
+	{
+		e.center[2] = 0.0;
+	}
 
 	// Parse
 	for (auto curPtr : m_content)
@@ -800,6 +876,7 @@ void XF_MSH::raw2derived()
 
 					face(i).area = distance(p1, p2);
 					line_center(p1, p2, face(i).center);
+					line_normal(p1, p2, face(i).n_LR, face(i).n_RL);
 				}
 				else if (cnct.x == XF_FACE::TRIANGULAR)
 				{
@@ -808,6 +885,7 @@ void XF_MSH::raw2derived()
 
 					face(i).area = triangle_area(p1, p2, p3);
 					triangle_center(p1, p2, p3, face(i).center);
+					triangle_normal(p1, p2, p3, face(i).n_LR, face(i).n_RL);
 				}
 				else if (cnct.x == XF_FACE::QUADRILATERAL)
 				{
@@ -816,6 +894,7 @@ void XF_MSH::raw2derived()
 
 					face(i).area = quadrilateral_area(p1, p2, p3, p4);
 					quadrilateral_center(p1, p2, p3, p4, face(i).center);
+					quadrilateral_normal(p1, p2, p3, p4, face(i).n_LR, face(i).n_RL);
 				}
 				else if (cnct.x == XF_FACE::POLYGONAL)
 					throw std::runtime_error("Not supported currently!");
@@ -825,7 +904,22 @@ void XF_MSH::raw2derived()
 		}
 
 		// Cell
-		// TODO
+		if (curPtr->identity() == XF_SECTION::CELL)
+		{
+			auto curObj = dynamic_cast<XF_CELL*>(curPtr);
+
+			// 1-based global face index
+			const int cur_first = curObj->first_index();
+			const int cur_last = curObj->last_index();
+
+			// Element type of cells in this zone
+			const int et = curObj->element_type();
+
+			for (int i = cur_first; i <= cur_last; ++i)
+			{
+				cell(i).type = et;
+			}
+		}
 	}
 }
 

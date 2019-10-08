@@ -55,12 +55,10 @@ public:
 		for (int i = 0; i < N; ++i)
 		{
 			const T &x = this->at(i);
-			if (!flag_a)
-				if (a == x)
-					flag_a = true;
-			if (!flag_b)
-				if (b == x)
-					flag_b = true;
+			if (!flag_a && a == x)
+				flag_a = true;
+			if (!flag_b && b == x)
+				flag_b = true;
 
 			if (flag_a && flag_b)
 				return true;

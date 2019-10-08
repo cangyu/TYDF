@@ -29,12 +29,44 @@ public:
 	// 1-based indexing
 	T &operator()(size_t i)
 	{
-		return std::vector<T>::at(i - 1);
+		return this->at(i - 1);
 	}
 
 	T operator()(size_t i) const
 	{
-		return std::vector<T>::at(i - 1);
+		return this->at(i - 1);
+	}
+
+	bool contains(const T &x) const
+	{
+		const int N = this->size();
+		for (int i = 0; i < N; ++i)
+			if (x == this->at(i))
+				return true;
+
+		return false;
+	}
+
+	bool contains(const T &a, const T &b) const
+	{
+		bool flag_a = false, flag_b = false;
+
+		const int N = this->size();
+		for (int i = 0; i < N; ++i)
+		{
+			const T &x = this->at(i);
+			if (!flag_a)
+				if (a == x)
+					flag_a = true;
+			if (!flag_b)
+				if (b == x)
+					flag_b = true;
+
+			if (flag_a && flag_b)
+				return true;
+		}
+
+		return false;
 	}
 };
 
@@ -461,24 +493,28 @@ public:
 
 	~XF_CELL() = default;
 
-	int type() const
-	{
-		return m_type;
-	}
+	int type() const { return m_type; }
+	int &type() { return m_type; }
 
-	int element_type() const
-	{
-		return m_elem;
-	}
+	int element_type() const { return m_elem; }
+	int &element_type() { return m_elem; }
 
 	int elem(size_t loc_idx) const
 	{
-		return m_mixedElemDesc[loc_idx];
+		int et = element_type();
+		if (et == XF_CELL::MIXED)
+			return m_mixedElemDesc[loc_idx];
+		else
+			return et;
 	}
 
 	int &elem(size_t loc_idx)
 	{
-		return m_mixedElemDesc[loc_idx];
+		auto &et = element_type();
+		if (et == XF_CELL::MIXED)
+			return m_mixedElemDesc[loc_idx];
+		else
+			return et;
 	}
 
 	void repr(std::ostream &out)
@@ -668,25 +704,13 @@ public:
 
 	~XF_ZONE() = default;
 
-	int zone() const
-	{
-		return m_zoneID;
-	}
+	int zone() const { return m_zoneID; }
 
-	const std::string &zone_type() const
-	{
-		return m_zoneType;
-	}
+	const std::string &zone_type() const { return m_zoneType; }
 
-	const std::string &zone_name() const
-	{
-		return m_zoneName;
-	}
+	const std::string &zone_name() const { return m_zoneName; }
 
-	int domain() const
-	{
-		return m_domainID;
-	}
+	int domain() const { return m_domainID; }
 
 	void repr(std::ostream &out)
 	{
@@ -725,6 +749,7 @@ private:
 		double center[3];
 		double volume;
 		XF_Array1D<size_t> face;
+		XF_Array1D<size_t> node;
 		XF_Array1D<size_t> adjCell;
 		XF_Array2D<double> unitNormal;
 	};
@@ -747,6 +772,18 @@ public:
 		m_totalCellNum = 0;
 		m_totalFaceNum = 0;
 	}
+
+	XF_MSH(const std::string &inp) :
+		XF_DIM(3),
+		m_content(0, nullptr)
+	{
+		m_totalNodeNum = 0;
+		m_totalCellNum = 0;
+		m_totalFaceNum = 0;
+
+		readFromFile(inp);
+	}
+
 
 	~XF_MSH()
 	{
@@ -774,20 +811,14 @@ public:
 	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
 
 private:
-	void add_entry(XF_SECTION *e)
-	{
-		m_content.push_back(e);
-	}
+	void add_entry(XF_SECTION *e) { m_content.push_back(e); }
 
 	void clear_entry()
 	{
 		// Release previous contents
-		for (auto &ptr : m_content)
+		for (auto ptr : m_content)
 			if (ptr)
-			{
 				delete ptr;
-				ptr = nullptr;
-			}
 
 		// Clear container
 		m_content.clear();
@@ -796,6 +827,215 @@ private:
 	void raw2derived();
 
 	void derived2raw();
+
+	void tet_standardization(CELL_ELEM &tet)
+	{
+		// Check num of total faces
+		if (tet.face.size() != 4)
+			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(tet.type) + R"(" and num of faces: )" + std::to_string(tet.face.size()));
+
+		// Ensure all faces are triangular
+		const auto &f0 = face(tet.face.at(0));
+		if (f0.type != XF_FACE::TRIANGULAR)
+			throw std::runtime_error("Internal error.");
+
+		const auto &f1 = face(tet.face.at(1));
+		if (f1.type != XF_FACE::TRIANGULAR)
+			throw std::runtime_error("Internal error.");
+
+		const auto &f2 = face(tet.face.at(2));
+		if (f2.type != XF_FACE::TRIANGULAR)
+			throw std::runtime_error("Internal error.");
+
+		const auto &f3 = face(tet.face.at(3));
+		if (f3.type != XF_FACE::TRIANGULAR)
+			throw std::runtime_error("Internal error.");
+
+		// Find all 4 nodes
+		size_t n1 = f0.node.at(0);
+		if (n1 == 0)
+			throw std::runtime_error("Internal error.");
+
+		size_t n2 = f0.node.at(1);
+		if (n2 == 0)
+			throw std::runtime_error("Internal error.");
+
+		size_t n3 = f0.node.at(2);
+		if (n3 == 0)
+			throw std::runtime_error("Internal error.");
+
+		size_t n0 = 0;
+		for (auto e : f2.node)
+			if (e != n1 && e != n2 && e != n3)
+			{
+				n0 = e;
+				break;
+			}
+		if (n0 == 0)
+			throw std::runtime_error("Internal error.");
+
+		// Assign node index
+		tet.node.resize(4);
+		tet.node.at(0) = n0;
+		tet.node.at(1) = n1;
+		tet.node.at(2) = n2;
+		tet.node.at(3) = n3;
+	}
+
+	void pyramid_standardization(CELL_ELEM &pyramid)
+	{
+		// Check num of total faces
+		if (pyramid.face.size() != 5)
+			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.face.size()));
+
+		// Find the bottom quad and ensure other faces are triangular.
+		size_t f0_idx = 0;
+		for (auto e : pyramid.face)
+		{
+			const auto &f = face(e);
+			if (f.type == XF_FACE::QUADRILATERAL)
+			{
+				if (f0_idx == 0)
+					f0_idx = e;
+				else
+					throw std::runtime_error("Internal error.");
+			}
+			else if (f.type == XF_FACE::TRIANGULAR)
+				continue;
+			else
+				throw std::runtime_error("Internal error.");
+		}
+		if (f0_idx == 0)
+			throw std::runtime_error("Internal error.");
+
+		// Nodes at bottom
+		const auto &f0 = face(f0_idx);
+
+		const size_t n0 = f0.node.at(0);
+		if (n0 == 0)
+			throw std::runtime_error("Internal error.");
+
+		const size_t n1 = f0.node.at(1);
+		if (n1 == 0)
+			throw std::runtime_error("Internal error.");
+
+		const size_t n2 = f0.node.at(2);
+		if (n2 == 0)
+			throw std::runtime_error("Internal error.");
+
+		const size_t n3 = f0.node.at(3);
+		if (n3 == 0)
+			throw std::runtime_error("Internal error.");
+
+		// Find other 4 triangles
+		size_t f1_idx = 0;
+		for (auto e : pyramid.face)
+		{
+			if (e == f0_idx)
+				continue;
+
+			const auto &f = face(e);
+			if (f.node.contains(n0, n3))
+			{
+				f1_idx = e;
+				break;
+			}
+		}
+		if (f1_idx == 0)
+			throw std::runtime_error("Internal error.");
+
+		size_t f2_idx = 0;
+		for (auto e : pyramid.face)
+		{
+			if (e == f0_idx || e == f1_idx)
+				continue;
+
+			const auto &f = face(e);
+			if (f.node.contains(n3, n2))
+			{
+				f2_idx = e;
+				break;
+			}
+		}
+		if (f2_idx == 0)
+			throw std::runtime_error("Internal error.");
+
+		size_t f3_idx = 0;
+		for (auto e : pyramid.face)
+		{
+			if (e == f0_idx || e == f1_idx || e == f2_idx)
+				continue;
+
+			const auto &f = face(e);
+			if (f.node.contains(n2, n1))
+			{
+				f3_idx = e;
+				break;
+			}
+		}
+		if (f3_idx == 0)
+			throw std::runtime_error("Internal error.");
+
+		size_t f4_idx = 0;
+		for (auto e : pyramid.face)
+		{
+			if (e != f0_idx && e != f1_idx && e != f2_idx && e != f3_idx)
+			{
+				f4_idx = e;
+				const auto &f = face(e);
+				if (!f.node.contains(n1, n0))
+					throw std::runtime_error("Internal error.");
+
+				break;
+			}
+		}
+		if (f4_idx == 0)
+			throw std::runtime_error("Internal error.");
+
+		pyramid.face.at(0) = f0_idx;
+		pyramid.face.at(1) = f1_idx;
+		pyramid.face.at(2) = f2_idx;
+		pyramid.face.at(3) = f3_idx;
+		pyramid.face.at(4) = f4_idx;
+
+		// The last node
+		size_t n4 = 0;
+		const auto &f1 = face(f1_idx);
+		for (auto e : f1.node)
+			if (e != n0 && e != n3)
+			{
+				n4 = e;
+				break;
+			}
+		if (n4 == 0)
+			throw std::runtime_error("Internal error.");
+
+		// Assign node index
+		pyramid.node.resize(5);
+		pyramid.node.at(0) = n0;
+		pyramid.node.at(1) = n1;
+		pyramid.node.at(2) = n2;
+		pyramid.node.at(3) = n3;
+		pyramid.node.at(4) = n4;
+	}
+
+	void prism_standardization(CELL_ELEM &prism)
+	{
+		// Check num of total faces
+		if (prism.face.size() != 5)
+			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(prism.type) + R"(" and num of faces: )" + std::to_string(prism.face.size()));
+
+		// Ensure there're 2 triangle and 3 quad
+		for (auto e : prism.face)
+		{
+			// TODO
+		}
+	}
+
+	void hex_standardization(CELL_ELEM &hex)
+	{
+		// TODO
+	}
 };
 
 #endif

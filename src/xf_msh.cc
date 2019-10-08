@@ -322,7 +322,7 @@ static inline void line_normal(double *na, double *nb, double *dst, double *dst_
 	dst[1] = -dst[1];
 	normalize(dst, dst);
 
-	for(size_t i = 0; i < 3; ++i)
+	for (size_t i = 0; i < 3; ++i)
 		dst_r[i] = -dst[i];
 }
 
@@ -370,7 +370,7 @@ static inline void triangle_normal(double *na, double *nb, double *nc, double *d
 	cross_product(rac, rab, dst); // Take cross product to find normal direction
 	normalize(dst, dst); // Normalize
 
-	for(size_t i = 0; i < 3; ++i)
+	for (size_t i = 0; i < 3; ++i)
 		dst_r[i] = -dst[i];
 }
 
@@ -440,7 +440,7 @@ static inline void quadrilateral_normal(double *n1, double *n2, double *n3, doub
 	// Normalize
 	normalize(dst, dst);
 
-	for(size_t i = 0; i < 3; ++i)
+	for (size_t i = 0; i < 3; ++i)
 		dst_r[i] = -dst[i];
 }
 
@@ -862,8 +862,13 @@ void XF_MSH::raw2derived()
 				face(i).node.assign(cnct.n, cnct.n + cnct.x);
 
 				// Adjacent cells, 1-based cell index are stored, 0 stands for boundary, right-hand convention is preserved.
-				face(i).leftCell = cnct.cl();
-				face(i).rightCell = cnct.cr();
+				size_t lc = cnct.cl(), rc = cnct.cr();
+				face(i).leftCell = lc;
+				face(i).rightCell = rc;
+				if (lc != 0)
+					cell(lc).face.push_back(i);
+				if (rc != 0)
+					cell(rc).face.push_back(i);
 
 				// Face on boundary or not
 				face(i).atBdry = (cnct.c0() == 0 || cnct.c1() == 0);
@@ -912,12 +917,31 @@ void XF_MSH::raw2derived()
 			const int cur_first = curObj->first_index();
 			const int cur_last = curObj->last_index();
 
-			// Element type of cells in this zone
-			const int et = curObj->element_type();
-
 			for (int i = cur_first; i <= cur_last; ++i)
 			{
-				cell(i).type = et;
+				auto &curCell = cell(i);
+
+				// Element type of cells in this zone
+				curCell.type = curObj->elem(i - cur_first);
+
+				// Organize order of included nodes and faces
+				switch (curCell.type)
+				{
+				case XF_CELL::TETRAHEDRAL:
+					tet_standardization(curCell);
+					break;
+				case XF_CELL::HEXAHEDRAL:
+					hex_standardization(curCell);
+					break;
+				case XF_CELL::PYRAMID:
+					pyramid_standardization(curCell);
+					break;
+				case XF_CELL::WEDGE:
+					prism_standardization(curCell);
+					break;
+				default:
+					throw std::runtime_error("Invalid cell element type: " + std::to_string(cell(i).type) + ", maybe caused by internal error.");
+				}
 			}
 		}
 	}

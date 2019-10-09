@@ -1,4 +1,4 @@
-#include "plot3d.h"
+#include "plot3d.hpp"
 
 // 3D single-block grid
 int test0()

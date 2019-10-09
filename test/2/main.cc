@@ -1,4 +1,4 @@
-#include "plot3d.h"
+#include "plot3d.hpp"
 
 // 2D grid in 3D form
 void test0()

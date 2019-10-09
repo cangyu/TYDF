@@ -1,5 +1,5 @@
 #include <iostream>
-#include "nmf.h"
+#include "nmf.hpp"
 
 int test0()
 {

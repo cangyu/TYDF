@@ -2,9 +2,9 @@
 #define __GLUE_HPP__
 
 #include <string>
-#include "nmf.h"
-#include "plot3d.h"
-#include "xf_msh.h"
+#include "nmf.hpp"
+#include "plot3d.hpp"
+#include "xf_msh.hpp"
 
 int glue(const std::string &f_nmf, const std::string &f_p3d, std::string &f_msh)
 {

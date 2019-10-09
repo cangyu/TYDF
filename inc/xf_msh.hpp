@@ -340,24 +340,15 @@ class XF_NODE :public XF_SECTION, public XF_RANGE, public XF_DIM
 {
 private:
 	int m_type;
-	std::vector<double> m_node;
+	XF_Array1D<XF_Vector> m_node;
 
 public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
 
-	XF_NODE(int zone, int first, int last, int type, int ND) : XF_SECTION(XF_SECTION::NODE), XF_RANGE(zone, first, last), XF_DIM(ND)
+	XF_NODE(int zone, int first, int last, int type, int ND) : XF_SECTION(XF_SECTION::NODE), XF_RANGE(zone, first, last), XF_DIM(ND), m_type(type), m_node(num())
 	{
-		if (type == 0)
-			m_type = XF_NODE::VIRTUAL;
-		else if (type == 1)
-			m_type = XF_NODE::ANY;
-		else if (type == 2)
-			m_type = XF_NODE::BOUNDARY;
-		else
+		if (type != VIRTUAL && type != ANY && type != BOUNDARY)
 			throw std::runtime_error("Invalid description of node type!");
-
-		m_node.resize(ND * num());
-		std::fill(m_node.begin(), m_node.end(), 0.0);
 	}
 
 	~XF_NODE() = default;
@@ -368,61 +359,47 @@ public:
 
 	void get_coordinate(size_t loc_idx, std::vector<double> &dst) const
 	{
-		size_t stx = STX(loc_idx);
+		const auto &node = m_node.at(loc_idx); // 0-based indexing
 		for (int i = 0; i < m_dim; ++i)
-			dst[i] = m_node[stx + i];
+			dst[i] = node.at(i);
 	}
 
 	void get_coordinate(size_t loc_idx, double *dst) const
 	{
-		size_t stx = STX(loc_idx);
+		const auto &node = m_node.at(loc_idx); // 0-based indexing
 		for (int i = 0; i < m_dim; ++i)
-			dst[i] = m_node[stx + i];
+			dst[i] = node.at(i);
 	}
 
-	void set_coordinate(size_t loc_idx, double x0, double x1, double x2)
+	void set_coordinate(size_t loc_idx, double x0, double x1, double x2 = 0.0)
 	{
-		const size_t stx = loc_idx * 3;
-		m_node[stx] = x0;
-		m_node[stx + 1] = x1;
-		m_node[stx + 2] = x2;
-	}
-
-	void set_coordinate(size_t loc_idx, double x0, double x1)
-	{
-		const size_t stx = loc_idx * 2;
-		m_node[stx] = x0;
-		m_node[stx + 1] = x1;
+		auto &node = m_node.at(loc_idx);
+		node.x() = x0;
+		node.y() = x1;
+		node.z() = x2;
 	}
 
 	void repr(std::ostream &out)
 	{
-		const int n_dim = ND();
-		const int N = num();
-
 		out << "(" << std::dec << identity();
 		out << " (" << std::hex << zone() << " " << first_index() << " " << last_index() << " ";
-		out << std::dec << type() << " " << n_dim << ")(" << std::endl;
+		out << std::dec << type() << " " << ND() << ")(" << std::endl;
 
-		size_t loc_idx = 0;
 		out.precision(12);
+		const int N = num();
 		for (int i = 0; i < N; ++i)
 		{
-			for (int k = 0; k < n_dim; ++k)
-				out << " " << m_node[loc_idx + k];
+			const auto &node = m_node.at(i);
+			for (int k = 0; k < m_dim; ++k)
+				out << " " << node.at(k);
 			out << std::endl;
-			loc_idx += n_dim;
 		}
-
 		out << "))" << std::endl;
 	}
 
 	bool is_virtual_node() const { return m_type == XF_NODE::VIRTUAL; }
 	bool is_boundary_node() const { return m_type == XF_NODE::BOUNDARY; }
 	bool is_internal_node() const { return m_type == XF_NODE::ANY; }
-
-private:
-	size_t STX(size_t loc_idx) const { return loc_idx * m_dim; }
 };
 
 class XF_CELL :public XF_SECTION, public XF_RANGE
@@ -828,7 +805,7 @@ public:
 					auto e = new XF_NODE(zone, first, last, tp, nd);
 					eat(fin, ')');
 					eat(fin, '(');
-					std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
+					std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ...";
 
 					if (nd != dimension())
 						throw std::runtime_error("Inconsistent with previous DIMENSION declaration!");
@@ -855,7 +832,7 @@ public:
 					}
 					eat(fin, ')');
 					eat(fin, ')');
-					std::cout << "Done!" << std::endl;
+					std::cout << " Done!" << std::endl;
 					add_entry(e);
 				}
 				skip_white(fin);
@@ -898,7 +875,7 @@ public:
 
 					if (elem == 0)
 					{
-						std::cout << "Reading " << e->num() << " mixed cells in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
+						std::cout << "Reading " << e->num() << " mixed cells in zone " << zone << " (from " << first << " to " << last << ") ... ";
 						eat(fin, '(');
 						for (int i = first; i <= last; ++i)
 						{
@@ -977,7 +954,7 @@ public:
 					eat(fin, ')');
 					eat(fin, '(');
 
-					std::cout << "Reading " << e->num() << " faces in zone " << zone << " (from " << first << " to " << last << ") ..." << std::endl;
+					std::cout << "Reading " << e->num() << " faces in zone " << zone << " (from " << first << " to " << last << ") ... ";
 
 					size_t tmp_n[4];
 					size_t tmp_c[2];
@@ -1253,12 +1230,12 @@ private:
 
 	void raw2derived()
 	{
-		// Allocate storage
+		std::cout << "(1/4)Allocating storage ..." << std::endl;
 		m_node.resize(numOfNode());
 		m_face.resize(numOfFace());
 		m_cell.resize(numOfCell());
 
-		// Init
+		std::cout << "(2/4)Set initial values ..." << std::endl;
 		for (auto &e : m_node)
 		{
 			e.coordinate.z() = 0.0;
@@ -1271,11 +1248,9 @@ private:
 			e.n_RL.z() = 0.0;
 		}
 		for (auto &e : m_cell)
-		{
 			e.center.z() = 0.0;
-		}
 
-		std::cout << "\tParsing records of node and face ..." << std::endl;
+		std::cout << "(3/4)Parsing records of node and face ..." << std::endl;
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::NODE)
@@ -1371,7 +1346,7 @@ private:
 			}
 		}
 
-		std::cout << "\tParsing records of cell ..." << std::endl;
+		std::cout << "(4/4)Parsing records of cell ..." << std::endl;
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::CELL)

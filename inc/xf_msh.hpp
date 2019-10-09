@@ -722,12 +722,7 @@ public:
 		readFromFile(inp);
 	}
 
-	~XF_MSH()
-	{
-		for (auto ptr : m_content)
-			if (ptr)
-				delete ptr;
-	}
+	~XF_MSH() { clear_entry(); }
 
 	int readFromFile(const std::string &src)
 	{
@@ -1076,6 +1071,7 @@ public:
 	size_t numOfFace() const { return m_totalFaceNum; }
 	size_t numOfCell() const { return m_totalCellNum; }
 
+	// 1-based indexing
 	NODE_ELEM &node(size_t idx) { return m_node(idx); }
 	FACE_ELEM &face(size_t idx) { return m_face(idx); }
 	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
@@ -1262,10 +1258,9 @@ private:
 			e.center[2] = 0.0;
 		}
 
-		// Parse
+		// Parse record of node and face
 		for (auto curPtr : m_content)
 		{
-			// Node
 			if (curPtr->identity() == XF_SECTION::NODE)
 			{
 				auto curObj = dynamic_cast<XF_NODE*>(curPtr);
@@ -1287,7 +1282,6 @@ private:
 				}
 			}
 
-			// Face
 			if (curPtr->identity() == XF_SECTION::FACE)
 			{
 				auto curObj = dynamic_cast<XF_FACE*>(curPtr);
@@ -1358,8 +1352,11 @@ private:
 						throw std::runtime_error("Internal error!");
 				}
 			}
+		}
 
-			// Cell
+		// Parse record of cell
+		for (auto curPtr : m_content)
+		{
 			if (curPtr->identity() == XF_SECTION::CELL)
 			{
 				auto curObj = dynamic_cast<XF_CELL*>(curPtr);
@@ -1567,6 +1564,7 @@ private:
 		if (f4_idx == 0)
 			throw std::runtime_error("Internal error.");
 
+		// Assign face index
 		pyramid.face.at(0) = f0_idx;
 		pyramid.face.at(1) = f1_idx;
 		pyramid.face.at(2) = f2_idx;
@@ -1600,16 +1598,154 @@ private:
 		if (prism.face.size() != 5)
 			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(prism.type) + R"(" and num of faces: )" + std::to_string(prism.face.size()));
 
-		// Ensure there're 2 triangle and 3 quad
+		// Ensure there're only 2 triangle and 3 quad
+		size_t f0_idx = 0, f1_idx = 0;
 		for (auto e : prism.face)
 		{
-			// TODO
+			const auto &f = face(e);
+			if (f.type == XF_FACE::TRIANGULAR)
+			{
+				if (f0_idx == 0)
+					f0_idx = e;
+				else if (f1_idx == 0)
+					f1_idx = e;
+				else
+					throw std::runtime_error("There're more than 2 triangular faces in a prism cell.");
+			}
+			else if (f.type == XF_FACE::QUADRILATERAL)
+				continue;
+			else
+				throw std::runtime_error("Internal error.");
 		}
+		if (f0_idx == 0 || f1_idx == 0)
+			throw std::runtime_error("Missing triangular faces in a prism cell.");
+
+		// 2 triangular faces
+		const auto &f0 = face(f0_idx);
+		const auto &f1 = face(f1_idx);
+
+		// 3 nodes on the bottom triangular face
+		const size_t n0 = f0.node.at(0);
+		const size_t n1 = f0.node.at(1);
+		const size_t n2 = f0.node.at(2);
+
+		// Find face 4
+		size_t f4_idx = 0;
+		for (auto e : prism.face)
+		{
+			const auto &f = face(e);
+			if (f.type == XF_FACE::QUADRILATERAL && f.node.contains(n0, n1))
+			{
+				if (f4_idx == 0)
+					f4_idx = e;
+				else
+					throw std::runtime_error("Inconsistent face composition.");
+			}
+		}
+		if (f4_idx == 0)
+			throw std::runtime_error("Missing face 4.");
+
+		const auto &f4 = face(f4_idx);
+
+		// Find face 3
+		size_t f3_idx = 0;
+		for (auto e : prism.face)
+		{
+			const auto &f = face(e);
+			if (f.type == XF_FACE::QUADRILATERAL && f.node.contains(n1, n2))
+			{
+				if (f3_idx == 0)
+					f3_idx = e;
+				else
+					throw std::runtime_error("Inconsistent face composition.");
+			}
+		}
+		if (f3_idx == 0)
+			throw std::runtime_error("Missing face 3.");
+
+		const auto &f3 = face(f3_idx);
+
+		// Find face 2
+		size_t f2_idx = 0;
+		for (auto e : prism.face)
+		{
+			const auto &f = face(e);
+			if (f.type == XF_FACE::QUADRILATERAL)
+			{
+				if (e != f4_idx && e != f3_idx)
+				{
+					f2_idx = e;
+					break;
+				}
+			}
+		}
+		if (f2_idx == 0)
+			throw std::runtime_error("Missing face 2.");
+
+		const auto &f2 = face(f2_idx);
+		if (!f2.node.contains(n2, n0))
+			throw std::runtime_error("Inconsistent face composition.");
+
+		// Assign face index
+		prism.face.at(0) = f0_idx;
+		prism.face.at(1) = f1_idx;
+		prism.face.at(2) = f2_idx;
+		prism.face.at(3) = f3_idx;
+		prism.face.at(4) = f4_idx;
+
+		// 3 nodes on the top triangular face
+		size_t n3 = 0, n5 = 0, n4 = 0;
+		for (auto e : f2.node)
+		{
+			if (e != n0 && e != n2)
+			{
+				if (n3 == 0)
+					n3 = e;
+				else if (n5 == 0)
+					n5 = e;
+				else
+					throw std::runtime_error("Internal error.");
+			}
+		}
+		if (n3 == 0 || n5 == 0)
+			throw std::runtime_error("Missing nodes on the top");
+
+		// Check if n3 and n5 needs to be swaped
+		if (!(f1.node.contains(n3) && f4.node.contains(n3)))
+			std::swap(n3, n5);
+
+		// Ensure n5 located on f1, f2 and f3
+		if (!(f1.node.contains(n5) && f3.node.contains(n5)))
+			throw std::runtime_error("Internal error.");
+
+		// Find n4
+		for (auto e : f1.node)
+		{
+			if (e != n3 && e != n5)
+			{
+				if (n4 == 0)
+					n4 = e;
+				else
+					throw std::runtime_error("Internal error.");
+			}
+		}
+
+		// Assign node index
+		prism.node.resize(6);
+		prism.node.at(0) = n0;
+		prism.node.at(1) = n1;
+		prism.node.at(2) = n2;
+		prism.node.at(3) = n3;
+		prism.node.at(4) = n4;
+		prism.node.at(5) = n5;
 	}
 
 	void hex_standardization(CELL_ELEM &hex)
 	{
-		// TODO
+		// Check num of total faces
+		if (hex.face.size() != 6)
+			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(hex.type) + R"(" and num of faces: )" + std::to_string(hex.face.size()));
+
 	}
 };
 

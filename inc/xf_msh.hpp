@@ -275,10 +275,7 @@ protected:
 	int m_first, m_last;
 
 public:
-	XF_RANGE(int zone, int first, int last) :
-		m_zone(zone),
-		m_first(first),
-		m_last(last)
+	XF_RANGE(int zone, int first, int last) : m_zone(zone), m_first(first), m_last(last)
 	{
 		if (m_first > m_last)
 			throw std::runtime_error("Invalid node index!");
@@ -304,10 +301,7 @@ private:
 public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
 
-	XF_NODE(int zone, int first, int last, int type, int ND) :
-		XF_SECTION(XF_SECTION::NODE),
-		XF_RANGE(zone, first, last),
-		XF_DIM(ND)
+	XF_NODE(int zone, int first, int last, int type, int ND) : XF_SECTION(XF_SECTION::NODE), XF_RANGE(zone, first, last), XF_DIM(ND)
 	{
 		if (type == 0)
 			m_type = XF_NODE::VIRTUAL;
@@ -407,9 +401,7 @@ public:
 
 	static const std::map<std::string, int> ELEM_MAPPING_Str2Idx;
 
-	XF_CELL(int zone, int first, int last, int type, int elem_type) :
-		XF_SECTION(XF_SECTION::CELL),
-		XF_RANGE(zone, first, last)
+	XF_CELL(int zone, int first, int last, int type, int elem_type) : XF_SECTION(XF_SECTION::CELL), XF_RANGE(zone, first, last)
 	{
 		// Check cell type before assign
 		auto it1 = XF_CELL::TYPE_MAPPING_Idx2Str.find(type);
@@ -553,9 +545,7 @@ public:
 
 	static const std::map<std::string, int> MAPPING_Str2Idx;
 
-	XF_FACE(int zone, int first, int last, int bc, int face) :
-		XF_SECTION(XF_SECTION::FACE),
-		XF_RANGE(zone, first, last)
+	XF_FACE(int zone, int first, int last, int bc, int face) : XF_SECTION(XF_SECTION::FACE), XF_RANGE(zone, first, last)
 	{
 		// Check B.C. before assign
 		auto it1 = XF_BC::MAPPING_Idx2Str.find(bc);
@@ -631,8 +621,7 @@ private:
 	int m_domainID;
 
 public:
-	XF_ZONE(int zone, const std::string &type, const std::string &name) :
-		XF_SECTION(XF_SECTION::ZONE)
+	XF_ZONE(int zone, const std::string &type, const std::string &name) : XF_SECTION(XF_SECTION::ZONE)
 	{
 		m_zoneID = zone;
 		m_zoneType = type;
@@ -702,18 +691,14 @@ private:
 	XF_Array1D<CELL_ELEM> m_cell;
 
 public:
-	XF_MSH() :
-		XF_DIM(3),
-		m_content(0, nullptr)
+	XF_MSH() : XF_DIM(3), m_content(0, nullptr)
 	{
 		m_totalNodeNum = 0;
 		m_totalCellNum = 0;
 		m_totalFaceNum = 0;
 	}
 
-	XF_MSH(const std::string &inp) :
-		XF_DIM(3),
-		m_content(0, nullptr)
+	XF_MSH(const std::string &inp) : XF_DIM(3), m_content(0, nullptr)
 	{
 		m_totalNodeNum = 0;
 		m_totalCellNum = 0;
@@ -1660,7 +1645,7 @@ private:
 					throw std::runtime_error("Inconsistent face composition.");
 			}
 		}
-		if (f3_idx == 0)
+		if (f3_idx == 0 || f3_idx == f4_idx)
 			throw std::runtime_error("Missing face 3.");
 
 		const auto &f3 = face(f3_idx);
@@ -1693,7 +1678,7 @@ private:
 		prism.face.at(3) = f3_idx;
 		prism.face.at(4) = f4_idx;
 
-		// 3 nodes on the top triangular face
+		// 3 nodes on the top triangular face to be defined
 		size_t n3 = 0, n5 = 0, n4 = 0;
 		for (auto e : f2.node)
 		{
@@ -1707,7 +1692,7 @@ private:
 					throw std::runtime_error("Internal error.");
 			}
 		}
-		if (n3 == 0 || n5 == 0)
+		if (n3 == 0 || n5 == 0 || n3 == n5)
 			throw std::runtime_error("Missing nodes on the top");
 
 		// Check if n3 and n5 needs to be swaped
@@ -1729,6 +1714,8 @@ private:
 					throw std::runtime_error("Internal error.");
 			}
 		}
+		if (n4 == 0)
+			throw std::runtime_error("Internal error.");
 
 		// Assign node index
 		prism.node.resize(6);

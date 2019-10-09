@@ -16,6 +16,56 @@
 #include <cmath>
 #include <stdexcept>
 
+typedef double XF_Scalar;
+
+class XF_Vector
+{
+private:
+	XF_Scalar m_data[3];
+
+	void exchange(XF_Vector &rhs)
+	{
+		for (int i = 0; i < 3; ++i)
+			std::swap(m_data[i], rhs.m_data[i]);
+	}
+
+public:
+	XF_Vector() : m_data{ 0.0, 0.0, 0.0 } {}
+
+	XF_Vector(XF_Scalar val) : m_data{ val, val, val } {}
+
+	XF_Vector(XF_Scalar v1, XF_Scalar v2, XF_Scalar v3) : m_data{ v1, v2, v3 } {}
+
+	XF_Vector(const XF_Vector &rhs) = default;
+
+	~XF_Vector() = default;
+
+	XF_Vector &operator=(XF_Vector rhs)
+	{
+		exchange(rhs);
+		return *this;
+	}
+
+	XF_Scalar *data() { return m_data; }
+
+	// 0-based indexing
+	XF_Scalar at(size_t idx) const { return m_data[idx]; }
+	XF_Scalar &at(size_t idx) { return m_data[idx]; }
+
+	// 1-based indexing
+	XF_Scalar operator()(int idx) const { return m_data[idx - 1]; }
+	XF_Scalar &operator()(int idx) { return m_data[idx - 1]; }
+
+	// Access through component
+	XF_Scalar x() const { return m_data[0]; }
+	XF_Scalar y() const { return m_data[1]; }
+	XF_Scalar z() const { return m_data[2]; }
+
+	XF_Scalar &x() { return m_data[0]; }
+	XF_Scalar &y() { return m_data[1]; }
+	XF_Scalar &z() { return m_data[2]; }
+};
+
 template<typename T>
 class XF_Array1D : public std::vector<T>
 {
@@ -44,7 +94,6 @@ public:
 	bool contains(const T &a, const T &b) const
 	{
 		bool flag_a = false, flag_b = false;
-
 		const int N = this->size();
 		for (int i = 0; i < N; ++i)
 		{
@@ -57,7 +106,6 @@ public:
 			if (flag_a && flag_b)
 				return true;
 		}
-
 		return false;
 	}
 };
@@ -647,34 +695,30 @@ class XF_MSH : public XF_DIM
 private:
 	struct NODE_ELEM
 	{
-		double coordinate[3];
+		XF_Vector coordinate;
 		bool atBdry;
-
-		double &x() { return coordinate[0]; }
-		double &y() { return coordinate[1]; }
-		double &z() { return coordinate[2]; }
 	};
 
 	struct FACE_ELEM
 	{
 		int type;
-		double center[3];
+		XF_Vector center;
 		double area;
 		XF_Array1D<size_t> node;
 		size_t leftCell, rightCell;
 		bool atBdry;
-		double n_LR[3], n_RL[3]; // Surface unit normal
+		XF_Vector n_LR, n_RL; // Surface unit normal
 	};
 
 	struct CELL_ELEM
 	{
 		int type;
-		double center[3];
+		XF_Vector center;
 		double volume;
 		XF_Array1D<size_t> face;
 		XF_Array1D<size_t> node;
 		XF_Array1D<size_t> adjCell;
-		XF_Array2D<double> unitNormal;
+		XF_Array1D<XF_Vector> normal;
 	};
 
 	// Raw
@@ -1225,21 +1269,21 @@ private:
 		// Init
 		for (auto &e : m_node)
 		{
-			e.z() = 0.0;
+			e.coordinate.z() = 0.0;
 			e.atBdry = false;
 		}
 		for (auto &e : m_face)
 		{
-			e.center[2] = 0.0;
-			e.n_LR[2] = 0.0;
-			e.n_RL[2] = 0.0;
+			e.center.z() = 0.0;
+			e.n_LR.z() = 0.0;
+			e.n_RL.z() = 0.0;
 		}
 		for (auto &e : m_cell)
 		{
-			e.center[2] = 0.0;
+			e.center.z() = 0.0;
 		}
 
-		// Parse record of node and face
+		std::cout << "\tParsing records of node and face ..." << std::endl;
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::NODE)
@@ -1256,7 +1300,7 @@ private:
 				for (int i = cur_first; i <= cur_last; ++i)
 				{
 					// Node Coordinates
-					curObj->get_coordinate(i - cur_first, node(i).coordinate);
+					curObj->get_coordinate(i - cur_first, node(i).coordinate.data());
 
 					// Node on boundary or not
 					node(i).atBdry = flag;
@@ -1303,29 +1347,29 @@ private:
 					if (cnct.x == XF_FACE::LINEAR)
 					{
 						auto na = cnct.n[0], nb = cnct.n[1];
-						auto p1 = node(na).coordinate, p2 = node(nb).coordinate;
+						auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data();
 
 						face(i).area = distance(p1, p2);
-						line_center(p1, p2, face(i).center);
-						line_normal(p1, p2, face(i).n_LR, face(i).n_RL);
+						line_center(p1, p2, face(i).center.data());
+						line_normal(p1, p2, face(i).n_LR.data(), face(i).n_RL.data());
 					}
 					else if (cnct.x == XF_FACE::TRIANGULAR)
 					{
 						auto na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2];
-						auto p1 = node(na).coordinate, p2 = node(nb).coordinate, p3 = node(nc).coordinate;
+						auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data(), p3 = node(nc).coordinate.data();
 
 						face(i).area = triangle_area(p1, p2, p3);
-						triangle_center(p1, p2, p3, face(i).center);
-						triangle_normal(p1, p2, p3, face(i).n_LR, face(i).n_RL);
+						triangle_center(p1, p2, p3, face(i).center.data());
+						triangle_normal(p1, p2, p3, face(i).n_LR.data(), face(i).n_RL.data());
 					}
 					else if (cnct.x == XF_FACE::QUADRILATERAL)
 					{
 						auto na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2], nd = cnct.n[3];
-						auto p1 = node(na).coordinate, p2 = node(nb).coordinate, p3 = node(nc).coordinate, p4 = node(nd).coordinate;
+						auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data(), p3 = node(nc).coordinate.data(), p4 = node(nd).coordinate.data();
 
 						face(i).area = quadrilateral_area(p1, p2, p3, p4);
-						quadrilateral_center(p1, p2, p3, p4, face(i).center);
-						quadrilateral_normal(p1, p2, p3, p4, face(i).n_LR, face(i).n_RL);
+						quadrilateral_center(p1, p2, p3, p4, face(i).center.data());
+						quadrilateral_normal(p1, p2, p3, p4, face(i).n_LR.data(), face(i).n_RL.data());
 					}
 					else if (cnct.x == XF_FACE::POLYGONAL)
 						throw std::runtime_error("Not supported currently!");
@@ -1335,7 +1379,7 @@ private:
 			}
 		}
 
-		// Parse record of cell
+		std::cout << "\tParsing records of cell ..." << std::endl;
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::CELL)
@@ -1749,7 +1793,187 @@ private:
 		if (n0 == 0 || n1 == 0 || n2 == 0 || n3 == 0)
 			throw std::runtime_error("Internal error.");
 
+		// Face 0
+		size_t f0_idx = 0;
+		for (auto e : hex.face)
+		{
+			if (e == f4_idx)
+				continue;
 
+			const auto &f = face(e);
+			if (f.node.contains(n3, n0))
+			{
+				if (f0_idx == 0)
+					f0_idx = e;
+				else
+					throw std::runtime_error("Duplicated face detected.");
+			}
+		}
+		if (f0_idx == 0)
+			throw std::runtime_error("Missing face 0");
+
+		const auto &f0 = face(f0_idx);
+		if (f0.node.size() != 4)
+			throw std::runtime_error("Internal error.");
+
+		// Face 2
+		size_t f2_idx = 0;
+		for (auto e : hex.face)
+		{
+			if (e == f4_idx || e == f0_idx)
+				continue;
+
+			const auto &f = face(e);
+			if (f.node.contains(n0, n1))
+			{
+				if (f2_idx == 0)
+					f2_idx = e;
+				else
+					throw std::runtime_error("Duplicated face detected.");
+			}
+		}
+		if (f2_idx == 0)
+			throw std::runtime_error("Missing face 2");
+
+		const auto &f2 = face(f2_idx);
+		if (f2.node.size() != 4)
+			throw std::runtime_error("Internal error.");
+
+		// Face 1
+		size_t f1_idx = 0;
+		for (auto e : hex.face)
+		{
+			if (e == f4_idx || e == f0_idx || e == f2_idx)
+				continue;
+
+			const auto &f = face(e);
+			if (f.node.contains(n1, n2))
+			{
+				if (f1_idx == 0)
+					f1_idx = e;
+				else
+					throw std::runtime_error("Duplicated face detected.");
+			}
+		}
+		if (f1_idx == 0)
+			throw std::runtime_error("Missing face 1");
+
+		const auto &f1 = face(f1_idx);
+		if (f1.node.size() != 4)
+			throw std::runtime_error("Internal error.");
+
+		// Face 3
+		size_t f3_idx = 0;
+		for (auto e : hex.face)
+		{
+			if (e == f4_idx || e == f0_idx || e == f2_idx || e == f1_idx)
+				continue;
+
+			const auto &f = face(e);
+			if (f.node.contains(n2, n3))
+			{
+				if (f3_idx == 0)
+					f3_idx = e;
+				else
+					throw std::runtime_error("Duplicated face detected.");
+			}
+		}
+		if (f3_idx == 0)
+			throw std::runtime_error("Missing face 3");
+
+		const auto &f3 = face(f3_idx);
+		if (f3.node.size() != 4)
+			throw std::runtime_error("Internal error.");
+
+		// Face 5
+		size_t f5_idx = 0;
+		for (auto e : hex.face)
+		{
+			if (e == f4_idx || e == f0_idx || e == f2_idx || e == f1_idx || e == f3_idx)
+				continue;
+
+			f5_idx = e;
+			break;
+		}
+		if (f5_idx == 0)
+			throw std::runtime_error("Missing face 5");
+
+		const auto &f5 = face(f5_idx);
+		if (f5.node.size() != 4)
+			throw std::runtime_error("Internal error.");
+
+		// Assign face index
+		hex.face.at(0) = f0_idx;
+		hex.face.at(1) = f1_idx;
+		hex.face.at(2) = f2_idx;
+		hex.face.at(3) = f3_idx;
+		hex.face.at(4) = f4_idx;
+		hex.face.at(5) = f5_idx;
+
+		// 4 nodes at top to be defined
+		size_t n4 = 0, n5 = 0, n6 = 0, n7 = 0;
+
+		// Node 4
+		for (auto e : f5.node)
+		{
+			if (f0.node.contains(e) && f2.node.contains(e))
+			{
+				n4 = e;
+				break;
+			}
+		}
+		if (n4 == 0 || n4 == n0)
+			throw std::runtime_error("Missing node 4");
+
+		// Node 5
+		for (auto e : f2.node)
+		{
+			if (e == n0 || e == n1 || e == n4)
+				continue;
+
+			n5 = e;
+			break;
+		}
+		if (n5 == 0)
+			throw std::runtime_error("Missing node 5");
+
+		// Node 6
+		for (auto e : f1.node)
+		{
+			if (e == n1 || e == n2 || e == n5)
+				continue;
+
+			n6 = e;
+			break;
+		}
+		if (n6 == 0)
+			throw std::runtime_error("Missing node 6");
+
+		// Node 7
+		for (auto e : f0.node)
+		{
+			if (e == n0 || e == n3 || e == n4)
+				continue;
+
+			n7 = e;
+			break;
+		}
+		if (n7 == 0)
+			throw std::runtime_error("Missing node 7");
+
+		if (!f3.node.contains(n6, n7))
+			throw std::runtime_error("Inconsistent node composition.");
+
+		// Assign node index
+		hex.node.resize(8);
+		hex.node.at(0) = n0;
+		hex.node.at(1) = n1;
+		hex.node.at(2) = n2;
+		hex.node.at(3) = n3;
+		hex.node.at(4) = n4;
+		hex.node.at(5) = n5;
+		hex.node.at(6) = n6;
+		hex.node.at(7) = n7;
 	}
 };
 

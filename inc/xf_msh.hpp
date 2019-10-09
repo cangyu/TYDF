@@ -28,9 +28,9 @@ public:
 
 	// 1-based indexing
 	T &operator()(size_t i) { return this->at(i - 1); }
-
 	T operator()(size_t i) const { return this->at(i - 1); }
 
+	// Check includances
 	bool contains(const T &x) const
 	{
 		const int N = this->size();
@@ -88,12 +88,10 @@ public:
 
 	// 0-based indexing
 	T &at(size_t i, size_t j) { return m_data[idx(i, j)]; }
-
 	T at(size_t i, size_t j) const { return m_data[idx(i, j)]; }
 
 	// 1-based indexing
 	T &operator()(size_t i, size_t j) { return at(i - 1, j - 1); }
-
 	T operator()(size_t i, size_t j) const { return at(i - 1, j - 1); }
 };
 
@@ -124,12 +122,10 @@ public:
 
 	// 0-based indexing
 	T &at(size_t i, size_t j, size_t k) { return m_data[idx(i, j, k)]; }
-
 	T at(size_t i, size_t j, size_t k) const { return m_data[idx(i, j, k)]; }
 
 	// 1-based indexing
 	T &operator()(size_t i, size_t j, size_t k) { return at(i - 1, j - 1, k - 1); }
-
 	T operator()(size_t i, size_t j, size_t k) const { return at(i - 1, j - 1, k - 1); }
 };
 
@@ -1732,6 +1728,27 @@ private:
 		// Check num of total faces
 		if (hex.face.size() != 6)
 			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(hex.type) + R"(" and num of faces: )" + std::to_string(hex.face.size()));
+
+		// Ensure all faces are quad
+		for (auto e : hex.face)
+		{
+			if (e == 0)
+				throw std::runtime_error("Internal error.");
+			const auto &f = face(e);
+			if (f.type != XF_FACE::QUADRILATERAL)
+				throw std::runtime_error(R"(Inconsistent face type ")" + XF_FACE::MAPPING_Idx2Str.at(f.type) + R"(" in a hex cell.)");
+		}
+
+		// Face 4 at bottom
+		const size_t f4_idx = hex.face.at(0);
+		const auto &f4 = face(f4_idx);
+		const size_t n0 = f4.node.at(0);
+		const size_t n1 = f4.node.at(1);
+		const size_t n2 = f4.node.at(2);
+		const size_t n3 = f4.node.at(3);
+		if (n0 == 0 || n1 == 0 || n2 == 0 || n3 == 0)
+			throw std::runtime_error("Internal error.");
+
 
 	}
 };

@@ -1,5 +1,5 @@
-#ifndef __XF_MSH_H__
-#define __XF_MSH_H__
+#ifndef __XF_MSH_HPP__
+#define __XF_MSH_HPP__
 
 #include <istream>
 #include <ostream>
@@ -585,15 +585,9 @@ public:
 
 	int face_type() const { return m_face; }
 
-	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const // 0-based local indexing
-	{
-		return m_connectivity[loc_idx];
-	}
-
-	XF_CONNECTIVITY &connectivity(size_t loc_idx) // 0-based local indexing
-	{
-		return m_connectivity[loc_idx];
-	}
+	// 0-based local indexing
+	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const { return m_connectivity[loc_idx]; }
+	XF_CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity[loc_idx]; }
 
 	void repr(std::ostream &out)
 	{

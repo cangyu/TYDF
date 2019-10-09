@@ -1,4 +1,4 @@
-#include "xf_msh.h"
+#include "xf_msh.hpp"
 
 const std::map<int, std::string> XF_BC::MAPPING_Idx2Str{
 	std::pair<int, std::string>(XF_BC::INTERIOR, "INTERIOR"),

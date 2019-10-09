@@ -665,13 +665,7 @@ private:
 	int m_domainID;
 
 public:
-	XF_ZONE(int zone, const std::string &type, const std::string &name) : XF_SECTION(XF_SECTION::ZONE)
-	{
-		m_zoneID = zone;
-		m_zoneType = type;
-		m_zoneName = name;
-		m_domainID = 0;
-	}
+	XF_ZONE(int zone, const std::string &type, const std::string &name) : XF_SECTION(XF_SECTION::ZONE), m_zoneID(zone), m_zoneType(type), m_zoneName(name), m_domainID(0) {}
 
 	~XF_ZONE() = default;
 
@@ -1105,7 +1099,6 @@ private:
 	static void eat(std::istream &in, char c)
 	{
 		char tmp;
-
 		do {
 			in >> tmp;
 		} while (tmp != c);
@@ -1114,7 +1107,6 @@ private:
 	static void skip_white(std::istream &in)
 	{
 		char tmp;
-
 		do {
 			in >> tmp;
 		} while (tmp == ' ' || tmp == '\t' || tmp == '\n');
@@ -1394,27 +1386,10 @@ private:
 				{
 					auto &curCell = cell(i);
 
-					// Element type of cells in this zone
-					curCell.type = curObj->elem(i - cur_first);
+					curCell.type = curObj->elem(i - cur_first); // Element type of cells in this zone
+					cell_standardization(curCell); // Organize order of included nodes and faces
 
-					// Organize order of included nodes and faces
-					switch (curCell.type)
-					{
-					case XF_CELL::TETRAHEDRAL:
-						tet_standardization(curCell);
-						break;
-					case XF_CELL::HEXAHEDRAL:
-						hex_standardization(curCell);
-						break;
-					case XF_CELL::PYRAMID:
-						pyramid_standardization(curCell);
-						break;
-					case XF_CELL::WEDGE:
-						prism_standardization(curCell);
-						break;
-					default:
-						throw std::runtime_error("Invalid cell element type: " + std::to_string(cell(i).type) + ", maybe caused by internal error.");
-					}
+					// TODO
 				}
 			}
 		}
@@ -1974,6 +1949,42 @@ private:
 		hex.node.at(5) = n5;
 		hex.node.at(6) = n6;
 		hex.node.at(7) = n7;
+	}
+
+	void triangle_standardization(CELL_ELEM &tri)
+	{
+		// TODO
+	}
+
+	void quad_standardization(CELL_ELEM &quad)
+	{
+		// TODO
+	}
+
+	void cell_standardization(CELL_ELEM &c)
+	{
+		switch (c.type)
+		{
+		case XF_CELL::TETRAHEDRAL:
+			tet_standardization(c);
+			break;
+		case XF_CELL::HEXAHEDRAL:
+			hex_standardization(c);
+			break;
+		case XF_CELL::PYRAMID:
+			pyramid_standardization(c);
+			break;
+		case XF_CELL::WEDGE:
+			prism_standardization(c);
+			break;
+		case XF_CELL::TRIANGULAR:
+			triangle_standardization(c);
+			break;
+		case XF_CELL::QUADRILATERAL:
+			quad_standardization(c);
+		default:
+			throw std::runtime_error("Invalid cell element type: " + std::to_string(c.type) + ", maybe caused by internal error.");
+		}
 	}
 };
 

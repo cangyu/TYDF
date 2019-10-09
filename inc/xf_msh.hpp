@@ -1,6 +1,7 @@
 #ifndef __XF_MSH_HPP__
 #define __XF_MSH_HPP__
 
+#include <cstddef>
 #include <istream>
 #include <ostream>
 #include <iostream>
@@ -11,7 +12,6 @@
 #include <set>
 #include <map>
 #include <utility>
-#include <cstdint>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -141,7 +141,7 @@ public:
 
 	static const std::map<std::string, int> MAPPING_Str2Idx;
 
-	XF_BC() = default;
+	XF_BC() = delete;
 
 	~XF_BC() = default;
 };
@@ -278,7 +278,12 @@ private:
 public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
 
-	XF_NODE(int zone, int first, int last, int type, int ND) : XF_SECTION(XF_SECTION::NODE), XF_RANGE(zone, first, last), XF_DIM(ND), m_type(type), m_node(num())
+	XF_NODE(int zone, int first, int last, int type, int ND) :
+	    XF_SECTION(XF_SECTION::NODE),
+	    XF_RANGE(zone, first, last),
+	    XF_DIM(ND),
+	    m_type(type),
+	    m_node(num())
 	{
 		if (type != VIRTUAL && type != ANY && type != BOUNDARY)
 			throw std::runtime_error("Invalid description of node type!");
@@ -452,18 +457,18 @@ public:
 
 	size_t c1() const { return c[1]; }
 
-	void set(int x, size_t *n, size_t *c)
+	void set(int x_, size_t *n_, size_t *c_)
 	{
-		this->x = x;
-		this->c[0] = c[0];
-		this->c[1] = c[1];
+		x = x_;
+		c[0] = c_[0];
+		c[1] = c_[1];
 
 		int i;
-		for (i = 0; i < x; ++i)
-			this->n[i] = n[i];
+		for (i = 0; i < x_; ++i)
+			n[i] = n_[i];
 		while (i < 4)
 		{
-			this->n[i] = 0;
+			n[i] = 0;
 			++i;
 		}
 	}
@@ -547,8 +552,8 @@ public:
 			{
 				const auto &loc_cnect = m_connectivity[i];
 				out << " " << loc_cnect.x;
-				for (int i = 0; i < loc_cnect.x; ++i)
-					out << " " << loc_cnect.n[i];
+				for (int j = 0; j < loc_cnect.x; ++j)
+					out << " " << loc_cnect.n[j];
 				out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
 			}
 		}
@@ -557,8 +562,8 @@ public:
 			for (int i = 0; i < N; ++i)
 			{
 				const auto &loc_cnect = m_connectivity[i];
-				for (int i = 0; i < loc_cnect.x; ++i)
-					out << " " << loc_cnect.n[i];
+				for (int j = 0; j < loc_cnect.x; ++j)
+					out << " " << loc_cnect.n[j];
 				out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
 			}
 		}
@@ -668,7 +673,7 @@ public:
 		{
 			skip_white(fin);
 			eat(fin, '(');
-			int ti;
+			int ti = -1;
 			fin >> std::dec >> ti;
 			if (ti == XF_SECTION::COMMENT)
 			{
@@ -1008,7 +1013,7 @@ public:
 private:
 	static void eat(std::istream &in, char c)
 	{
-		char tmp;
+		char tmp = 0;
 		do {
 			in >> tmp;
 		} while (tmp != c);
@@ -1016,7 +1021,7 @@ private:
 
 	static void skip_white(std::istream &in)
 	{
-		char tmp;
+		char tmp = 0;
 		do {
 			in >> tmp;
 		} while (tmp == ' ' || tmp == '\t' || tmp == '\n');
@@ -1861,12 +1866,148 @@ private:
 
 	void triangle_standardization(CELL_ELEM &tri)
 	{
-		// TODO
+        // Check num of total faces
+		if(tri.face.size()!=3)
+			throw std::runtime_error("Inconsitent face composition.");
+
+		// Ensure all faces are lines
+		for(auto e : tri.face)
+        {
+		    const auto &f = face(e);
+		    if(e == 0 || f.type != XF_FACE::LINEAR || f.node.size() != 2)
+		        throw std::runtime_error("Invalid face detected.");
+        }
+
+		// Faces
+		// Keep the order of faces as it is.
+		// Doesn't matter as any order of the 3 faces is valid.
+        const auto f0_idx = tri.face.at(0);
+        const auto f1_idx = tri.face.at(1);
+        const auto f2_idx = tri.face.at(2);
+
+        const auto &f0 = face(f0_idx);
+        const auto &f1 = face(f1_idx);
+        const auto &f2 = face(f2_idx);
+
+		// Nodes
+		const size_t n0 = f0.node.at(0);
+		const size_t n1 = f0.node.at(1);
+		if(n0 == 0 || n1 == 0 || n0 == n1)
+		    throw std::runtime_error("Missing node detected.");
+
+		size_t n2 = 0;
+		for(auto e : f1.node)
+        {
+		    if(f0.node.contains(e))
+		        continue;
+
+		    n2 = e;
+		    break;
+        }
+		if(n2 == 0 || n2 == n0 || n2 == n1 || !f2.node.contains(n2))
+		    throw std::runtime_error("Node 2 is missing.");
+
+        // Assign node index
+        tri.node.resize(3);
+        tri.node.at(0) = n0;
+        tri.node.at(1) = n1;
+        tri.node.at(2) = n2;
 	}
 
 	void quad_standardization(CELL_ELEM &quad)
 	{
-		// TODO
+        // Check num of total faces
+        if(quad.face.size() != 4)
+            throw std::runtime_error("Inconsitent face composition.");
+
+        // Ensure all faces are lines
+        for(auto e : quad.face)
+        {
+            const auto &f = face(e);
+            if(e == 0 || f.type != XF_FACE::LINEAR || f.node.size() != 2)
+                throw std::runtime_error("Invalid face detected.");
+        }
+
+        // Face 0
+        const auto f0_idx = quad.face.at(0);
+        const auto &f0 = face(f0_idx);
+
+        // Node 0 and 1
+        const auto n0 = f0.node.at(0);
+        const auto n1 = f0.node.at(1);
+
+        // Face 1
+        size_t f1_idx = 0;
+        for(auto e : quad.face)
+        {
+            if(e == f0_idx)
+                continue;
+
+            const auto &f = face(e);
+            if(f.node.contains(n1))
+            {
+                f1_idx = e;
+                break;
+            }
+        }
+        if(f1_idx == 0)
+            throw std::runtime_error("Missing face 1");
+
+        const auto &f1 = face(f1_idx);
+
+        // Node 2
+        const size_t n2 = f1.node.at(0) == n1 ? f1.node.at(1) : f1.node.at(0);
+
+        // Face 3
+        size_t f3_idx = 0;
+        for(auto e : quad.face)
+        {
+            if(e == f0_idx || e == f1_idx)
+                continue;
+
+            const auto &f = face(e);
+            if(f.node.contains(n0))
+            {
+                f3_idx = e;
+                break;
+            }
+        }
+        if(f3_idx == 0)
+            throw std::runtime_error("Missing face 3");
+
+        const auto &f3 = face(f3_idx);
+
+        // Node 3
+        const size_t n3 = f3.node.at(0) == n0 ? f3.node.at(1) : f3.node.at(0);
+
+        // Check face 2
+        size_t f2_idx = 0;
+        for(auto e : quad.face)
+        {
+            if(e == f0_idx || e == f1_idx || e == f3_idx)
+                continue;
+
+            f2_idx = e;
+            break;
+        }
+        if(f2_idx == 0)
+            throw std::runtime_error("Missing face 2");
+
+        const auto &f2 = face(f2_idx);
+        if(!f2.node.contains(n2, n3))
+            throw std::runtime_error("Inconsistent node and face includance on face 2");
+
+        // Assign face index
+        quad.face.at(1) = f1_idx;
+        quad.face.at(2) = f2_idx;
+        quad.face.at(3) = f3_idx;
+
+        // Assign node index
+        quad.node.resize(4);
+        quad.node.at(0) = n0;
+        quad.node.at(1) = n1;
+        quad.node.at(2) = n2;
+        quad.node.at(3) = n3;
 	}
 
 	void cell_standardization(CELL_ELEM &c)

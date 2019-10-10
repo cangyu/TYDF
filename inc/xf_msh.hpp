@@ -627,7 +627,7 @@ private:
 		XF_Array1D<size_t> face;
 		XF_Array1D<size_t> node;
 		XF_Array1D<size_t> adjCell;
-		XF_Array1D<XF_Vector> normal;
+		XF_Array1D<XF_Vector> n, S;
 	};
 
 	// Raw
@@ -743,7 +743,7 @@ public:
 					auto e = new XF_NODE(zone, first, last, tp, nd);
 					eat(fin, ')');
 					eat(fin, '(');
-					std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ...";
+					std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ... ";
 
 					if (nd != dimension())
 						throw std::runtime_error("Inconsistent with previous DIMENSION declaration!");
@@ -770,7 +770,7 @@ public:
 					}
 					eat(fin, ')');
 					eat(fin, ')');
-					std::cout << " Done!" << std::endl;
+					std::cout << "Done!" << std::endl;
 					add_entry(e);
 				}
 				skip_white(fin);
@@ -1030,11 +1030,11 @@ private:
 			in.unget();
 	}
 
-	static double dot_product(const double *na, const double *nb)
+	static double dot_product(const XF_Vector &na, const XF_Vector &nb)
 	{
 		double ret = 0.0;
-		for (int i = 0; i < 3; ++i)
-			ret += na[i] * nb[i];
+		for (int i = 1; i <= 3; ++i)
+			ret += na(i) * nb(i);
 		return ret;
 	}
 
@@ -1080,7 +1080,11 @@ private:
 
 	static void line_normal(double *na, double *nb, double *dst, double *dst_r)
 	{
+		// dst: unit normal vector from left cell to right cell.
+		// dst_r: unit normal vector from right cell to left cell.
+
 		delta(na, nb, dst);
+		// Rotate 90 deg in clockwise direction
 		std::swap(dst[0], dst[1]);
 		dst[1] = -dst[1];
 		normalize(dst, dst);
@@ -1106,7 +1110,10 @@ private:
 
 	static void triangle_normal(double *na, double *nb, double *nc, double *dst, double *dst_r)
 	{
-		// Order of nodes follows the right-hand convention.
+		// dst: unit normal vector from left cell to right cell.
+		// dst_r: unit normal vector from right cell to left cell.
+		// Order of "na, nb, nc" follows the right-hand convention.
+
 		double rab[3], rac[3];
 		delta(na, nb, rab);
 		delta(na, nc, rac);
@@ -1119,7 +1126,7 @@ private:
 
 	static void quadrilateral_center(double *n1, double *n2, double *n3, double *n4, double *dst)
 	{
-		// 1, 2, 3, 4 are in anti-clockwise direction.
+		// Order of "n1, n2, n3, n4" follows the right-hand convention.
 		const double S123 = triangle_area(n1, n2, n3);
 		const double S134 = triangle_area(n1, n3, n4);
 
@@ -1136,7 +1143,7 @@ private:
 
 	static double quadrilateral_area(double *n1, double *n2, double *n3, double *n4)
 	{
-		// 1, 2, 3, 4 are in anti-clockwise direction.
+		// Order of "n1, n2, n3, n4" follows the right-hand convention.
 		const double S123 = triangle_area(n1, n2, n3);
 		const double S134 = triangle_area(n1, n3, n4);
 		return S123 + S134;
@@ -1144,19 +1151,15 @@ private:
 
 	static void quadrilateral_normal(double *n1, double *n2, double *n3, double *n4, double *dst, double *dst_r)
 	{
-		// See (5.12) of Jiri Blazek's CFD book.
-		const double dxa = n4[0] - n2[0], dxb = n3[0] - n1[0];
-		const double dya = n4[1] - n2[1], dyb = n3[1] - n1[1];
-		const double dza = n4[2] - n2[2], dzb = n3[2] - n1[2];
+		// dst: unit normal vector from left cell to right cell.
+		// dst_r: unit normal vector from right cell to left cell.
+		// Order of "n1, n2, n3, n4" follows the right-hand convention.
 
-		// See (5.13) of Jiri Blazek's CFD book.
-		dst[0] = 0.5*(dza * dyb - dya * dzb);
-		dst[1] = 0.5*(dxa * dzb - dza * dxb);
-		dst[2] = 0.5*(dya * dxb - dxa * dyb);
-
-		// Normalize
+		double ra[3] = { 0 }, rb[3] = { 0 };
+		delta(n2, n4, ra);
+		delta(n1, n3, rb);
+		cross_product(ra, rb, dst);
 		normalize(dst, dst);
-
 		for (size_t i = 0; i < 3; ++i)
 			dst_r[i] = -dst[i];
 	}
@@ -1313,9 +1316,10 @@ private:
 					// Organize order of included nodes and faces
 					cell_standardization(curCell);
 
-					// Adjacent cells and Unit normal
+					// Adjacent cells and normal
 					curCell.adjCell.resize(curCell.face.size());
-					curCell.normal.resize(curCell.face.size());
+					curCell.n.resize(curCell.face.size());
+					curCell.S.resize(curCell.face.size());
 					for (int j = 0; j < curCell.face.size(); ++j)
 					{
 						const auto f_idx = curCell.face[j];
@@ -1324,27 +1328,39 @@ private:
 						if (c0 == i)
 						{
 							curCell.adjCell[j] = c1;
-							curCell.normal[j] = f.n_LR;
+							curCell.n[j] = f.n_LR;
 						}
 						else if (c1 == i)
 						{
 							curCell.adjCell[j] = c0;
-							curCell.normal[j] = f.n_RL;
+							curCell.n[j] = f.n_RL;
 						}
 						else
 							throw std::runtime_error("Internal error.");
+
+						for (int k = 1; k <= dimension(); ++k)
+							curCell.S[j](k) = f.area * curCell.n[j](k);
 					}
 
-					// Centroid and volume
+					// Volume and Centroid. 
+					// Based on the divergence theorem. See (5.15) and (5.17) of Jiri Blazek's CFD book.
 					curCell.volume = 0.0;
+					curCell.center.x() = 0.0; curCell.center.y() = 0.0; curCell.center.z() = 0.0;
 					for (int j = 0; j < curCell.face.size(); ++j)
 					{
 						const auto cfi = curCell.face.at(j);
-						auto cf_c = face(cfi).center.data();
-						auto cf_n = curCell.normal.at(j).data();
-						curCell.volume += dot_product(cf_c, cf_n);
+						const auto &cf = face(cfi);
+						const auto &cf_c = cf.center;
+						const auto &cf_S = curCell.S.at(j);
+						const auto w = dot_product(cf_c, cf_S);
+						curCell.volume += w;
+						for (int k = 1; k <= dimension(); ++k)
+							curCell.center(k) += w * cf_c(k);
 					}
 					curCell.volume /= dimension();
+					const double cde = (1.0 + dimension()) * curCell.volume;
+					for (int k = 1; k <= dimension(); ++k)
+						curCell.center(k) /= cde;
 				}
 			}
 		}

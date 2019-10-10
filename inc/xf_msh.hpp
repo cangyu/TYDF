@@ -1030,7 +1030,15 @@ private:
 			in.unget();
 	}
 
-	static void cross_product(double *a, double *b, double *dst)
+    static double dot_product(const double *na, const double *nb)
+    {
+        double ret = 0.0;
+        for (int i = 0; i < 3; ++i)
+            ret += na[i] * nb[i];
+        return ret;
+    }
+
+	static void cross_product(const double *a, const double *b, double *dst)
 	{
 		dst[0] = a[1] * b[2] - a[2] * b[1];
 		dst[1] = a[2] * b[0] - a[0] * b[2];
@@ -1328,7 +1336,15 @@ private:
 					}
 
 					// Centroid and volume
-					// TODO
+					curCell.volume = 0.0;
+                    for (int j = 0; j < curCell.face.size(); ++j)
+                    {
+                        const auto cfi = curCell.face.at(j);
+                        auto cf_c = face(cfi).center.data();
+                        auto cf_n = curCell.normal.at(j).data();
+                        curCell.volume += dot_product(cf_c, cf_n);
+                    }
+                    curCell.volume /= dimension();
 				}
 			}
 		}
@@ -1336,6 +1352,11 @@ private:
 
 	void derived2raw()
 	{
+	    // Update size
+	    m_totalCellNum = m_cell.size();
+	    m_totalFaceNum = m_face.size();
+	    m_totalNodeNum = m_node.size();
+
 		// TODO
 	}
 

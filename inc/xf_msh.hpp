@@ -1299,9 +1299,35 @@ private:
 				{
 					auto &curCell = cell(i);
 
-					curCell.type = curObj->elem(i - cur_first); // Element type of cells in this zone
-					cell_standardization(curCell); // Organize order of included nodes and faces
+					// Element type of cells in this zone
+					curCell.type = curObj->elem(i - cur_first);
 
+					// Organize order of included nodes and faces
+					cell_standardization(curCell);
+
+					// Adjacent cells and Unit normal
+					curCell.adjCell.resize(curCell.face.size());
+					curCell.normal.resize(curCell.face.size());
+					for (int j = 0; j < curCell.face.size(); ++j)
+					{
+						const auto f_idx = curCell.face[j];
+						const auto &f = face(f_idx);
+						const auto c0 = f.leftCell, c1 = f.rightCell;
+						if (c0 == i)
+						{
+							curCell.adjCell[j] = c1;
+							curCell.normal[j] = f.n_LR;
+						}
+						else if (c1 == i)
+						{
+							curCell.adjCell[j] = c0;
+							curCell.normal[j] = f.n_RL;
+						}
+						else
+							throw std::runtime_error("Internal error.");
+					}
+
+					// Centroid and volume
 					// TODO
 				}
 			}

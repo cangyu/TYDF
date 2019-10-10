@@ -630,29 +630,28 @@ private:
 		XF_Array1D<XF_Vector> n, S;
 	};
 
+	struct BOUNDARY_PATCH
+	{
+		XF_Array1D<size_t> face;
+		std::string name;
+		std::string bc;
+	};
+
 	// Raw
 	std::vector<XF_SECTION*> m_content;
-	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
+	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum, m_totalBdryPatchNum;
 
 	// Derived
 	XF_Array1D<NODE_ELEM> m_node;
 	XF_Array1D<FACE_ELEM> m_face;
 	XF_Array1D<CELL_ELEM> m_cell;
+	XF_Array1D<BOUNDARY_PATCH> m_patch;
 
 public:
-	XF_MSH() : XF_DIM(3), m_content(0, nullptr)
-	{
-		m_totalNodeNum = 0;
-		m_totalCellNum = 0;
-		m_totalFaceNum = 0;
-	}
+	XF_MSH() : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalBdryPatchNum(0) {}
 
-	XF_MSH(const std::string &inp) : XF_DIM(3), m_content(0, nullptr)
+	XF_MSH(const std::string &inp) : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalBdryPatchNum(0)
 	{
-		m_totalNodeNum = 0;
-		m_totalCellNum = 0;
-		m_totalFaceNum = 0;
-
 		readFromFile(inp);
 	}
 
@@ -1004,11 +1003,13 @@ public:
 	size_t numOfNode() const { return m_totalNodeNum; }
 	size_t numOfFace() const { return m_totalFaceNum; }
 	size_t numOfCell() const { return m_totalCellNum; }
+	size_t numOfPatch() const { return m_totalBdryPatchNum; }
 
 	// 1-based indexing
 	NODE_ELEM &node(size_t idx) { return m_node(idx); }
 	FACE_ELEM &face(size_t idx) { return m_face(idx); }
 	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
+	BOUNDARY_PATCH &patch(size_t idx) { return m_patch(idx); }
 
 private:
 	static void eat(std::istream &in, char c)

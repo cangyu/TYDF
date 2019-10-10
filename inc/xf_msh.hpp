@@ -1320,7 +1320,7 @@ private:
 					curCell.adjCell.resize(curCell.face.size());
 					curCell.n.resize(curCell.face.size());
 					curCell.S.resize(curCell.face.size());
-					for (int j = 0; j < curCell.face.size(); ++j)
+					for (size_t j = 0; j < curCell.face.size(); ++j)
 					{
 						const auto f_idx = curCell.face[j];
 						const auto &f = face(f_idx);
@@ -1346,7 +1346,7 @@ private:
 					// Based on the divergence theorem. See (5.15) and (5.17) of Jiri Blazek's CFD book.
 					curCell.volume = 0.0;
 					curCell.center.x() = 0.0; curCell.center.y() = 0.0; curCell.center.z() = 0.0;
-					for (int j = 0; j < curCell.face.size(); ++j)
+					for (size_t j = 0; j < curCell.face.size(); ++j)
 					{
 						const auto cfi = curCell.face.at(j);
 						const auto &cf = face(cfi);

@@ -83,8 +83,8 @@ public:
 	// Check includances
 	bool contains(const T &x) const
 	{
-		const int N = this->size();
-		for (int i = 0; i < N; ++i)
+		const size_t N = this->size();
+		for (size_t i = 0; i < N; ++i)
 			if (x == this->at(i))
 				return true;
 
@@ -94,8 +94,8 @@ public:
 	bool contains(const T &a, const T &b) const
 	{
 		bool flag_a = false, flag_b = false;
-		const int N = this->size();
-		for (int i = 0; i < N; ++i)
+		const size_t N = this->size();
+		for (size_t i = 0; i < N; ++i)
 		{
 			const T &x = this->at(i);
 			if (!flag_a && a == x)
@@ -323,8 +323,8 @@ public:
 		out << std::dec << type() << " " << ND() << ")(" << std::endl;
 
 		out.precision(12);
-		const int N = num();
-		for (int i = 0; i < N; ++i)
+		const size_t N = num();
+		for (size_t i = 0; i < N; ++i)
 		{
 			const auto &node = m_node.at(i);
 			for (int k = 0; k < m_dim; ++k)
@@ -503,7 +503,7 @@ public:
 
 	static const std::map<std::string, int> MAPPING_Str2Idx;
 
-	XF_FACE(int zone, int first, int last, int bc, int face) : XF_RANGE(XF_SECTION::FACE, zone, first, last)
+	XF_FACE(size_t zone, size_t first, size_t last, int bc, int face) : XF_RANGE(XF_SECTION::FACE, zone, first, last)
 	{
 		// Check B.C. before assign
 		auto it1 = XF_BC::MAPPING_Idx2Str.find(bc);
@@ -544,10 +544,10 @@ public:
 		out << zone() << " " << first_index() << " " << last_index() << " ";
 		out << bc_type() << " " << face_type() << ")(" << std::endl;
 
-		const int N = num();
+		const size_t N = num();
 		if (m_face == XF_FACE::MIXED)
 		{
-			for (int i = 0; i < N; ++i)
+			for (size_t i = 0; i < N; ++i)
 			{
 				const auto &loc_cnect = m_connectivity[i];
 				out << " " << loc_cnect.x;
@@ -558,7 +558,7 @@ public:
 		}
 		else
 		{
-			for (int i = 0; i < N; ++i)
+			for (size_t i = 0; i < N; ++i)
 			{
 				const auto &loc_cnect = m_connectivity[i];
 				for (int j = 0; j < loc_cnect.x; ++j)
@@ -1012,6 +1012,11 @@ public:
 	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
 	ZONE_ELEM &zone(size_t idx) { return m_zone(idx); }
 
+	const NODE_ELEM &node(size_t idx) const { return m_node(idx); }
+	const FACE_ELEM &face(size_t idx) const { return m_face(idx); }
+	const CELL_ELEM &cell(size_t idx) const { return m_cell(idx); }
+	const ZONE_ELEM &zone(size_t idx) const { return m_zone(idx); }
+
 private:
 	static void eat(std::istream &in, char c)
 	{
@@ -1212,10 +1217,10 @@ private:
 				const bool flag = curObj->is_boundary_node();
 
 				// 1-based global node index
-				const int cur_first = curObj->first_index();
-				const int cur_last = curObj->last_index();
+				const size_t cur_first = curObj->first_index();
+				const size_t cur_last = curObj->last_index();
 
-				for (int i = cur_first; i <= cur_last; ++i)
+				for (size_t i = cur_first; i <= cur_last; ++i)
 				{
 					// Node Coordinates
 					curObj->get_coordinate(i - cur_first, node(i).coordinate.data());
@@ -1230,13 +1235,13 @@ private:
 				auto curObj = dynamic_cast<XF_FACE*>(curPtr);
 
 				// 1-based global face index
-				const int cur_first = curObj->first_index();
-				const int cur_last = curObj->last_index();
+				const size_t cur_first = curObj->first_index();
+				const size_t cur_last = curObj->last_index();
 
 				// Face type of this zone
 				const int ft = curObj->face_type();
 
-				for (int i = cur_first; i <= cur_last; ++i)
+				for (size_t i = cur_first; i <= cur_last; ++i)
 				{
 					const auto &cnct = curObj->connectivity(i - cur_first);
 
@@ -1305,10 +1310,10 @@ private:
 				auto curObj = dynamic_cast<XF_CELL*>(curPtr);
 
 				// 1-based global face index
-				const int cur_first = curObj->first_index();
-				const int cur_last = curObj->last_index();
+				const size_t cur_first = curObj->first_index();
+				const size_t cur_last = curObj->last_index();
 
-				for (int i = cur_first; i <= cur_last; ++i)
+				for (size_t i = cur_first; i <= cur_last; ++i)
 				{
 					auto &curCell = cell(i);
 
@@ -1369,7 +1374,7 @@ private:
 
 		// Parse records of zone
 		m_totalZoneNum = 0;
-		std::map<int, int> tmp;
+		std::map<size_t, size_t> tmp;
 		for (auto curPtr : m_content)
 		{
 			auto curObj = dynamic_cast<XF_RANGE*>(curPtr);

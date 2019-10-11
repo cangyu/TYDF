@@ -245,14 +245,14 @@ public:
 	}
 };
 
-class XF_RANGE
+class XF_RANGE : public XF_SECTION
 {
 protected:
 	int m_zone;
 	int m_first, m_last;
 
 public:
-	XF_RANGE(int zone, int first, int last) : m_zone(zone), m_first(first), m_last(last)
+	XF_RANGE(int id, int zone, int first, int last) : XF_SECTION(id), m_zone(zone), m_first(first), m_last(last)
 	{
 		if (m_first > m_last)
 			throw std::runtime_error("Invalid node index!");
@@ -269,7 +269,7 @@ public:
 	int num() const { return (last_index() - first_index() + 1); }
 };
 
-class XF_NODE :public XF_SECTION, public XF_RANGE, public XF_DIM
+class XF_NODE : public XF_RANGE, public XF_DIM
 {
 private:
 	int m_type;
@@ -279,8 +279,7 @@ public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
 
 	XF_NODE(int zone, int first, int last, int type, int ND) :
-		XF_SECTION(XF_SECTION::NODE),
-		XF_RANGE(zone, first, last),
+		XF_RANGE(XF_SECTION::NODE, zone, first, last),
 		XF_DIM(ND),
 		m_type(type),
 		m_node(num())
@@ -340,7 +339,7 @@ public:
 	bool is_internal_node() const { return m_type == XF_NODE::ANY; }
 };
 
-class XF_CELL :public XF_SECTION, public XF_RANGE
+class XF_CELL : public XF_RANGE
 {
 private:
 	int m_type;
@@ -360,7 +359,7 @@ public:
 
 	static const std::map<std::string, int> ELEM_MAPPING_Str2Idx;
 
-	XF_CELL(int zone, int first, int last, int type, int elem_type) : XF_SECTION(XF_SECTION::CELL), XF_RANGE(zone, first, last)
+	XF_CELL(int zone, int first, int last, int type, int elem_type) : XF_RANGE(XF_SECTION::CELL, zone, first, last)
 	{
 		// Check cell type before assign
 		auto it1 = XF_CELL::TYPE_MAPPING_Idx2Str.find(type);
@@ -490,7 +489,7 @@ public:
 	}
 };
 
-class XF_FACE : public XF_SECTION, public XF_RANGE
+class XF_FACE : public XF_RANGE
 {
 private:
 	int m_bc;
@@ -504,7 +503,7 @@ public:
 
 	static const std::map<std::string, int> MAPPING_Str2Idx;
 
-	XF_FACE(int zone, int first, int last, int bc, int face) : XF_SECTION(XF_SECTION::FACE), XF_RANGE(zone, first, last)
+	XF_FACE(int zone, int first, int last, int bc, int face) : XF_RANGE(XF_SECTION::FACE, zone, first, last)
 	{
 		// Check B.C. before assign
 		auto it1 = XF_BC::MAPPING_Idx2Str.find(bc);
@@ -586,16 +585,15 @@ public:
 
 	int zone() const { return m_zoneID; }
 
-	const std::string &zone_type() const { return m_zoneType; }
+	const std::string &type() const { return m_zoneType; }
 
-	const std::string &zone_name() const { return m_zoneName; }
+	const std::string &name() const { return m_zoneName; }
 
 	int domain() const { return m_domainID; }
 
 	void repr(std::ostream &out)
 	{
-		out << std::dec;
-		out << "(" << identity() << " (" << m_zoneID << " " << m_zoneType << " " << m_zoneName << ")())" << std::endl;
+		out << std::dec << "(" << identity() << " (" << zone() << " " << type() << " " << name() << ")())" << std::endl;
 	}
 };
 
@@ -632,25 +630,31 @@ private:
 
 	struct BOUNDARY_PATCH
 	{
-		XF_Array1D<size_t> face;
 		std::string name;
-		std::string bc;
+		int bc;
+		XF_Array1D<size_t> face;
 	};
 
 	// Raw
 	std::vector<XF_SECTION*> m_content;
-	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum, m_totalBdryPatchNum;
+	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
 
 	// Derived
 	XF_Array1D<NODE_ELEM> m_node;
 	XF_Array1D<FACE_ELEM> m_face;
 	XF_Array1D<CELL_ELEM> m_cell;
-	XF_Array1D<BOUNDARY_PATCH> m_patch;
+
+	size_t m_totalZoneNum;
+	std::map<size_t, size_t> m_zoneIdxMapping; // From real to storage
+	XF_Array1D<XF_RANGE*> m_zone; // May be the group of nodes, the group of faces or the group of cells
+
+	size_t m_totalBdryPatchNum;
+	XF_Array1D<BOUNDARY_PATCH> m_patch; // The group of boundary faces
 
 public:
-	XF_MSH() : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalBdryPatchNum(0) {}
+	XF_MSH() : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalBdryPatchNum(0), m_totalZoneNum(0) {}
 
-	XF_MSH(const std::string &inp) : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalBdryPatchNum(0)
+	XF_MSH(const std::string &inp) : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalBdryPatchNum(0), m_totalZoneNum(0)
 	{
 		readFromFile(inp);
 	}
@@ -933,7 +937,7 @@ public:
 				auto e = new XF_ZONE(zone, ztp, zname);
 				add_entry(e);
 				skip_white(fin);
-				std::cout << "ZONE " << e->zone() << ", named " << R"(")" << e->zone_name() << R"(", )" << "is " << R"(")" << e->zone_type() << R"(")" << std::endl;
+				std::cout << "ZONE " << e->zone() << ", named " << R"(")" << e->name() << R"(", )" << "is " << R"(")" << e->type() << R"(")" << std::endl;
 			}
 			else
 				throw std::runtime_error("Unsupported section index: " + std::to_string(ti));
@@ -944,7 +948,7 @@ public:
 
 		// Re-orginize grid connectivities in a much easier way,
 		// and compute some derived quantities.
-		std::cout << "Converting into high-level representation ..." << std::endl;
+		std::cout << "Converting into high-level representation ... ";
 		raw2derived();
 		std::cout << "Done!" << std::endl;
 
@@ -1003,6 +1007,7 @@ public:
 	size_t numOfNode() const { return m_totalNodeNum; }
 	size_t numOfFace() const { return m_totalFaceNum; }
 	size_t numOfCell() const { return m_totalCellNum; }
+	size_t numOfZone() const { return m_totalZoneNum; }
 	size_t numOfPatch() const { return m_totalBdryPatchNum; }
 
 	// 1-based indexing
@@ -1012,6 +1017,16 @@ public:
 	BOUNDARY_PATCH &patch(size_t idx) { return m_patch(idx); }
 
 private:
+	XF_RANGE *zone(int idx)
+	{
+		// idx: 1-based zone index
+
+		if (m_zoneIdxMapping.find(idx) == m_zoneIdxMapping.end())
+			return nullptr;
+		else
+			return m_zone.at(m_zoneIdxMapping[idx]);
+	}
+
 	static void eat(std::istream &in, char c)
 	{
 		char tmp = 0;
@@ -1180,12 +1195,12 @@ private:
 
 	void raw2derived()
 	{
-		std::cout << "(1/4)Allocating storage ..." << std::endl;
+		// Allocate storage
 		m_node.resize(numOfNode());
 		m_face.resize(numOfFace());
 		m_cell.resize(numOfCell());
 
-		std::cout << "(2/4)Set initial values ..." << std::endl;
+		// Set initial values
 		for (auto &e : m_node)
 		{
 			e.coordinate.z() = 0.0;
@@ -1200,7 +1215,7 @@ private:
 		for (auto &e : m_cell)
 			e.center.z() = 0.0;
 
-		std::cout << "(3/4)Parsing records of node and face ..." << std::endl;
+		// Parse records of node and face
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::NODE)
@@ -1296,7 +1311,7 @@ private:
 			}
 		}
 
-		std::cout << "(4/4)Parsing records of cell ..." << std::endl;
+		// Parse records of cell
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::CELL)
@@ -1364,6 +1379,76 @@ private:
 						curCell.center(k) /= cde;
 				}
 			}
+		}
+
+		// Parse records of zone
+		m_totalZoneNum = 0;
+		m_zoneIdxMapping.clear();
+		m_zone.clear();
+		for (auto curPtr : m_content)
+		{
+			auto curObj = dynamic_cast<XF_RANGE*>(curPtr);
+			if (curObj == nullptr)
+				continue;
+
+			const auto curZone = curObj->zone();
+			if (m_zoneIdxMapping.find(curZone) == m_zoneIdxMapping.end())
+			{
+				m_zoneIdxMapping[curZone] = m_totalZoneNum;
+				m_zone.push_back(curObj);
+				++m_totalZoneNum;
+			}
+			else
+				throw std::runtime_error("Duplicated zone detected.");
+		}
+
+		// Parse records of boundary patches
+		m_totalBdryPatchNum = 0;
+		for (auto e : m_content)
+		{
+			auto curObj = dynamic_cast<XF_ZONE*>(e);
+			if (curObj == nullptr)
+				continue;
+
+			auto curZoneIdx = curObj->zone();
+			auto curZonePtr = zone(curZoneIdx);
+			auto curFace = dynamic_cast<XF_FACE*>(curZonePtr);
+			if (curFace == nullptr)
+				continue;
+
+			if (curFace->identity() != XF_SECTION::FACE || curFace->zone() != curZoneIdx)
+				throw std::runtime_error("Inconsistency detected.");
+
+			if (XF_BC::INTERIOR != XF_BC::MAPPING_Str2Idx.at(curObj->type()))
+				++m_totalBdryPatchNum;
+		}
+		m_patch.clear();
+		m_patch.resize(m_totalBdryPatchNum);
+		size_t cnt = 0;
+		for (auto e : m_content)
+		{
+			auto curObj = dynamic_cast<XF_ZONE*>(e);
+			if (curObj == nullptr)
+				continue;
+
+			auto curZoneIdx = curObj->zone();
+			auto curZonePtr = zone(curZoneIdx);
+			auto curFace = dynamic_cast<XF_FACE*>(curZonePtr);
+			if (curFace == nullptr)
+				continue;
+
+			if (XF_BC::INTERIOR == XF_BC::MAPPING_Str2Idx.at(curObj->type()))
+				continue;
+
+			m_patch[cnt].name = curObj->name();
+			m_patch[cnt].bc = XF_BC::MAPPING_Str2Idx.at(curObj->type());
+			m_patch[cnt].face.resize(curFace->num());
+			const auto loc_first = curFace->first_index();
+			const auto loc_last = curFace->last_index();
+			for (auto i = loc_first; i <= loc_last; ++i)
+				m_patch[cnt].face.at(i - loc_first) = i;
+
+			++cnt;
 		}
 	}
 

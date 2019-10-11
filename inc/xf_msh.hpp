@@ -248,25 +248,25 @@ public:
 class XF_RANGE : public XF_SECTION
 {
 protected:
-	int m_zone;
-	int m_first, m_last;
+	size_t m_zone;
+	size_t m_first, m_last;
 
 public:
-	XF_RANGE(int id, int zone, int first, int last) : XF_SECTION(id), m_zone(zone), m_first(first), m_last(last)
+	XF_RANGE(int id, size_t zone, size_t first, size_t last) : XF_SECTION(id), m_zone(zone), m_first(first), m_last(last)
 	{
-		if (m_first > m_last)
+		if (first > last)
 			throw std::runtime_error("Invalid node index!");
 	}
 
 	virtual ~XF_RANGE() = default;
 
-	int zone() const { return m_zone; }
+	size_t zone() const { return m_zone; }
 
-	int first_index() const { return m_first; }
+	size_t first_index() const { return m_first; }
 
-	int last_index() const { return m_last; }
+	size_t last_index() const { return m_last; }
 
-	int num() const { return (last_index() - first_index() + 1); }
+	size_t num() const { return (last_index() - first_index() + 1); }
 };
 
 class XF_NODE : public XF_RANGE, public XF_DIM
@@ -636,13 +636,6 @@ private:
 		XF_RANGE *obj;
 	};
 
-	struct BOUNDARY_PATCH
-	{
-		std::string name;
-		int bc;
-		XF_Array1D<size_t> face;
-	};
-
 	// Raw
 	std::vector<XF_SECTION*> m_content;
 	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
@@ -655,13 +648,10 @@ private:
 	size_t m_totalZoneNum;
 	XF_Array1D<ZONE_ELEM> m_zone; // May be the group of nodes, the group of faces or the group of cells
 
-	size_t m_totalBdryPatchNum;
-	XF_Array1D<BOUNDARY_PATCH> m_patch; // The group of boundary faces
-
 public:
-	XF_MSH() : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalBdryPatchNum(0), m_totalZoneNum(0) {}
+	XF_MSH() : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {}
 
-	XF_MSH(const std::string &inp) : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalBdryPatchNum(0), m_totalZoneNum(0)
+	XF_MSH(const std::string &inp) : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0)
 	{
 		readFromFile(inp);
 	}
@@ -1015,14 +1005,12 @@ public:
 	size_t numOfFace() const { return m_totalFaceNum; }
 	size_t numOfCell() const { return m_totalCellNum; }
 	size_t numOfZone() const { return m_totalZoneNum; }
-	size_t numOfPatch() const { return m_totalBdryPatchNum; }
 
 	// 1-based indexing
 	NODE_ELEM &node(size_t idx) { return m_node(idx); }
 	FACE_ELEM &face(size_t idx) { return m_face(idx); }
 	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
 	ZONE_ELEM &zone(size_t idx) { return m_zone(idx); }
-	BOUNDARY_PATCH &patch(size_t idx) { return m_patch(idx); }
 
 private:
 	static void eat(std::istream &in, char c)
@@ -1417,47 +1405,6 @@ private:
 			const auto curZoneIdx = curObj->zone();
 			zone(curZoneIdx).name = curObj->name();
 			zone(curZoneIdx).type = curObj->type();
-		}
-
-		// Parse records of boundary patches
-		m_totalBdryPatchNum = 0;
-		for (auto e : m_content)
-		{
-			const auto curObj = dynamic_cast<XF_ZONE*>(e);
-			if (curObj == nullptr)
-				continue;
-
-			const auto curZoneIdx = curObj->zone();
-			auto curZonePtr = zone(curZoneIdx).obj;
-			auto curFace = dynamic_cast<XF_FACE*>(curZonePtr);
-			if (curFace == nullptr)
-				continue;
-
-			if (curFace->identity() != XF_SECTION::FACE || curFace->zone() != curZoneIdx)
-				throw std::runtime_error("Inconsistency detected.");
-
-			if (XF_BC::INTERIOR != XF_BC::MAPPING_Str2Idx.at(curObj->type()))
-				++m_totalBdryPatchNum;
-		}
-		m_patch.clear();
-		m_patch.resize(numOfPatch());
-		size_t cnt = 0;
-		for (int curZoneIdx = 1; curZoneIdx <= numOfZone(); ++curZoneIdx)
-		{
-			const auto &curZone = zone(curZoneIdx);
-			auto curFace = dynamic_cast<XF_FACE*>(curZone.obj);
-			if (curFace == nullptr || XF_BC::INTERIOR == XF_BC::MAPPING_Str2Idx.at(curZone.type))
-				continue;
-
-			m_patch[cnt].name = curZone.name;
-			m_patch[cnt].bc = XF_BC::MAPPING_Str2Idx.at(curZone.type);
-			m_patch[cnt].face.resize(curFace->num());
-			const auto loc_first = curFace->first_index();
-			const auto loc_last = curFace->last_index();
-			for (auto i = loc_first; i <= loc_last; ++i)
-				m_patch[cnt].face.at(i - loc_first) = i;
-
-			++cnt;
 		}
 	}
 

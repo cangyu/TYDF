@@ -600,6 +600,7 @@ public:
 class XF_MSH : public XF_DIM
 {
 private:
+	// Index of node, face, cell and zone all start from 1 and increase continuously.
 	struct NODE_ELEM
 	{
 		XF_Vector coordinate;
@@ -628,6 +629,13 @@ private:
 		XF_Array1D<XF_Vector> n, S;
 	};
 
+	struct ZONE_ELEM
+	{
+		std::string type;
+		std::string name;
+		XF_RANGE *obj;
+	};
+
 	struct BOUNDARY_PATCH
 	{
 		std::string name;
@@ -645,8 +653,7 @@ private:
 	XF_Array1D<CELL_ELEM> m_cell;
 
 	size_t m_totalZoneNum;
-	std::map<size_t, size_t> m_zoneIdxMapping; // From real to storage
-	XF_Array1D<XF_RANGE*> m_zone; // May be the group of nodes, the group of faces or the group of cells
+	XF_Array1D<ZONE_ELEM> m_zone; // May be the group of nodes, the group of faces or the group of cells
 
 	size_t m_totalBdryPatchNum;
 	XF_Array1D<BOUNDARY_PATCH> m_patch; // The group of boundary faces
@@ -1014,19 +1021,10 @@ public:
 	NODE_ELEM &node(size_t idx) { return m_node(idx); }
 	FACE_ELEM &face(size_t idx) { return m_face(idx); }
 	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
+	ZONE_ELEM &zone(size_t idx) { return m_zone(idx); }
 	BOUNDARY_PATCH &patch(size_t idx) { return m_patch(idx); }
 
 private:
-	XF_RANGE *zone(int idx)
-	{
-		// idx: 1-based zone index
-
-		if (m_zoneIdxMapping.find(idx) == m_zoneIdxMapping.end())
-			return nullptr;
-		else
-			return m_zone.at(m_zoneIdxMapping[idx]);
-	}
-
 	static void eat(std::istream &in, char c)
 	{
 		char tmp = 0;
@@ -1383,8 +1381,7 @@ private:
 
 		// Parse records of zone
 		m_totalZoneNum = 0;
-		m_zoneIdxMapping.clear();
-		m_zone.clear();
+		std::map<int, int> tmp;
 		for (auto curPtr : m_content)
 		{
 			auto curObj = dynamic_cast<XF_RANGE*>(curPtr);
@@ -1392,26 +1389,46 @@ private:
 				continue;
 
 			const auto curZone = curObj->zone();
-			if (m_zoneIdxMapping.find(curZone) == m_zoneIdxMapping.end())
-			{
-				m_zoneIdxMapping[curZone] = m_totalZoneNum;
-				m_zone.push_back(curObj);
-				++m_totalZoneNum;
-			}
+			if (tmp.find(curZone) == tmp.end())
+				tmp[curZone] = m_totalZoneNum++;
 			else
 				throw std::runtime_error("Duplicated zone detected.");
+		}
+		m_zone.clear();
+		m_zone.resize(numOfZone());
+		for (auto curPtr : m_content)
+		{
+			auto curObj = dynamic_cast<XF_RANGE*>(curPtr);
+			if (curObj == nullptr)
+				continue;
+
+			const auto curZoneIdx = curObj->zone();
+			if (curZoneIdx > numOfZone())
+				throw std::runtime_error("Inconsistent zone index detected.");
+			else
+				zone(curZoneIdx).obj = curObj;
+		}
+		for (auto e : m_content)
+		{
+			const auto curObj = dynamic_cast<XF_ZONE*>(e);
+			if (curObj == nullptr)
+				continue;
+
+			const auto curZoneIdx = curObj->zone();
+			zone(curZoneIdx).name = curObj->name();
+			zone(curZoneIdx).type = curObj->type();
 		}
 
 		// Parse records of boundary patches
 		m_totalBdryPatchNum = 0;
 		for (auto e : m_content)
 		{
-			auto curObj = dynamic_cast<XF_ZONE*>(e);
+			const auto curObj = dynamic_cast<XF_ZONE*>(e);
 			if (curObj == nullptr)
 				continue;
 
-			auto curZoneIdx = curObj->zone();
-			auto curZonePtr = zone(curZoneIdx);
+			const auto curZoneIdx = curObj->zone();
+			auto curZonePtr = zone(curZoneIdx).obj;
 			auto curFace = dynamic_cast<XF_FACE*>(curZonePtr);
 			if (curFace == nullptr)
 				continue;
@@ -1423,25 +1440,17 @@ private:
 				++m_totalBdryPatchNum;
 		}
 		m_patch.clear();
-		m_patch.resize(m_totalBdryPatchNum);
+		m_patch.resize(numOfPatch());
 		size_t cnt = 0;
-		for (auto e : m_content)
+		for (int curZoneIdx = 1; curZoneIdx <= numOfZone(); ++curZoneIdx)
 		{
-			auto curObj = dynamic_cast<XF_ZONE*>(e);
-			if (curObj == nullptr)
+			const auto &curZone = zone(curZoneIdx);
+			auto curFace = dynamic_cast<XF_FACE*>(curZone.obj);
+			if (curFace == nullptr || XF_BC::INTERIOR == XF_BC::MAPPING_Str2Idx.at(curZone.type))
 				continue;
 
-			auto curZoneIdx = curObj->zone();
-			auto curZonePtr = zone(curZoneIdx);
-			auto curFace = dynamic_cast<XF_FACE*>(curZonePtr);
-			if (curFace == nullptr)
-				continue;
-
-			if (XF_BC::INTERIOR == XF_BC::MAPPING_Str2Idx.at(curObj->type()))
-				continue;
-
-			m_patch[cnt].name = curObj->name();
-			m_patch[cnt].bc = XF_BC::MAPPING_Str2Idx.at(curObj->type());
+			m_patch[cnt].name = curZone.name;
+			m_patch[cnt].bc = XF_BC::MAPPING_Str2Idx.at(curZone.type);
 			m_patch[cnt].face.resize(curFace->num());
 			const auto loc_first = curFace->first_index();
 			const auto loc_last = curFace->last_index();

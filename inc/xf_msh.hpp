@@ -110,13 +110,30 @@ public:
 	}
 };
 
-class XF_STR
+class XF_SECTION
+{
+private:
+	int m_identity;
+
+public:
+	enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
+
+	XF_SECTION(int id) : m_identity(id) {}
+
+	virtual ~XF_SECTION() = default;
+
+	virtual void repr(std::ostream &out) = 0;
+
+	int identity() const { return m_identity; }
+};
+
+class XF_STR : public XF_SECTION
 {
 private:
 	std::string m_msg;
 
 public:
-	XF_STR(const std::string &msg) : m_msg(msg) {}
+	XF_STR(int id, const std::string &msg) : XF_SECTION(id), m_msg(msg) {}
 
 	virtual ~XF_STR() = default;
 
@@ -129,6 +146,8 @@ public:
 	}
 
 	const std::string &str() const { return m_msg; }
+
+	void repr(std::ostream &out) { out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl; }
 };
 
 class XF_BC
@@ -158,9 +177,9 @@ public:
 		AXIS = 37
 	};
 
-	static bool isValidBCIdx(int bc)
+	static bool isValidBCIdx(int x)
 	{
-		static const std::set<int> idx_set{
+		static const std::set<int> candidate_set{
 			INTERIOR,
 			WALL,
 			PRESSURE_INLET,
@@ -178,12 +197,12 @@ public:
 			AXIS
 		};
 
-		return idx_set.find(bc) != idx_set.end();
+		return candidate_set.find(x) != candidate_set.end();
 	}
 
-	static bool isValidBCStr(const std::string &bc)
+	static bool isValidBCStr(const std::string &x)
 	{
-		static const std::set<std::string> str_set{
+		static const std::set<std::string> candidate_set{
 			"interior",
 			"wall",
 			"pressure-inlet", "inlet-vent", "intake-fan",
@@ -201,12 +220,12 @@ public:
 			"axis"
 		};
 
-		std::string bc_(bc);
-		XF_STR::formalize(bc_);
-		return str_set.find(bc_) != str_set.end();
+		std::string x_(x);
+		XF_STR::formalize(x_);
+		return candidate_set.find(x_) != candidate_set.end();
 	}
 
-	static const std::string &idx2str(int bc)
+	static const std::string &idx2str(int x)
 	{
 		static const std::map<int, std::string> Idx2StrMapping{
 			std::pair<int, std::string>(XF_BC::INTERIOR, "interior"),
@@ -226,14 +245,14 @@ public:
 			std::pair<int, std::string>(XF_BC::AXIS, "axis")
 		};
 
-		auto it = Idx2StrMapping.find(bc);
+		auto it = Idx2StrMapping.find(x);
 		if (it == Idx2StrMapping.end())
-			throw std::runtime_error("\"" + std::to_string(bc) + "\" is not a valid B.C. index.");
+			throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid B.C. index.");
 		else
 			return it->second;
 	}
 
-	static const int str2idx(const std::string &bc)
+	static const int str2idx(const std::string &x)
 	{
 		static const std::map<std::string, int> Str2IdxMapping{
 			std::pair<std::string, int>("interior", XF_BC::INTERIOR),
@@ -259,12 +278,12 @@ public:
 			std::pair<std::string, int>("axis", XF_BC::AXIS)
 		};
 
-		std::string bc_(bc);
-		XF_STR::formalize(bc_);
+		std::string x_(x);
+		XF_STR::formalize(x_);
 
-		auto it = Str2IdxMapping.find(bc_);
+		auto it = Str2IdxMapping.find(x_);
 		if (it == Str2IdxMapping.end())
-			throw std::runtime_error("\"" + bc + "\" is not a valid B.C. string.");
+			throw std::runtime_error("\"" + x + "\" is not a valid B.C. string.");
 		else
 			return it->second;
 	}
@@ -274,47 +293,20 @@ public:
 	~XF_BC() = default;
 };
 
-class XF_SECTION
-{
-private:
-	int m_identity;
-
-public:
-	enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
-
-	XF_SECTION(int id) : m_identity(id) {}
-
-	virtual ~XF_SECTION() = default;
-
-	virtual void repr(std::ostream &out) = 0;
-
-	int identity() const { return m_identity; }
-};
-
-class XF_COMMENT : public XF_SECTION, public XF_STR
+class XF_COMMENT : public XF_STR
 {
 public:
-	XF_COMMENT(const std::string &info) : XF_SECTION(XF_SECTION::COMMENT), XF_STR(info) {}
+	XF_COMMENT(const std::string &info) : XF_STR(XF_SECTION::COMMENT, info) {}
 
 	~XF_COMMENT() = default;
-
-	void repr(std::ostream &out)
-	{
-		out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl;
-	}
 };
 
-class XF_HEADER : public XF_SECTION, public XF_STR
+class XF_HEADER : public XF_STR
 {
 public:
-	XF_HEADER(const std::string &info) : XF_SECTION(XF_SECTION::HEADER), XF_STR(info) {}
+	XF_HEADER(const std::string &info) : XF_STR(XF_SECTION::HEADER, info) {}
 
 	~XF_HEADER() = default;
-
-	void repr(std::ostream &out)
-	{
-		out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl;
-	}
 };
 
 class XF_DIM
@@ -462,19 +454,18 @@ public:
 
 	static bool isValidCellTypeIdx(int x)
 	{
-		static const std::set<int> idx_set{ DEAD, FLUID, SOLID };
+		static const std::set<int> candidate_set{ DEAD, FLUID, SOLID };
 
-		return idx_set.find(x) != idx_set.end();
+		return candidate_set.find(x) != candidate_set.end();
 	}
 
 	static bool isValidCellTypeStr(const std::string &x)
 	{
-		static const std::set<std::string> str_set{ "dead", "fluid", "solid" };
+		static const std::set<std::string> candidate_set{ "dead", "fluid", "solid" };
 
-		std::string t(x);
-		XF_STR::formalize(t);
-
-		return str_set.find(t) != str_set.end();
+		std::string x_(x);
+		XF_STR::formalize(x_);
+		return candidate_set.find(x_) != candidate_set.end();
 	}
 
 	static const std::string &cell_type_idx2str(int x)
@@ -511,18 +502,18 @@ public:
 
 	static bool isValidElemTypeIdx(int x)
 	{
-		static const std::set<int> idx_set{ MIXED, TRIANGULAR, TETRAHEDRAL, QUADRILATERAL, HEXAHEDRAL, PYRAMID, WEDGE, POLYHEDRAL };
+		static const std::set<int> candidate_set{ MIXED, TRIANGULAR, TETRAHEDRAL, QUADRILATERAL, HEXAHEDRAL, PYRAMID, WEDGE, POLYHEDRAL };
 
-		return idx_set.find(x) != idx_set.end();
+		return candidate_set.find(x) != candidate_set.end();
 	}
 
 	static bool isValidElemTypeStr(const std::string &x)
 	{
-		static const std::set<std::string> str_set{ "mixed", "triangular", "tetrahedral", "quadrilateral", "hexahedral", "pyramid", "wedge", "prism", "polyhedral" };
+		static const std::set<std::string> candidate_set{ "mixed", "triangular", "tetrahedral", "quadrilateral", "hexahedral", "pyramid", "wedge", "prism", "polyhedral" };
 
-		std::string t(x);
-		XF_STR::formalize(t);
-		return str_set.find(t) == str_set.end();
+		std::string x_(x);
+		XF_STR::formalize(x_);
+		return candidate_set.find(x_) == candidate_set.end();
 	}
 
 	static const std::string &elem_type_idx2str(int x)

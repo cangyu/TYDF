@@ -110,13 +110,26 @@ public:
 	}
 };
 
-static void XF_FormalizeStr(std::string &s)
+class XF_STR
 {
-	std::transform(s.begin(), s.end(), s.begin(), ::toupper);
-	for (auto &e : s)
-		if (e == '_')
-			e = '-';
-}
+private:
+	std::string m_msg;
+
+public:
+	XF_STR(const std::string &msg) : m_msg(msg) {}
+
+	virtual ~XF_STR() = default;
+
+	static void formalize(std::string &s)
+	{
+		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+		for (auto &e : s)
+			if (e == '_')
+				e = '-';
+	}
+
+	const std::string &str() const { return m_msg; }
+};
 
 class XF_BC
 {
@@ -147,7 +160,7 @@ public:
 
 	static bool isValidBCIdx(int bc)
 	{
-		static const std::set<int> bc_idx_set{
+		static const std::set<int> idx_set{
 			INTERIOR,
 			WALL,
 			PRESSURE_INLET,
@@ -165,95 +178,100 @@ public:
 			AXIS
 		};
 
-		return bc_idx_set.find(bc) != bc_idx_set.end();
+		return idx_set.find(bc) != idx_set.end();
 	}
 
 	static bool isValidBCStr(const std::string &bc)
 	{
-		static const std::set<std::string> bc_str_set{
-			"INTERIOR",
-			"WALL",
-			"PRESSURE-INLET", "INLET-VENT", "INTAKE-FAN",
-			"PRESSURE-OUTLET", "EXHAUST-FAN", "OUTLET-VENT",
-			"SYMMETRY",
-			"PERIODIC-SHADOW",
-			"PRESSURE-FAR-FIELD",
-			"VELOCITY-INLET",
-			"PERIODIC",
-			"FAN", "POROUS-JUMP", "RADIATOR",
-			"MASS-FLOW-INLET",
-			"INTERFACE",
-			"PARENT",
-			"OUTFLOW",
-			"AXIS"
+		static const std::set<std::string> str_set{
+			"interior",
+			"wall",
+			"pressure-inlet", "inlet-vent", "intake-fan",
+			"pressure-outlet", "exhaust-fan", "outlet-vent",
+			"symmetry",
+			"periodic-shadow",
+			"pressure-far-field",
+			"velocity-inlet",
+			"periodic",
+			"fan", "porous-jump", "radiator",
+			"mass-flow-inlet",
+			"interface",
+			"parent",
+			"outflow",
+			"axis"
 		};
 
 		std::string bc_(bc);
-		XF_FormalizeStr(bc_);
-		return bc_str_set.find(bc_) != bc_str_set.end();
+		XF_STR::formalize(bc_);
+		return str_set.find(bc_) != str_set.end();
 	}
 
 	static const std::string &idx2str(int bc)
 	{
-		static const std::map<int, std::string> bc_mapping_Idx2Str{
-			std::pair<int, std::string>(XF_BC::INTERIOR, "INTERIOR"),
-			std::pair<int, std::string>(XF_BC::WALL, "WALL"),
-			std::pair<int, std::string>(XF_BC::PRESSURE_INLET, "PRESSURE-INLET"),
-			std::pair<int, std::string>(XF_BC::PRESSURE_OUTLET, "PRESSURE-OUTLET"),
-			std::pair<int, std::string>(XF_BC::SYMMETRY, "SYMMETRY"),
-			std::pair<int, std::string>(XF_BC::PERIODIC_SHADOW, "PERIODIC-SHADOW"),
-			std::pair<int, std::string>(XF_BC::PRESSURE_FAR_FIELD, "PRESSURE-FAR-FIELD"),
-			std::pair<int, std::string>(XF_BC::VELOCITY_INLET, "VELOCITY-INLET"),
-			std::pair<int, std::string>(XF_BC::PERIODIC, "PERIODIC"),
-			std::pair<int, std::string>(XF_BC::FAN, "FAN"),
-			std::pair<int, std::string>(XF_BC::MASS_FLOW_INLET, "MASS-FLOW-INLET"),
-			std::pair<int, std::string>(XF_BC::INTERFACE, "INTERFACE"),
-			std::pair<int, std::string>(XF_BC::PARENT, "PARENT"),
-			std::pair<int, std::string>(XF_BC::OUTFLOW, "OUTFLOW"),
-			std::pair<int, std::string>(XF_BC::AXIS, "AXIS")
+		static const std::map<int, std::string> Idx2StrMapping{
+			std::pair<int, std::string>(XF_BC::INTERIOR, "interior"),
+			std::pair<int, std::string>(XF_BC::WALL, "wall"),
+			std::pair<int, std::string>(XF_BC::PRESSURE_INLET, "pressure-inlet"),
+			std::pair<int, std::string>(XF_BC::PRESSURE_OUTLET, "pressure-outlet"),
+			std::pair<int, std::string>(XF_BC::SYMMETRY, "symmetry"),
+			std::pair<int, std::string>(XF_BC::PERIODIC_SHADOW, "periodic-shadow"),
+			std::pair<int, std::string>(XF_BC::PRESSURE_FAR_FIELD, "pressure-far-field"),
+			std::pair<int, std::string>(XF_BC::VELOCITY_INLET, "velocity-inlet"),
+			std::pair<int, std::string>(XF_BC::PERIODIC, "periodic"),
+			std::pair<int, std::string>(XF_BC::FAN, "fan"),
+			std::pair<int, std::string>(XF_BC::MASS_FLOW_INLET, "mass-flow-inlet"),
+			std::pair<int, std::string>(XF_BC::INTERFACE, "interface"),
+			std::pair<int, std::string>(XF_BC::PARENT, "parent"),
+			std::pair<int, std::string>(XF_BC::OUTFLOW, "outflow"),
+			std::pair<int, std::string>(XF_BC::AXIS, "axis")
 		};
 
-		if (!isValidBCIdx(bc))
+		auto it = Idx2StrMapping.find(bc);
+		if (it == Idx2StrMapping.end())
 			throw std::runtime_error("\"" + std::to_string(bc) + "\" is not a valid B.C. index.");
-
-		return bc_mapping_Idx2Str.at(bc);
+		else
+			return it->second;
 	}
 
 	static const int str2idx(const std::string &bc)
 	{
-		static const std::map<std::string, int> bc_mapping_Str2Idx{
-			std::pair<std::string, int>("INTERIOR", XF_BC::INTERIOR),
-			std::pair<std::string, int>("WALL", XF_BC::WALL),
-			std::pair<std::string, int>("PRESSURE-INLET", XF_BC::PRESSURE_INLET),
-			std::pair<std::string, int>("INLET-VENT", XF_BC::INLET_VENT),
-			std::pair<std::string, int>("INTAKE-FAN", XF_BC::INTAKE_FAN),
-			std::pair<std::string, int>("PRESSURE-OUTLET", XF_BC::PRESSURE_OUTLET),
-			std::pair<std::string, int>("EXHAUST-FAN", XF_BC::EXHAUST_FAN),
-			std::pair<std::string, int>("OUTLET-VENT", XF_BC::OUTLET_VENT),
-			std::pair<std::string, int>("SYMMETRY", XF_BC::SYMMETRY),
-			std::pair<std::string, int>("PERIODIC-SHADOW", XF_BC::PERIODIC_SHADOW),
-			std::pair<std::string, int>("PRESSURE-FAR-FIELD", XF_BC::PRESSURE_FAR_FIELD),
-			std::pair<std::string, int>("VELOCITY-INLET", XF_BC::VELOCITY_INLET),
-			std::pair<std::string, int>("PERIODIC", XF_BC::PERIODIC),
-			std::pair<std::string, int>("FAN", XF_BC::FAN),
-			std::pair<std::string, int>("POROUS-JUMP", XF_BC::POROUS_JUMP),
-			std::pair<std::string, int>("RADIATOR", XF_BC::RADIATOR),
-			std::pair<std::string, int>("MASS-FLOW-INLET", XF_BC::MASS_FLOW_INLET),
-			std::pair<std::string, int>("INTERFACE", XF_BC::INTERFACE),
-			std::pair<std::string, int>("PARENT", XF_BC::PARENT),
-			std::pair<std::string, int>("OUTFLOW", XF_BC::OUTFLOW),
-			std::pair<std::string, int>("AXIS", XF_BC::AXIS)
+		static const std::map<std::string, int> Str2IdxMapping{
+			std::pair<std::string, int>("interior", XF_BC::INTERIOR),
+			std::pair<std::string, int>("wall", XF_BC::WALL),
+			std::pair<std::string, int>("pressure-inlet", XF_BC::PRESSURE_INLET),
+			std::pair<std::string, int>("inlet-vent", XF_BC::INLET_VENT),
+			std::pair<std::string, int>("intake-fan", XF_BC::INTAKE_FAN),
+			std::pair<std::string, int>("pressure-outlet", XF_BC::PRESSURE_OUTLET),
+			std::pair<std::string, int>("exhaust-fan", XF_BC::EXHAUST_FAN),
+			std::pair<std::string, int>("outlet-vent", XF_BC::OUTLET_VENT),
+			std::pair<std::string, int>("symmetry", XF_BC::SYMMETRY),
+			std::pair<std::string, int>("periodic-shadow", XF_BC::PERIODIC_SHADOW),
+			std::pair<std::string, int>("pressure-far-field", XF_BC::PRESSURE_FAR_FIELD),
+			std::pair<std::string, int>("velocity-inlet", XF_BC::VELOCITY_INLET),
+			std::pair<std::string, int>("periodic", XF_BC::PERIODIC),
+			std::pair<std::string, int>("fan", XF_BC::FAN),
+			std::pair<std::string, int>("porous-jump", XF_BC::POROUS_JUMP),
+			std::pair<std::string, int>("radiator", XF_BC::RADIATOR),
+			std::pair<std::string, int>("mass-flow-inlet", XF_BC::MASS_FLOW_INLET),
+			std::pair<std::string, int>("interface", XF_BC::INTERFACE),
+			std::pair<std::string, int>("parent", XF_BC::PARENT),
+			std::pair<std::string, int>("outflow", XF_BC::OUTFLOW),
+			std::pair<std::string, int>("axis", XF_BC::AXIS)
 		};
 
-		if (!isValidBCStr(bc))
-			throw std::runtime_error("\"" + bc + "\" is not a valid B.C. string.");
-
 		std::string bc_(bc);
-		XF_FormalizeStr(bc_);
-		return bc_mapping_Str2Idx.at(bc_);
+		XF_STR::formalize(bc_);
+
+		auto it = Str2IdxMapping.find(bc_);
+		if (it == Str2IdxMapping.end())
+			throw std::runtime_error("\"" + bc + "\" is not a valid B.C. string.");
+		else
+			return it->second;
 	}
 
 	XF_BC() = delete;
+
+	~XF_BC() = default;
 };
 
 class XF_SECTION
@@ -271,19 +289,6 @@ public:
 	virtual void repr(std::ostream &out) = 0;
 
 	int identity() const { return m_identity; }
-};
-
-class XF_STR
-{
-private:
-	std::string m_msg;
-
-public:
-	XF_STR(const std::string &msg) : m_msg(msg) {}
-
-	virtual ~XF_STR() = default;
-
-	const std::string &str() const { return m_msg; }
 };
 
 class XF_COMMENT : public XF_SECTION, public XF_STR
@@ -455,28 +460,126 @@ private:
 public:
 	enum { DEAD = 0, FLUID = 1, SOLID = 17 }; // Cell type.
 
+	static bool isValidCellTypeIdx(int x)
+	{
+		static const std::set<int> idx_set{ DEAD, FLUID, SOLID };
+
+		return idx_set.find(x) != idx_set.end();
+	}
+
+	static bool isValidCellTypeStr(const std::string &x)
+	{
+		static const std::set<std::string> str_set{ "dead", "fluid", "solid" };
+
+		std::string t(x);
+		XF_STR::formalize(t);
+
+		return str_set.find(t) != str_set.end();
+	}
+
+	static const std::string &cell_type_idx2str(int x)
+	{
+		static const std::map<int, std::string> Idx2StrMapping{
+			std::pair<int, std::string>(XF_CELL::FLUID, "fluid"),
+			std::pair<int, std::string>(XF_CELL::SOLID, "solid"),
+			std::pair<int, std::string>(XF_CELL::DEAD, "dead")
+		};
+
+		auto it = Idx2StrMapping.find(x);
+		if (it == Idx2StrMapping.end())
+			throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid CELL-TYPE index.");
+		else
+			return it->second;
+	}
+
+	static int cell_type_str2idx(const std::string &x)
+	{
+		static const std::map<std::string, int> Str2IdxMapping{
+			std::pair<std::string, int>("fluid", XF_CELL::FLUID),
+			std::pair<std::string, int>("solid", XF_CELL::SOLID),
+			std::pair<std::string, int>("dead", XF_CELL::DEAD),
+		};
+
+		auto it = Str2IdxMapping.find(x);
+		if (it == Str2IdxMapping.end())
+			throw std::runtime_error("\"" + x + "\" is not a valid CELL-TYPE string.");
+		else
+			return it->second;
+	}
+
 	enum { MIXED = 0, TRIANGULAR = 1, TETRAHEDRAL = 2, QUADRILATERAL = 3, HEXAHEDRAL = 4, PYRAMID = 5, WEDGE = 6, POLYHEDRAL = 7 }; // Cell element type.
 
-	static const std::map<int, std::string> TYPE_MAPPING_Idx2Str;
+	static bool isValidElemTypeIdx(int x)
+	{
+		static const std::set<int> idx_set{ MIXED, TRIANGULAR, TETRAHEDRAL, QUADRILATERAL, HEXAHEDRAL, PYRAMID, WEDGE, POLYHEDRAL };
 
-	static const std::map<std::string, int> TYPE_MAPPING_Str2Idx;
+		return idx_set.find(x) != idx_set.end();
+	}
 
-	static const std::map<int, std::string> ELEM_MAPPING_Idx2Str;
+	static bool isValidElemTypeStr(const std::string &x)
+	{
+		static const std::set<std::string> str_set{ "mixed", "triangular", "tetrahedral", "quadrilateral", "hexahedral", "pyramid", "wedge", "prism", "polyhedral" };
 
-	static const std::map<std::string, int> ELEM_MAPPING_Str2Idx;
+		std::string t(x);
+		XF_STR::formalize(t);
+		return str_set.find(t) == str_set.end();
+	}
 
-	XF_CELL(int zone, int first, int last, int type, int elem_type) : XF_RANGE(XF_SECTION::CELL, zone, first, last)
+	static const std::string &elem_type_idx2str(int x)
+	{
+		static const std::map<int, std::string> Idx2StrMapping{
+			std::pair<int, std::string>(XF_CELL::MIXED, "mixed"),
+			std::pair<int, std::string>(XF_CELL::TRIANGULAR, "triangular"),
+			std::pair<int, std::string>(XF_CELL::TETRAHEDRAL, "tetrahedral"),
+			std::pair<int, std::string>(XF_CELL::QUADRILATERAL, "quadrilateral"),
+			std::pair<int, std::string>(XF_CELL::HEXAHEDRAL, "hexahedral"),
+			std::pair<int, std::string>(XF_CELL::PYRAMID, "pyramid"),
+			std::pair<int, std::string>(XF_CELL::WEDGE, "wedge"),
+			std::pair<int, std::string>(XF_CELL::POLYHEDRAL, "polyhedral")
+		};
+
+		auto it = Idx2StrMapping.find(x);
+		if (it == Idx2StrMapping.end())
+			throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid CELL-ELEM-TYPE index.");
+		else
+			return it->second;
+	}
+
+	static int elem_type_str2idx(const std::string &x)
+	{
+		static const std::map<std::string, int> Str2IdxMapping{
+			std::pair<std::string, int>("mixed", XF_CELL::MIXED),
+			std::pair<std::string, int>("triangular", XF_CELL::TRIANGULAR),
+			std::pair<std::string, int>("tri", XF_CELL::TRIANGULAR),
+			std::pair<std::string, int>("tetrahedral", XF_CELL::TETRAHEDRAL),
+			std::pair<std::string, int>("tet", XF_CELL::TETRAHEDRAL),
+			std::pair<std::string, int>("quadrilateral", XF_CELL::QUADRILATERAL),
+			std::pair<std::string, int>("quad", XF_CELL::QUADRILATERAL),
+			std::pair<std::string, int>("hexahedral", XF_CELL::HEXAHEDRAL),
+			std::pair<std::string, int>("hex", XF_CELL::HEXAHEDRAL),
+			std::pair<std::string, int>("pyramid", XF_CELL::PYRAMID),
+			std::pair<std::string, int>("wedge", XF_CELL::WEDGE),
+			std::pair<std::string, int>("prism", XF_CELL::WEDGE),
+			std::pair<std::string, int>("polyhedral", XF_CELL::POLYHEDRAL)
+		};
+
+		auto it = Str2IdxMapping.find(x);
+		if (it == Str2IdxMapping.end())
+			throw std::runtime_error("\"" + x + "\" is not a valid CELL-ELEM-TYPE string.");
+		else
+			return it->second;
+	}
+
+	XF_CELL(size_t zone, size_t first, size_t last, int type, int elem_type) : XF_RANGE(XF_SECTION::CELL, zone, first, last)
 	{
 		// Check cell type before assign
-		auto it1 = XF_CELL::TYPE_MAPPING_Idx2Str.find(type);
-		if (it1 == XF_CELL::TYPE_MAPPING_Idx2Str.end())
+		if (!isValidCellTypeIdx(type))
 			throw std::runtime_error("Invalid cell type: " + std::to_string(type));
 		else
 			m_type = type;
 
 		// Check cell elem before assign
-		auto it2 = XF_CELL::ELEM_MAPPING_Idx2Str.find(elem_type);
-		if (it2 == XF_CELL::ELEM_MAPPING_Idx2Str.end())
+		if (!isValidElemTypeIdx(elem_type))
 			throw std::runtime_error("Invalid cell element type: " + std::to_string(elem_type));
 		else
 			m_elem = elem_type;
@@ -487,8 +590,6 @@ public:
 			m_mixedElemDesc.resize(num());
 			std::fill(m_mixedElemDesc.begin(), m_mixedElemDesc.end(), XF_CELL::MIXED);
 		}
-		else
-			m_mixedElemDesc.resize(0);
 	}
 
 	~XF_CELL() = default;
@@ -507,10 +608,9 @@ public:
 		else
 			return et;
 	}
-
 	int &elem(size_t loc_idx)
 	{
-		auto &et = element_type();
+		int &et = element_type();
 		if (et == XF_CELL::MIXED)
 			return m_mixedElemDesc[loc_idx];
 		else
@@ -923,39 +1023,17 @@ public:
 						for (int i = first; i <= last; ++i)
 						{
 							fin >> elem;
-							size_t i_loc = i - first;
-							switch (elem)
-							{
-							case 1:
-								e->elem(i_loc) = XF_CELL::TRIANGULAR;
-								break;
-							case 2:
-								e->elem(i_loc) = XF_CELL::TETRAHEDRAL;
-								break;
-							case 3:
-								e->elem(i_loc) = XF_CELL::QUADRILATERAL;
-								break;
-							case 4:
-								e->elem(i_loc) = XF_CELL::HEXAHEDRAL;
-								break;
-							case 5:
-								e->elem(i_loc) = XF_CELL::PYRAMID;
-								break;
-							case 6:
-								e->elem(i_loc) = XF_CELL::WEDGE;
-								break;
-							case 7:
-								e->elem(i_loc) = XF_CELL::POLYHEDRAL;
-								break;
-							default:
-								throw std::runtime_error("Invalid cell type!");
-							}
+							const size_t i_loc = i - first;
+							if (XF_CELL::isValidElemTypeIdx(elem))
+								e->elem(i_loc) = elem;
+							else
+								throw std::runtime_error("Invalid CELL-ELEM-TYPE: \"" + std::to_string(elem) + "\"");
 						}
 						eat(fin, ')');
 						std::cout << "Done!" << std::endl;
 					}
 					else
-						std::cout << e->num() << " " << XF_CELL::ELEM_MAPPING_Idx2Str.at(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
+						std::cout << e->num() << " " << XF_CELL::elem_type_idx2str(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
 
 					eat(fin, ')');
 					add_entry(e);
@@ -1527,7 +1605,7 @@ private:
 	{
 		// Check num of total faces
 		if (tet.face.size() != 4)
-			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(tet.type) + R"(" and num of faces: )" + std::to_string(tet.face.size()));
+			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::elem_type_idx2str(tet.type) + R"(" and num of faces: )" + std::to_string(tet.face.size()));
 
 		// Ensure all faces are triangular
 		const auto &f0 = face(tet.face.at(0));
@@ -1581,7 +1659,7 @@ private:
 	{
 		// Check num of total faces
 		if (pyramid.face.size() != 5)
-			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.face.size()));
+			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::elem_type_idx2str(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.face.size()));
 
 		// Find the bottom quad and ensure other faces are triangular.
 		size_t f0_idx = 0;
@@ -1719,7 +1797,7 @@ private:
 	{
 		// Check num of total faces
 		if (prism.face.size() != 5)
-			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(prism.type) + R"(" and num of faces: )" + std::to_string(prism.face.size()));
+			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::elem_type_idx2str(prism.type) + R"(" and num of faces: )" + std::to_string(prism.face.size()));
 
 		// Ensure there're only 2 triangle and 3 quad
 		size_t f0_idx = 0, f1_idx = 0;
@@ -1869,7 +1947,7 @@ private:
 	{
 		// Check num of total faces
 		if (hex.face.size() != 6)
-			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::ELEM_MAPPING_Idx2Str.at(hex.type) + R"(" and num of faces: )" + std::to_string(hex.face.size()));
+			throw std::runtime_error(R"(Mismatch between cell type ")" + XF_CELL::elem_type_idx2str(hex.type) + R"(" and num of faces: )" + std::to_string(hex.face.size()));
 
 		// Ensure all faces are quad
 		for (auto e : hex.face)

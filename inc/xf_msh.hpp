@@ -385,9 +385,14 @@ private:
 public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
 
-	XF_NODE(int zone, int first, int last, int type, int ND) : XF_RANGE(XF_SECTION::NODE, zone, first, last), XF_DIM(ND), m_type(type), m_node(num())
+	static bool isValidNodeTypeIdx(int x)
 	{
-		if (type != VIRTUAL && type != ANY && type != BOUNDARY)
+		return x == VIRTUAL || x == ANY || x == BOUNDARY;
+	}
+
+	XF_NODE(size_t zone, size_t first, size_t last, int type, int ND) : XF_RANGE(XF_SECTION::NODE, zone, first, last), XF_DIM(ND), m_type(type), m_node(num())
+	{
+		if (!isValidNodeTypeIdx(type))
 			throw std::runtime_error("Invalid description of node type!");
 	}
 

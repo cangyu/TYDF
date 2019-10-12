@@ -147,7 +147,10 @@ public:
 
 	const std::string &str() const { return m_msg; }
 
-	void repr(std::ostream &out) { out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl; }
+	void repr(std::ostream &out)
+	{
+		out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl;
+	}
 };
 
 class XF_BC
@@ -701,9 +704,56 @@ private:
 public:
 	enum { MIXED = 0, LINEAR = 2, TRIANGULAR = 3, QUADRILATERAL = 4, POLYGONAL = 5 };
 
-	static const std::map<int, std::string> MAPPING_Idx2Str;
+	static bool isValidFaceTypeIdx(int x)
+	{
+		static const std::set<int> candidate_set{ MIXED, LINEAR, TRIANGULAR, QUADRILATERAL, POLYGONAL };
 
-	static const std::map<std::string, int> MAPPING_Str2Idx;
+		return candidate_set.find(x) != candidate_set.end();
+	}
+
+	static bool isValidFaceTypeStr(const std::string &x)
+	{
+		static const std::set<std::string> candidate_set{ "mixed", "linear", "triangular", "quadrilateral", "polygonal" };
+
+		return candidate_set.find(x) != candidate_set.end();
+	}
+
+	static const std::string &idx2str(int x)
+	{
+		static const std::map<int, std::string> Idx2StrMapping{
+			std::pair<int, std::string>(XF_FACE::MIXED, "mixed"),
+			std::pair<int, std::string>(XF_FACE::LINEAR, "linear"),
+			std::pair<int, std::string>(XF_FACE::TRIANGULAR, "triangular"),
+			std::pair<int, std::string>(XF_FACE::QUADRILATERAL, "quadrilateral"),
+			std::pair<int, std::string>(XF_FACE::POLYGONAL, "polygonal")
+		};
+
+		auto it = Idx2StrMapping.find(x);
+		if (it == Idx2StrMapping.end())
+			throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid FACE-TYPE index.");
+		else
+			return it->second;
+	}
+
+	static int str2idx(const std::string &x)
+	{
+		static const std::map<std::string, int> Str2IdxMapping{
+			std::pair<std::string, int>("mixed", XF_FACE::MIXED),
+			std::pair<std::string, int>("linear", XF_FACE::LINEAR),
+			std::pair<std::string, int>("line", XF_FACE::LINEAR),
+			std::pair<std::string, int>("triangular", XF_FACE::TRIANGULAR),
+			std::pair<std::string, int>("tri", XF_FACE::TRIANGULAR),
+			std::pair<std::string, int>("quadrilateral", XF_FACE::QUADRILATERAL),
+			std::pair<std::string, int>("quad", XF_FACE::QUADRILATERAL),
+			std::pair<std::string, int>("polygonal", XF_FACE::POLYGONAL)
+		};
+
+		auto it = Str2IdxMapping.find(x);
+		if (it == Str2IdxMapping.end())
+			throw std::runtime_error("\"" + x + "\" is not a valid FACE-TYPE string.");
+		else
+			return it->second;
+	}
 
 	XF_FACE(size_t zone, size_t first, size_t last, int bc, int face) : XF_RANGE(XF_SECTION::FACE, zone, first, last)
 	{
@@ -714,15 +764,12 @@ public:
 			m_bc = bc;
 
 		// Check face type before assign
-		auto it2 = XF_FACE::MAPPING_Idx2Str.find(face);
-		if (it2 == XF_FACE::MAPPING_Idx2Str.end())
+		if (!isValidFaceTypeIdx(face))
 			throw std::runtime_error("Invalid face type: " + std::to_string(face));
+		else if (face == XF_FACE::POLYGONAL)
+			throw std::runtime_error("Polygonal face is not supported currently.");
 		else
 			m_face = face;
-
-		// Exception currently
-		if (m_face == XF_FACE::POLYGONAL)
-			throw std::runtime_error("Not supported face type: " + XF_FACE::MAPPING_Idx2Str.at(m_face));
 
 		// Resize local storage
 		m_connectivity.resize(num());
@@ -736,6 +783,7 @@ public:
 
 	// 0-based local indexing
 	const XF_CONNECTIVITY &connectivity(size_t loc_idx) const { return m_connectivity[loc_idx]; }
+
 	XF_CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity[loc_idx]; }
 
 	void repr(std::ostream &out)
@@ -1952,7 +2000,7 @@ private:
 				throw std::runtime_error("Internal error.");
 			const auto &f = face(e);
 			if (f.type != XF_FACE::QUADRILATERAL)
-				throw std::runtime_error(R"(Inconsistent face type ")" + XF_FACE::MAPPING_Idx2Str.at(f.type) + R"(" in a hex cell.)");
+				throw std::runtime_error(R"(Inconsistent face type ")" + XF_FACE::idx2str(f.type) + R"(" in a hex cell.)");
 		}
 
 		// Face 4 at bottom

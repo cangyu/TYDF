@@ -110,6 +110,14 @@ public:
 	}
 };
 
+static void XF_FormalizeStr(std::string &s)
+{
+	std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+	for (auto &e : s)
+		if (e == '_')
+			e = '-';
+}
+
 class XF_BC
 {
 public:
@@ -137,13 +145,115 @@ public:
 		AXIS = 37
 	};
 
-	static const std::map<int, std::string> MAPPING_Idx2Str;
+	static bool isValidBCIdx(int bc)
+	{
+		static const std::set<int> bc_idx_set{
+			INTERIOR,
+			WALL,
+			PRESSURE_INLET,
+			PRESSURE_OUTLET,
+			SYMMETRY,
+			PERIODIC_SHADOW,
+			PRESSURE_FAR_FIELD,
+			VELOCITY_INLET,
+			PERIODIC,
+			FAN,
+			MASS_FLOW_INLET,
+			INTERFACE,
+			PARENT,
+			OUTFLOW,
+			AXIS
+		};
 
-	static const std::map<std::string, int> MAPPING_Str2Idx;
+		return bc_idx_set.find(bc) != bc_idx_set.end();
+	}
+
+	static bool isValidBCStr(const std::string &bc)
+	{
+		static const std::set<std::string> bc_str_set{
+			"INTERIOR",
+			"WALL",
+			"PRESSURE-INLET", "INLET-VENT", "INTAKE-FAN",
+			"PRESSURE-OUTLET", "EXHAUST-FAN", "OUTLET-VENT",
+			"SYMMETRY",
+			"PERIODIC-SHADOW",
+			"PRESSURE-FAR-FIELD",
+			"VELOCITY-INLET",
+			"PERIODIC",
+			"FAN", "POROUS-JUMP", "RADIATOR",
+			"MASS-FLOW-INLET",
+			"INTERFACE",
+			"PARENT",
+			"OUTFLOW",
+			"AXIS"
+		};
+
+		std::string bc_(bc);
+		XF_FormalizeStr(bc_);
+		return bc_str_set.find(bc_) != bc_str_set.end();
+	}
+
+	static const std::string &idx2str(int bc)
+	{
+		static const std::map<int, std::string> bc_mapping_Idx2Str{
+			std::pair<int, std::string>(XF_BC::INTERIOR, "INTERIOR"),
+			std::pair<int, std::string>(XF_BC::WALL, "WALL"),
+			std::pair<int, std::string>(XF_BC::PRESSURE_INLET, "PRESSURE-INLET"),
+			std::pair<int, std::string>(XF_BC::PRESSURE_OUTLET, "PRESSURE-OUTLET"),
+			std::pair<int, std::string>(XF_BC::SYMMETRY, "SYMMETRY"),
+			std::pair<int, std::string>(XF_BC::PERIODIC_SHADOW, "PERIODIC-SHADOW"),
+			std::pair<int, std::string>(XF_BC::PRESSURE_FAR_FIELD, "PRESSURE-FAR-FIELD"),
+			std::pair<int, std::string>(XF_BC::VELOCITY_INLET, "VELOCITY-INLET"),
+			std::pair<int, std::string>(XF_BC::PERIODIC, "PERIODIC"),
+			std::pair<int, std::string>(XF_BC::FAN, "FAN"),
+			std::pair<int, std::string>(XF_BC::MASS_FLOW_INLET, "MASS-FLOW-INLET"),
+			std::pair<int, std::string>(XF_BC::INTERFACE, "INTERFACE"),
+			std::pair<int, std::string>(XF_BC::PARENT, "PARENT"),
+			std::pair<int, std::string>(XF_BC::OUTFLOW, "OUTFLOW"),
+			std::pair<int, std::string>(XF_BC::AXIS, "AXIS")
+		};
+
+		if (!isValidBCIdx(bc))
+			throw std::runtime_error("\"" + std::to_string(bc) + "\" is not a valid B.C. index.");
+
+		return bc_mapping_Idx2Str.at(bc);
+	}
+
+	static const int str2idx(const std::string &bc)
+	{
+		static const std::map<std::string, int> bc_mapping_Str2Idx{
+			std::pair<std::string, int>("INTERIOR", XF_BC::INTERIOR),
+			std::pair<std::string, int>("WALL", XF_BC::WALL),
+			std::pair<std::string, int>("PRESSURE-INLET", XF_BC::PRESSURE_INLET),
+			std::pair<std::string, int>("INLET-VENT", XF_BC::INLET_VENT),
+			std::pair<std::string, int>("INTAKE-FAN", XF_BC::INTAKE_FAN),
+			std::pair<std::string, int>("PRESSURE-OUTLET", XF_BC::PRESSURE_OUTLET),
+			std::pair<std::string, int>("EXHAUST-FAN", XF_BC::EXHAUST_FAN),
+			std::pair<std::string, int>("OUTLET-VENT", XF_BC::OUTLET_VENT),
+			std::pair<std::string, int>("SYMMETRY", XF_BC::SYMMETRY),
+			std::pair<std::string, int>("PERIODIC-SHADOW", XF_BC::PERIODIC_SHADOW),
+			std::pair<std::string, int>("PRESSURE-FAR-FIELD", XF_BC::PRESSURE_FAR_FIELD),
+			std::pair<std::string, int>("VELOCITY-INLET", XF_BC::VELOCITY_INLET),
+			std::pair<std::string, int>("PERIODIC", XF_BC::PERIODIC),
+			std::pair<std::string, int>("FAN", XF_BC::FAN),
+			std::pair<std::string, int>("POROUS-JUMP", XF_BC::POROUS_JUMP),
+			std::pair<std::string, int>("RADIATOR", XF_BC::RADIATOR),
+			std::pair<std::string, int>("MASS-FLOW-INLET", XF_BC::MASS_FLOW_INLET),
+			std::pair<std::string, int>("INTERFACE", XF_BC::INTERFACE),
+			std::pair<std::string, int>("PARENT", XF_BC::PARENT),
+			std::pair<std::string, int>("OUTFLOW", XF_BC::OUTFLOW),
+			std::pair<std::string, int>("AXIS", XF_BC::AXIS)
+		};
+
+		if (!isValidBCStr(bc))
+			throw std::runtime_error("\"" + bc + "\" is not a valid B.C. string.");
+
+		std::string bc_(bc);
+		XF_FormalizeStr(bc_);
+		return bc_mapping_Str2Idx.at(bc_);
+	}
 
 	XF_BC() = delete;
-
-	~XF_BC() = default;
 };
 
 class XF_SECTION
@@ -278,11 +388,7 @@ private:
 public:
 	enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
 
-	XF_NODE(int zone, int first, int last, int type, int ND) :
-		XF_RANGE(XF_SECTION::NODE, zone, first, last),
-		XF_DIM(ND),
-		m_type(type),
-		m_node(num())
+	XF_NODE(int zone, int first, int last, int type, int ND) : XF_RANGE(XF_SECTION::NODE, zone, first, last), XF_DIM(ND), m_type(type), m_node(num())
 	{
 		if (type != VIRTUAL && type != ANY && type != BOUNDARY)
 			throw std::runtime_error("Invalid description of node type!");
@@ -506,8 +612,7 @@ public:
 	XF_FACE(size_t zone, size_t first, size_t last, int bc, int face) : XF_RANGE(XF_SECTION::FACE, zone, first, last)
 	{
 		// Check B.C. before assign
-		auto it1 = XF_BC::MAPPING_Idx2Str.find(bc);
-		if (it1 == XF_BC::MAPPING_Idx2Str.end())
+		if (!XF_BC::isValidBCIdx(bc))
 			throw std::runtime_error("Invalid B.C. type: " + std::to_string(bc));
 		else
 			m_bc = bc;
@@ -1011,11 +1116,6 @@ public:
 	FACE_ELEM &face(size_t idx) { return m_face(idx); }
 	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
 	ZONE_ELEM &zone(size_t idx) { return m_zone(idx); }
-
-	const NODE_ELEM &node(size_t idx) const { return m_node(idx); }
-	const FACE_ELEM &face(size_t idx) const { return m_face(idx); }
-	const CELL_ELEM &cell(size_t idx) const { return m_cell(idx); }
-	const ZONE_ELEM &zone(size_t idx) const { return m_zone(idx); }
 
 private:
 	static void eat(std::istream &in, char c)

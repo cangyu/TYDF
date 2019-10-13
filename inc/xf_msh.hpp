@@ -855,7 +855,7 @@ private:
 	{
 		XF_Vector coordinate;
 		bool atBdry;
-		XF_Array1D<size_t> adjNode;
+		XF_Array1D<size_t> adjacentNode;
 		XF_Array1D<size_t> dependentFace;
 		XF_Array1D<size_t> dependentCell;
 	};
@@ -868,7 +868,8 @@ private:
 		XF_Array1D<size_t> node;
 		size_t leftCell, rightCell;
 		bool atBdry;
-		XF_Vector n_LR, n_RL; // Surface unit normal
+		XF_Vector n_LR; // Surface unit normal
+		XF_Vector n_RL;
 	};
 
 	struct CELL_ELEM
@@ -879,7 +880,8 @@ private:
 		XF_Array1D<size_t> face;
 		XF_Array1D<size_t> node;
 		XF_Array1D<size_t> adjCell;
-		XF_Array1D<XF_Vector> n, S;
+		XF_Array1D<XF_Vector> n;
+		XF_Array1D<XF_Vector> S;
 	};
 
 	// Index of zone may not start from 1, and may be given arbitrarily.
@@ -1447,16 +1449,19 @@ private:
 
 	void raw2derived()
 	{
-		// Allocate storage
+		/************************* Allocate storage ***************************/
 		m_node.resize(numOfNode());
 		m_face.resize(numOfFace());
 		m_cell.resize(numOfCell());
 
-		// Set initial values
+        /************************ Set initial values **************************/
 		for (auto &e : m_node)
 		{
 			e.coordinate.z() = 0.0;
 			e.atBdry = false;
+			e.adjacentNode.clear();
+			e.dependentFace.clear();
+			e.dependentCell.clear();
 		}
 		for (auto &e : m_face)
 		{
@@ -1465,9 +1470,11 @@ private:
 			e.n_RL.z() = 0.0;
 		}
 		for (auto &e : m_cell)
+		{
 			e.center.z() = 0.0;
-
-		// Parse records of node and face
+		}
+        /************************* Parse node and face ************************/
+		// Basic records
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::NODE)
@@ -1562,8 +1569,60 @@ private:
 				}
 			}
 		}
+        // Adjacent nodes, dependent faces, and dependent cells of each node
+		for (auto curPtr : m_content) // Count all occurance
+		{
+			if (curPtr->identity() == XF_SECTION::FACE)
+			{
+				auto curObj = dynamic_cast<XF_FACE*>(curPtr);
 
-		// Parse records of cell
+				// 1-based index
+				const auto cur_first = curObj->first_index();
+				const auto cur_last = curObj->last_index();
+
+				for (auto i = cur_first; i <= cur_last; ++i)
+				{
+					const auto &cnct = curObj->connectivity(i - cur_first);
+					const auto loc_leftCell = cnct.cl();
+					const auto loc_rightCell = cnct.cr();
+
+					for (int j = 0; j < cnct.x; ++j)
+					{
+						const auto idx_ = cnct.n[j];
+						auto &curNode = node(idx_);
+
+						const auto loc_leftNode = cnct.leftAdj(j);
+						const auto loc_rightNode = cnct.rightAdj(j);
+
+						// Adjacent nodes
+						curNode.adjacentNode.push_back(loc_leftNode);
+						if (cnct.x > 2)
+							curNode.adjacentNode.push_back(loc_rightNode);
+
+						// Dependent faces
+						curNode.dependentFace.push_back(i);
+
+						// Dependent cells
+						if(loc_leftCell != 0)
+							curNode.dependentCell.push_back(loc_leftCell);
+						if(loc_rightCell != 0)
+							curNode.dependentCell.push_back(loc_rightCell);
+					}
+				}
+			}
+		}
+		for (size_t i = 1; i <= numOfNode(); ++i) // Remove duplication
+		{
+			auto &curNode = node(i);
+
+			const std::set<size_t> st1(curNode.adjacentNode.begin(), curNode.adjacentNode.end());
+			curNode.adjacentNode.assign(st1.begin(), st1.end());
+
+			const std::set<size_t> st2(curNode.dependentCell.begin(), curNode.dependentCell.end());
+			curNode.dependentCell.assign(st2.begin(), st2.end());
+		}
+
+        /*********************** Parse records of cell ************************/
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::CELL)
@@ -1633,7 +1692,7 @@ private:
 			}
 		}
 
-		// Parse records of zone
+        /*********************** Parse records of zone ************************/
 		m_totalZoneNum = 0;
 		m_zoneMapping.clear();
 		for (auto curPtr : m_content) // Determine the total num of zones.

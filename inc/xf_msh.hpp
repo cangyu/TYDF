@@ -849,11 +849,14 @@ public:
 class XF_MSH : public XF_DIM
 {
 private:
-	// Index of node, face, cell and zone all start from 1 and increase continuously.
+	// Index of node, face, and cell start from 1 and increase continuously.
 	struct NODE_ELEM
 	{
 		XF_Vector coordinate;
 		bool atBdry;
+		XF_Array1D<size_t> adjNode;
+		XF_Array1D<size_t> dependentFace;
+		XF_Array1D<size_t> dependentCell;
 	};
 
 	struct FACE_ELEM
@@ -878,8 +881,10 @@ private:
 		XF_Array1D<XF_Vector> n, S;
 	};
 
+	// Index of zone may not start from 1, and may be given arbitrarily.
 	struct ZONE_ELEM
 	{
+		size_t ID;
 		std::string type;
 		std::string name;
 		XF_RANGE *obj;
@@ -887,15 +892,13 @@ private:
 
 	// Raw
 	std::vector<XF_SECTION*> m_content;
-	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum;
+	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum, m_totalZoneNum;
 
 	// Derived
 	XF_Array1D<NODE_ELEM> m_node;
 	XF_Array1D<FACE_ELEM> m_face;
 	XF_Array1D<CELL_ELEM> m_cell;
-
-	size_t m_totalZoneNum;
-	XF_Array1D<ZONE_ELEM> m_zone; // May be the group of nodes, the group of faces or the group of cells
+	XF_Array1D<ZONE_ELEM> m_zone;
 
 public:
 	XF_MSH() : XF_DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {}
@@ -1597,7 +1600,7 @@ private:
 		// Parse records of zone
 		m_totalZoneNum = 0;
 		std::map<size_t, size_t> tmp;
-		for (auto curPtr : m_content)
+		for (auto curPtr : m_content) // Determine the total num of zones.
 		{
 			auto curObj = dynamic_cast<XF_RANGE*>(curPtr);
 			if (curObj == nullptr)
@@ -1611,17 +1614,16 @@ private:
 		}
 		m_zone.clear();
 		m_zone.resize(numOfZone());
-		for (auto curPtr : m_content)
+		for (auto curPtr : m_content) // Assign zone contents
 		{
 			auto curObj = dynamic_cast<XF_RANGE*>(curPtr);
 			if (curObj == nullptr)
 				continue;
 
 			const auto curZoneIdx = curObj->zone();
-			if (curZoneIdx > numOfZone())
-				throw std::runtime_error("Inconsistent zone index detected.");
-			else
-				zone(curZoneIdx).obj = curObj;
+			auto &curZone = m_zone.at(tmp.at(curZoneIdx));
+			curZone.ID = curZoneIdx;
+			curZone.obj = curObj;
 		}
 		for (auto e : m_content)
 		{
@@ -1630,18 +1632,14 @@ private:
 				continue;
 
 			const auto curZoneIdx = curObj->zone();
-			zone(curZoneIdx).name = curObj->name();
-			zone(curZoneIdx).type = curObj->type();
+			auto &curZone = m_zone.at(tmp.at(curZoneIdx));
+			curZone.name = curObj->name();
+			curZone.type = curObj->type();
 		}
 	}
 
 	void derived2raw()
 	{
-		// Update size
-		m_totalCellNum = m_cell.size();
-		m_totalFaceNum = m_face.size();
-		m_totalNodeNum = m_node.size();
-
 		// TODO
 	}
 
@@ -2363,6 +2361,7 @@ private:
 			break;
 		case XF_CELL::QUADRILATERAL:
 			quad_standardization(c);
+			break;
 		default:
 			throw std::runtime_error("Invalid cell element type: " + std::to_string(c.type) + ", maybe caused by internal error.");
 		}

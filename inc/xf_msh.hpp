@@ -16,6 +16,8 @@
 #include <cmath>
 #include <stdexcept>
 
+#define EXTRACT_NODE_CONNECTIVITY 0
+
 typedef double XF_Scalar;
 
 class XF_Vector
@@ -855,9 +857,11 @@ private:
 	{
 		XF_Vector coordinate;
 		bool atBdry;
+#if EXTRACT_NODE_CONNECTIVITY
 		XF_Array1D<size_t> adjacentNode;
 		XF_Array1D<size_t> dependentFace;
 		XF_Array1D<size_t> dependentCell;
+#endif // EXTRACT_NODE_CONNECTIVITY
 	};
 
 	struct FACE_ELEM
@@ -1454,14 +1458,16 @@ private:
 		m_face.resize(numOfFace());
 		m_cell.resize(numOfCell());
 
-        /************************ Set initial values **************************/
+		/************************ Set initial values **************************/
 		for (auto &e : m_node)
 		{
 			e.coordinate.z() = 0.0;
 			e.atBdry = false;
+#if EXTRACT_NODE_CONNECTIVITY
 			e.adjacentNode.clear();
 			e.dependentFace.clear();
 			e.dependentCell.clear();
+#endif // EXTRACT_NODE_CONNECTIVITY
 		}
 		for (auto &e : m_face)
 		{
@@ -1473,7 +1479,8 @@ private:
 		{
 			e.center.z() = 0.0;
 		}
-        /************************* Parse node and face ************************/
+
+		/************************* Parse node and face ************************/
 		// Basic records
 		for (auto curPtr : m_content)
 		{
@@ -1569,7 +1576,8 @@ private:
 				}
 			}
 		}
-        // Adjacent nodes, dependent faces, and dependent cells of each node
+#if EXTRACT_NODE_CONNECTIVITY
+		// Adjacent nodes, dependent faces, and dependent cells of each node
 		for (auto curPtr : m_content) // Count all occurance
 		{
 			if (curPtr->identity() == XF_SECTION::FACE)
@@ -1603,9 +1611,9 @@ private:
 						curNode.dependentFace.push_back(i);
 
 						// Dependent cells
-						if(loc_leftCell != 0)
+						if (loc_leftCell != 0)
 							curNode.dependentCell.push_back(loc_leftCell);
-						if(loc_rightCell != 0)
+						if (loc_rightCell != 0)
 							curNode.dependentCell.push_back(loc_rightCell);
 					}
 				}
@@ -1621,8 +1629,9 @@ private:
 			const std::set<size_t> st2(curNode.dependentCell.begin(), curNode.dependentCell.end());
 			curNode.dependentCell.assign(st2.begin(), st2.end());
 		}
+#endif  // EXTRACT_NODE_CONNECTIVITY
 
-        /*********************** Parse records of cell ************************/
+		/*********************** Parse records of cell ************************/
 		for (auto curPtr : m_content)
 		{
 			if (curPtr->identity() == XF_SECTION::CELL)
@@ -1692,7 +1701,7 @@ private:
 			}
 		}
 
-        /*********************** Parse records of zone ************************/
+		/*********************** Parse records of zone ************************/
 		m_totalZoneNum = 0;
 		m_zoneMapping.clear();
 		for (auto curPtr : m_content) // Determine the total num of zones.

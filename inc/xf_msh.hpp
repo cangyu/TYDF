@@ -77,8 +77,15 @@ public:
 	~XF_Array1D() = default;
 
 	// 1-based indexing
-	T &operator()(size_t i) { return this->at(i - 1); }
-	T operator()(size_t i) const { return this->at(i - 1); }
+	T &operator()(size_t i)
+	{
+		return this->at(i - 1);
+	}
+
+	const T &operator()(size_t i) const
+	{
+		return *(this->cbegin() + (i - 1));
+	}
 
 	// Check includances
 	bool contains(const T &x) const
@@ -892,12 +899,16 @@ private:
 
 	// Raw
 	std::vector<XF_SECTION*> m_content;
-	size_t m_totalNodeNum, m_totalCellNum, m_totalFaceNum, m_totalZoneNum;
+	size_t m_totalNodeNum;
+	size_t m_totalCellNum;
+	size_t m_totalFaceNum;
 
 	// Derived
 	XF_Array1D<NODE_ELEM> m_node;
 	XF_Array1D<FACE_ELEM> m_face;
 	XF_Array1D<CELL_ELEM> m_cell;
+	size_t m_totalZoneNum;
+	std::map<size_t, size_t> m_zoneMapping;
 	XF_Array1D<ZONE_ELEM> m_zone;
 
 public:
@@ -1237,12 +1248,55 @@ public:
 	size_t numOfZone() const { return m_totalZoneNum; }
 
 	// 1-based indexing
-	NODE_ELEM &node(size_t idx) { return m_node(idx); }
-	FACE_ELEM &face(size_t idx) { return m_face(idx); }
-	CELL_ELEM &cell(size_t idx) { return m_cell(idx); }
-	ZONE_ELEM &zone(size_t idx) { return m_zone(idx); }
+	const NODE_ELEM &node(size_t id) const
+	{
+		return m_node(id);
+	}
+	const FACE_ELEM &face(size_t id) const
+	{
+		return m_face(id);
+	}
+	const CELL_ELEM &cell(size_t id) const
+	{
+		return m_cell(id);
+	}
+	const ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) const
+	{
+		// If "isRealZoneID" is "true", then "id" is the real zone index,
+		// otherwise, "id" is the internal storage index.
+		// Whatever "isRealZoneID" is, "id" is always 1-based for consistency.
+
+		if (isRealZoneID)
+			return m_zone.at(m_zoneMapping.at(id));
+		else
+			return m_zone(id);
+	}
 
 private:
+	NODE_ELEM &node(size_t id)
+	{
+		return m_node(id);
+	}
+	FACE_ELEM &face(size_t id)
+	{
+		return m_face(id);
+	}
+	CELL_ELEM &cell(size_t id)
+	{
+		return m_cell(id);
+	}
+	ZONE_ELEM &zone(size_t id, bool isRealZoneID = false)
+	{
+		// If "isRealZoneID" is "true", then "id" is the real zone index,
+		// otherwise, "id" is the internal storage index.
+		// Whatever "isRealZoneID" is, "id" is always 1-based for consistency.
+
+		if (isRealZoneID)
+			return m_zone.at(m_zoneMapping.at(id));
+		else
+			return m_zone(id);
+	}
+
 	static void eat(std::istream &in, char c)
 	{
 		char tmp = 0;
@@ -1599,7 +1653,7 @@ private:
 
 		// Parse records of zone
 		m_totalZoneNum = 0;
-		std::map<size_t, size_t> tmp;
+		m_zoneMapping.clear();
 		for (auto curPtr : m_content) // Determine the total num of zones.
 		{
 			auto curObj = dynamic_cast<XF_RANGE*>(curPtr);
@@ -1607,8 +1661,8 @@ private:
 				continue;
 
 			const auto curZone = curObj->zone();
-			if (tmp.find(curZone) == tmp.end())
-				tmp[curZone] = m_totalZoneNum++;
+			if (m_zoneMapping.find(curZone) == m_zoneMapping.end())
+				m_zoneMapping[curZone] = m_totalZoneNum++;
 			else
 				throw std::runtime_error("Duplicated zone detected.");
 		}
@@ -1621,7 +1675,7 @@ private:
 				continue;
 
 			const auto curZoneIdx = curObj->zone();
-			auto &curZone = m_zone.at(tmp.at(curZoneIdx));
+			auto &curZone = m_zone.at(m_zoneMapping.at(curZoneIdx));
 			curZone.ID = curZoneIdx;
 			curZone.obj = curObj;
 		}
@@ -1632,7 +1686,7 @@ private:
 				continue;
 
 			const auto curZoneIdx = curObj->zone();
-			auto &curZone = m_zone.at(tmp.at(curZoneIdx));
+			auto &curZone = m_zone.at(m_zoneMapping.at(curZoneIdx));
 			curZone.name = curObj->name();
 			curZone.type = curObj->type();
 		}

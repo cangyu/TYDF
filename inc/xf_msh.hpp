@@ -77,15 +77,9 @@ public:
 	~XF_Array1D() = default;
 
 	// 1-based indexing
-	T &operator()(size_t i)
-	{
-		return this->at(i - 1);
-	}
+	T &operator()(size_t i) { return this->at(i - 1); }
 
-	const T &operator()(size_t i) const
-	{
-		return *(this->cbegin() + (i - 1));
-	}
+	const T &operator()(size_t i) const { return this->at(i - 1); }
 
 	// Check includances
 	bool contains(const T &x) const
@@ -1248,18 +1242,12 @@ public:
 	size_t numOfZone() const { return m_totalZoneNum; }
 
 	// 1-based indexing
-	const NODE_ELEM &node(size_t id) const
-	{
-		return m_node(id);
-	}
-	const FACE_ELEM &face(size_t id) const
-	{
-		return m_face(id);
-	}
-	const CELL_ELEM &cell(size_t id) const
-	{
-		return m_cell(id);
-	}
+	const NODE_ELEM &node(size_t id) const { return m_node(id); }
+
+	const FACE_ELEM &face(size_t id) const { return m_face(id); }
+
+	const CELL_ELEM &cell(size_t id) const { return m_cell(id); }
+
 	const ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) const
 	{
 		// If "isRealZoneID" is "true", then "id" is the real zone index,
@@ -1273,18 +1261,12 @@ public:
 	}
 
 private:
-	NODE_ELEM &node(size_t id)
-	{
-		return m_node(id);
-	}
-	FACE_ELEM &face(size_t id)
-	{
-		return m_face(id);
-	}
-	CELL_ELEM &cell(size_t id)
-	{
-		return m_cell(id);
-	}
+	NODE_ELEM &node(size_t id) { return m_node(id); }
+
+	FACE_ELEM &face(size_t id) { return m_face(id); }
+
+	CELL_ELEM &cell(size_t id) { return m_cell(id); }
+
 	ZONE_ELEM &zone(size_t id, bool isRealZoneID = false)
 	{
 		// If "isRealZoneID" is "true", then "id" is the real zone index,

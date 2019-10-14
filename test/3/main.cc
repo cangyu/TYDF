@@ -3,7 +3,7 @@
 // 3D single-block grid
 int test0()
 {
-	PLOT3D p3d;
+	PLOT3D::GRID p3d;
 	int ret = 0;
 
 	ret = p3d.readFromFile("xyz.fmt");

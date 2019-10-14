@@ -1,4 +1,4 @@
-#include "xf_msh.hpp"
+#include "xf.hpp"
 
 using namespace std;
 
@@ -8,7 +8,7 @@ int test0()
 	const string OUTPUT_PATH("blessed.msh");
 
 	int ret = 0;
-	XF_MSH msh;
+	XF::MSH msh;
 
 	cout << "Reading mesh: \"" << MESH_PATH << "\" ..." << endl;
 

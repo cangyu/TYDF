@@ -7,7 +7,9 @@
 #include <string>
 #include <stdexcept>
 
-class PLOT3D_BLK
+namespace PLOT3D
+{
+class BLK
 {
 private:
 	template<typename T>
@@ -128,7 +130,7 @@ private:
 public:
 	typedef Array<double> *pCoordBlk;
 
-	PLOT3D_BLK(size_t nI, size_t nJ) :
+	BLK(size_t nI, size_t nJ) :
 		m_nI(nI),
 		m_nJ(nJ),
 		m_nK(1),
@@ -145,7 +147,7 @@ public:
 		m_z = nullptr;
 	}
 
-	PLOT3D_BLK(size_t nI, size_t nJ, size_t nK) :
+	BLK(size_t nI, size_t nJ, size_t nK) :
 		m_nI(nI),
 		m_nJ(nJ),
 		m_nK(nK),
@@ -163,7 +165,7 @@ public:
 		m_z = new Array<double>(nI, nJ, nK, 0.0);
 	}
 
-	~PLOT3D_BLK()
+	~BLK()
 	{
 		if (m_x)
 			delete m_x;
@@ -283,18 +285,18 @@ private:
 	size_t m_nIJ, m_nIJK;
 };
 
-typedef PLOT3D_BLK *pPLOT3D_BLK;
+typedef BLK *pBLK;
 
-class PLOT3D
+class GRID
 {
 private:
 	size_t m_nBLK;
 	bool m_3d;
 	int m_dim;
-	std::vector<pPLOT3D_BLK> m_blk;
+	std::vector<pBLK> m_blk;
 
 public:
-	PLOT3D()
+	GRID()
 	{
 		m_nBLK = 0;
 		m_3d = true;
@@ -302,7 +304,7 @@ public:
 		m_blk.resize(0, nullptr);
 	}
 
-	~PLOT3D()
+	~GRID()
 	{
 		for (size_t i = 0; i < m_blk.size(); ++i)
 			if (m_blk[i])
@@ -325,13 +327,13 @@ public:
 	}
 
 	// Access block through 0-based indexing
-	pPLOT3D_BLK at(size_t idx)
+	pBLK at(size_t idx)
 	{
 		return m_blk[idx];
 	}
 
 	// Access block through 1-based indexing
-	pPLOT3D_BLK operator()(size_t idx)
+	pBLK operator()(size_t idx)
 	{
 		return at(idx - 1);
 	}
@@ -361,9 +363,9 @@ public:
 			ss << s;
 			ss >> IMAX >> JMAX;
 			if (!(ss >> KMAX))
-				m_blk.push_back(new PLOT3D_BLK(IMAX, JMAX));
+				m_blk.push_back(new BLK(IMAX, JMAX));
 			else
-				m_blk.push_back(new PLOT3D_BLK(IMAX, JMAX, KMAX));
+				m_blk.push_back(new BLK(IMAX, JMAX, KMAX));
 		}
 
 		// Read coordinates of each block
@@ -502,5 +504,7 @@ public:
 		return 0;
 	}
 };
+
+}
 
 #endif

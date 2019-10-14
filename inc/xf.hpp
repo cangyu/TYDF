@@ -1,5 +1,5 @@
-#ifndef __XF_MSH_HPP__
-#define __XF_MSH_HPP__
+#ifndef __XF_HPP__
+#define __XF_HPP__
 
 #include <cstddef>
 #include <istream>

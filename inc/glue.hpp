@@ -4,7 +4,7 @@
 #include <string>
 #include "nmf.hpp"
 #include "plot3d.hpp"
-#include "xf_msh.hpp"
+#include "xf.hpp"
 
 int glue(const std::string &f_nmf, const std::string &f_p3d, std::string &f_msh)
 {
@@ -12,7 +12,7 @@ int glue(const std::string &f_nmf, const std::string &f_p3d, std::string &f_msh)
     return 0;
 }
 
-int glue(const NMF &src1, const PLOT3D &src2, XF_MSH &dst)
+int glue(const NMF &src1, const PLOT3D::GRID &src2, XF::MSH &dst)
 {
 	// TODO
     return 0;

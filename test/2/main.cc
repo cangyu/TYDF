@@ -3,7 +3,7 @@
 // 2D grid in 3D form
 void test0()
 {
-	PLOT3D p3d;
+	PLOT3D::GRID p3d;
 	int ret = 0;
 
 	ret = p3d.readFromFile("xyz1.fmt");
@@ -18,7 +18,7 @@ void test0()
 // 2D grid in 2D form
 void test1()
 {
-	PLOT3D p3d;
+	PLOT3D::GRID p3d;
 	int ret = 0;
 
 	ret = p3d.readFromFile("xyz2.fmt");

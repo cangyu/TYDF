@@ -1,5 +1,5 @@
-#ifndef __NMF_H__
-#define __NMF_H__
+#ifndef __NMF_HPP__
+#define __NMF_HPP__
 
 #include <vector>
 #include <fstream>
@@ -11,24 +11,28 @@
 #include <cstddef>
 #include <string>
 #include <map>
+#include <set>
 #include <utility>
 #include <stdexcept>
 
-class NMF_Block
+namespace NMF
+{
+
+template<typename T>
+class Array1D : public std::vector<T>
+{
+public:
+	Array1D(size_t n) : std::vector<T>(n) {}
+	Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
+
+	// 1-based indexing
+	T &operator()(size_t i) { return std::vector<T>::at(i - 1); }
+	const T &operator()(size_t i) const { return std::vector<T>::at(i - 1); }
+};
+
+class Block
 {
 private:
-	template<typename T>
-	class Array1D : public std::vector<T>
-	{
-	public:
-		Array1D(size_t n) : std::vector<T>(n) {}
-
-		Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
-
-		// 1-based indexing
-		T &operator()(size_t i) { return std::vector<T>::at(i - 1); }
-	};
-
 	class HEX_CELL
 	{
 	private:
@@ -53,8 +57,7 @@ private:
 	};
 
 public:
-	NMF_Block(size_t nI, size_t nJ, size_t nK) :
-		m_hex((nI - 1)*(nJ - 1)*(nK - 1))
+	Block(size_t nI, size_t nJ, size_t nK) : m_hex((nI - 1)*(nJ - 1)*(nK - 1))
 	{
 		m_nI = nI;
 		m_nJ = nJ;
@@ -62,19 +65,14 @@ public:
 	}
 
 	size_t IDIM() const { return m_nI; }
-
-	size_t &IDIM() { return m_nI; }
-
 	size_t JDIM() const { return m_nJ; }
-
-	size_t &JDIM() { return m_nJ; }
-
 	size_t KDIM() const { return m_nK; }
-
+	
+	size_t &IDIM() { return m_nI; }
+	size_t &JDIM() { return m_nJ; }
 	size_t &KDIM() { return m_nK; }
 
 	size_t node_num() const { return IDIM() * JDIM() * KDIM(); }
-
 	size_t face_num() const
 	{
 		size_t ret = 0;
@@ -83,7 +81,6 @@ public:
 		ret += IDIM() * JDIM() * (KDIM() - 1);
 		return ret;
 	}
-
 	size_t cell_num() const { return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1); }
 
 	HEX_CELL &cell(size_t i, size_t j)
@@ -95,7 +92,6 @@ public:
 		// Access
 		return m_hex.at(i0 + (m_nI - 1) * j0);
 	}
-
 	HEX_CELL &cell(size_t i, size_t j, size_t k)
 	{
 		// Convert 1-based index to 0-based
@@ -112,7 +108,7 @@ private:
 	Array1D<HEX_CELL> m_hex;
 };
 
-class NMF_Range
+class Range
 {
 private:
 	size_t m_blk; // Block index, 1-based.
@@ -123,7 +119,7 @@ private:
 	size_t m_e2; // Secondary direction ending index, 1-based.
 
 public:
-	NMF_Range()
+	Range()
 	{
 		m_blk = 0;
 		m_face = 0;
@@ -133,7 +129,7 @@ public:
 		m_e2 = 0;
 	}
 
-	NMF_Range(size_t *src)
+	Range(size_t *src)
 	{
 		m_blk = src[0];
 		m_face = src[1];
@@ -143,7 +139,7 @@ public:
 		m_e2 = src[5];
 	}
 
-	NMF_Range(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2)
+	Range(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2)
 	{
 		m_blk = b;
 		m_face = f;
@@ -206,7 +202,7 @@ public:
 	size_t face_num() const { return (pri_node_num() - 1) * (sec_node_num() - 1); }
 };
 
-class NMF_BC
+class BC
 {
 public:
 	enum {
@@ -225,40 +221,117 @@ public:
 		OUTFLOW = 13
 	};
 
-	static const std::map<int, std::string> MAPPING_Idx2Str;
+	static bool isValidBCIdx(int x)
+	{
+		static const std::set<int> candidate_set{ 
+			COLLAPSED, ONE_TO_ONE, PATCHED, 
+			POLE_DIR1, POLE_DIR2, 
+			SYM_X, SYM_Y, SYM_Z, 
+			UNPROCESSED, WALL, SYM, 
+			INFLOW, OUTFLOW 
+		};
 
-	static const std::map<std::string, int> MAPPING_Str2Idx;
+		return candidate_set.find(x) != candidate_set.end();
+	}
+
+	static bool isValidBCStr(const std::string &x)
+	{
+		static const std::set<std::string> candidate_set{ 
+			"COLLAPSED", "ONE_TO_ONE", "PATCHED", 
+			"POLE_DIR1", "POLE_DIR2", 
+			"SYM_X", "SYM_Y", "SYM_Z",
+			 "UNPROCESSED", "WALL", "SYM", 
+			 "INFLOW", "OUTFLOW" 
+		};
+
+		return candidate_set.find(x) != candidate_set.end();
+	}
+
+	static const std::string &idx2str(int x)
+	{
+		static const std::map<int, std::string> mapping_set{
+			std::pair<int, std::string>(COLLAPSED, "COLLAPSED"),
+			std::pair<int, std::string>(ONE_TO_ONE, "ONE_TO_ONE"),
+			std::pair<int, std::string>(PATCHED, "PATCHED"),
+			std::pair<int, std::string>(POLE_DIR1, "POLE_DIR1"),
+			std::pair<int, std::string>(POLE_DIR2, "POLE_DIR2"),
+			std::pair<int, std::string>(SYM_X, "SYM_X"),
+			std::pair<int, std::string>(SYM_Y, "SYM_Y"),
+			std::pair<int, std::string>(SYM_Z, "SYM_Z"),
+			std::pair<int, std::string>(UNPROCESSED, "UNPROCESSED"),
+			std::pair<int, std::string>(WALL, "WALL"),
+			std::pair<int, std::string>(SYM, "SYM"),
+			std::pair<int, std::string>(INFLOW, "INFLOW"),
+			std::pair<int, std::string>(OUTFLOW, "OUTFLOW")
+		};
+
+		auto it = mapping_set.find(x);
+		if(it == mapping_set.end())
+			throw std::runtime_error("Not found!");
+		else
+			return it->second;
+	}
+
+	static int str2idx(const std::string &x)
+	{
+		static const std::map<std::string, int> mapping_set{
+			std::pair<std::string, int>("COLLAPSED", COLLAPSED),
+			std::pair<std::string, int>("ONE_TO_ONE", ONE_TO_ONE),
+			std::pair<std::string, int>("PATCHED", PATCHED),
+			std::pair<std::string, int>("POLE_DIR1", POLE_DIR1),
+			std::pair<std::string, int>("POLE_DIR2", POLE_DIR2),
+			std::pair<std::string, int>("SYM_X", SYM_X),
+			std::pair<std::string, int>("SYM_Y", SYM_Y),
+			std::pair<std::string, int>("SYM_Z", SYM_Z),
+			std::pair<std::string, int>("UNPROCESSED", UNPROCESSED),
+			std::pair<std::string, int>("WALL", WALL),
+			std::pair<std::string, int>("SYM", SYM),
+			std::pair<std::string, int>("SYMMETRY", SYM),
+			std::pair<std::string, int>("INFLOW", INFLOW),
+			std::pair<std::string, int>("OUTFLOW", OUTFLOW)
+		};
+
+		auto it = mapping_set.find(x);
+		if(it == mapping_set.end())
+			throw std::runtime_error("Not found!");
+		else
+			return it->second;
+	}
+
+	BC() = delete;
+
+	~BC() = default;
 };
 
-class NMF_Entry
+class Entry
 {
 private:
 	int m_bc;
-	NMF_Range m_rg1, m_rg2;
+	Range m_rg1, m_rg2;
 	bool m_swap;
 
 public:
-	NMF_Entry(const std::string &t, size_t *s) :
+	Entry(const std::string &t, size_t *s) :
 		m_rg1(s),
 		m_rg2(),
 		m_swap(false)
 	{
 		// Check before assign
-		auto it = NMF_BC::MAPPING_Str2Idx.find(t);
-		if (it == NMF_BC::MAPPING_Str2Idx.end())
+		auto it = BC::MAPPING_Str2Idx.find(t);
+		if (it == BC::MAPPING_Str2Idx.end())
 			throw std::runtime_error("Unsupported B.C. name: " + t);
 		else
 			m_bc = it->second;
 	}
 
-	NMF_Entry(const std::string &t, size_t *s1, size_t *s2, bool f) :
+	Entry(const std::string &t, size_t *s1, size_t *s2, bool f) :
 		m_rg1(s1),
 		m_rg2(s2),
 		m_swap(f)
 	{
 		// Check before assign
-		auto it = NMF_BC::MAPPING_Str2Idx.find(t);
-		if (it == NMF_BC::MAPPING_Str2Idx.end())
+		auto it = BC::MAPPING_Str2Idx.find(t);
+		if (it == BC::MAPPING_Str2Idx.end())
 			throw std::runtime_error("Unsupported B.C. name: " + t);
 		else
 			m_bc = it->second;
@@ -284,9 +357,9 @@ public:
 
 	size_t &F2() { return m_rg2.F(); }
 
-	NMF_Range &Range1() { return m_rg1; }
+	Range &Range1() { return m_rg1; }
 
-	NMF_Range &Range2() { return m_rg2; }
+	Range &Range2() { return m_rg2; }
 
 	bool Swap() const { return m_swap; }
 
@@ -308,15 +381,152 @@ public:
 	}
 };
 
-class NMF
+class MAPPING
 {
 public:
+	MAPPING() = default;
+
+	~MAPPING() = default;
+
 	size_t nBlk() const { return m_blk.size(); }
 
-	int readFromFile(const std::string &path);
+	int readFromFile(const std::string &path)
+	{
+		std::string s;
+		std::stringstream ss;
 
-	int writeToFile(const std::string &path);
+		//Load file
+		std::ifstream mfp(path);
+		if (mfp.fail())
+			throw std::runtime_error("Can not open target input file: " + path);
 
+		//Skip header
+		do {
+			std::getline(mfp, s, '\n');
+		} while (s.find('#') != std::string::npos);
+
+		//Read block dimension info
+		size_t NumOfBlk;
+		ss << s;
+		ss >> NumOfBlk;
+		if (NumOfBlk == 0)
+			throw std::runtime_error("Invalid num of blocks: " + std::to_string(NumOfBlk));
+
+		m_blk.clear();
+		for (size_t i = 1; i <= NumOfBlk; i++)
+		{
+			size_t idx, i_max, j_max, k_max;
+			std::getline(mfp, s, '\n');
+			ss.clear();
+			ss << s;
+			ss >> idx >> i_max >> j_max >> k_max;
+
+			if (idx != i)
+				throw std::runtime_error("Invalid order of block: " + std::to_string(idx));
+			if (i_max == 0)
+				throw std::runtime_error("Invalid I dimension: " + std::to_string(i_max));
+			if (j_max == 0)
+				throw std::runtime_error("Invalid J dimension: " + std::to_string(j_max));
+			if (k_max == 0)
+				throw std::runtime_error("Invalid K dimension: " + std::to_string(k_max));
+
+			m_blk.emplace_back(i_max, j_max, k_max);
+		}
+
+		//Skip separators
+		do {
+			std::getline(mfp, s, '\n');
+		} while (s.find('#') != std::string::npos);
+
+		//Read bc mappings
+		m_entry.clear();
+		do {
+			transform(s.begin(), s.end(), s.begin(), ::toupper);
+			ss.clear();
+			ss << s;
+			std::string bc_str;
+			ss >> bc_str;
+			size_t connectivity[2][6] = { 0 };
+			if (BC::MAPPING_Str2Idx.at(bc_str) == BC::ONE_TO_ONE)
+			{
+				for (int i = 0; i < 2; i++)
+					for (int j = 0; j < 6; j++)
+						ss >> connectivity[i][j];
+
+				std::string swp;
+				ss >> swp;
+
+				m_entry.emplace_back(bc_str, connectivity[0], connectivity[1], swp == "TRUE");
+			}
+			else
+			{
+				for (int i = 0; i < 6; i++)
+					ss >> connectivity[0][i];
+
+				m_entry.emplace_back(bc_str, connectivity[0]);
+			}
+		} while (std::getline(mfp, s, '\n'));
+
+		// Finalize
+		mfp.close();
+		return 0;
+	}
+
+	int writeToFile(const std::string &path)
+	{
+		// Open target file
+		std::ofstream f_out(path);
+		if (f_out.fail())
+			throw std::runtime_error("Can not open target output file: " + path);
+
+		// Header
+		f_out << "# ======================== Neutral Map File generated by the Grid-Glue software ==============================" << std::endl;
+		f_out << "# ============================================================================================================" << std::endl;
+		f_out << "# Block#    IDIM    JDIM    KDIM" << std::endl;
+		f_out << "# ------------------------------------------------------------------------------------------------------------" << std::endl;
+
+		// Block info
+		const size_t NumOfBlk = nBlk();
+		f_out << std::setw(8) << std::right << NumOfBlk << std::endl;
+		for (size_t i = 0; i < NumOfBlk; i++)
+		{
+			f_out << std::setw(8) << std::right << i + 1;
+			f_out << std::setw(8) << std::right << m_blk[i].IDIM();
+			f_out << std::setw(8) << std::right << m_blk[i].JDIM();
+			f_out << std::setw(8) << std::right << m_blk[i].KDIM();
+			f_out << std::endl;
+		}
+
+		// Interface and boundary info
+		f_out << "# ============================================================================================================" << std::endl;
+		f_out << "# Type           B1    F1       S1    E1       S2    E2       B2    F2       S1    E1       S2    E2      Swap" << std::endl;
+		f_out << "# ------------------------------------------------------------------------------------------------------------" << std::endl;
+		for (auto & e : m_entry)
+		{
+			f_out << std::setw(13) << std::left << BC::MAPPING_Idx2Str.at(e.Type());
+			f_out << std::setw(6) << std::right << e.B1();
+			f_out << std::setw(6) << std::right << e.F1();
+			f_out << std::setw(9) << std::right << e.Range1().S1();
+			f_out << std::setw(6) << std::right << e.Range1().E1();
+			f_out << std::setw(9) << std::right << e.Range1().S2();
+			f_out << std::setw(6) << std::right << e.Range1().E2();
+			if (e.Type() == BC::ONE_TO_ONE)
+			{
+				f_out << std::setw(9) << std::right << e.B2();
+				f_out << std::setw(6) << std::right << e.F2();
+				f_out << std::setw(9) << std::right << e.Range2().S1();
+				f_out << std::setw(6) << std::right << e.Range2().E1();
+				f_out << std::setw(9) << std::right << e.Range2().S2();
+				f_out << std::setw(6) << std::right << e.Range2().E2();
+				f_out << std::setw(10) << std::right << (e.Swap() ? "TRUE" : "FALSE");
+			}
+			f_out << std::endl;
+		}
+
+		// Finalize
+		f_out.close();
+		return 0;
+	}
 	size_t nHex() const
 	{
 		size_t ret = 0;
@@ -333,17 +543,57 @@ public:
 
 		// Sustract duplicated interface
 		for (const auto & e : m_entry)
-			if (e.Type() == NMF_BC::ONE_TO_ONE)
+			if (e.Type() == BC::ONE_TO_ONE)
 				ret -= e.face_num();
 
 		return ret;
 	}
 
-	int compute_topology();
+	int compute_topology()
+	{
+		// Indexing of cells
+		size_t cnt = 0;
+		for (auto &blk : m_blk)
+		{
+			const size_t cI = blk.IDIM();
+			const size_t cJ = blk.JDIM();
+			const size_t cK = blk.KDIM();
+
+			for (size_t k = 1; k < cK; ++k)
+				for (size_t j = 1; j < cJ; ++j)
+					for (size_t i = 1; i < cI; ++i)
+						blk.cell(i, j, k).CellSeq() = ++cnt;
+		}
+
+		const size_t totalCellNum = nHex();
+		assert(cnt == totalCellNum);
+
+		// Indexing of faces
+		cnt = 0;
+		for (auto &blk : m_blk)
+		{
+			const size_t cI = blk.IDIM();
+			const size_t cJ = blk.JDIM();
+			const size_t cK = blk.KDIM();
+
+			
+
+		}
+		const size_t totalFaceNum = nQuad();
+		//assert(cnt == totalFaceNum);
+
+		// Indexing of nodes
+		cnt = 0;
+		// TODO
+
+		return 0;
+	}
 
 private:
-	std::vector<NMF_Block> m_blk;
-	std::vector<NMF_Entry> m_entry;
+	std::vector<Block> m_blk;
+	std::vector<Entry> m_entry;
 };
+
+}
 
 #endif

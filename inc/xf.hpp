@@ -160,7 +160,23 @@ namespace XF
 
 		static bool isValidBCIdx(int x)
 		{
-			static const std::set<int> candidate_set{ INTERIOR,	WALL, PRESSURE_INLET, PRESSURE_OUTLET, SYMMETRY, PERIODIC_SHADOW, PRESSURE_FAR_FIELD, VELOCITY_INLET, PERIODIC, FAN, MASS_FLOW_INLET, INTERFACE, PARENT, OUTFLOW, AXIS };
+			static const std::set<int> candidate_set{
+				INTERIOR,
+				WALL,
+				PRESSURE_INLET,
+				PRESSURE_OUTLET,
+				SYMMETRY,
+				PERIODIC_SHADOW,
+				PRESSURE_FAR_FIELD,
+				VELOCITY_INLET,
+				PERIODIC,
+				FAN,
+				MASS_FLOW_INLET,
+				INTERFACE,
+				PARENT,
+				OUTFLOW,
+				AXIS
+			};
 
 			return candidate_set.find(x) != candidate_set.end();
 		}

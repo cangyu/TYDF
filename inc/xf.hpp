@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <array>
 #include <vector>
 #include <set>
 #include <map>
@@ -16,58 +17,31 @@
 #include <cmath>
 #include <stdexcept>
 
+#define EXTRACT_NODE_CONNECTIVITY 1
+
 namespace XF
 {
-#define EXTRACT_NODE_CONNECTIVITY 0
-
 	typedef double Scalar;
 
-	class Vector
+	class Vector : public std::array<Scalar, 3>
 	{
-	private:
-		Scalar m_data[3];
-
-		void exchange(Vector &rhs)
-		{
-			for (int i = 0; i < 3; ++i)
-				std::swap(m_data[i], rhs.m_data[i]);
-		}
-
 	public:
-		Vector() : m_data{ 0.0, 0.0, 0.0 } {}
-
-		Vector(Scalar val) : m_data{ val, val, val } {}
-
-		Vector(Scalar v1, Scalar v2, Scalar v3) : m_data{ v1, v2, v3 } {}
-
-		Vector(const Vector &rhs) = default;
-
-		~Vector() = default;
-
-		Vector &operator=(Vector rhs)
-		{
-			exchange(rhs);
-			return *this;
-		}
-
-		Scalar *data() { return m_data; }
-
-		// 0-based indexing
-		Scalar at(size_t idx) const { return m_data[idx]; }
-		Scalar &at(size_t idx) { return m_data[idx]; }
+		Vector() : std::array<Scalar, 3>{ 0.0, 0.0, 0.0 } {}
+		Vector(Scalar val) : std::array<Scalar, 3>{ val, val, val } {}
+		Vector(Scalar v1, Scalar v2, Scalar v3) : std::array<Scalar, 3>{ v1, v2, v3 } {}
 
 		// 1-based indexing
-		Scalar operator()(int idx) const { return m_data[idx - 1]; }
-		Scalar &operator()(int idx) { return m_data[idx - 1]; }
+		Scalar operator()(int idx) const { return at(idx - 1); }
+		Scalar &operator()(int idx) { return at(idx - 1); }
 
 		// Access through component
-		Scalar x() const { return m_data[0]; }
-		Scalar y() const { return m_data[1]; }
-		Scalar z() const { return m_data[2]; }
+		Scalar x() const { return at(0); }
+		Scalar y() const { return at(1); }
+		Scalar z() const { return at(2); }
 
-		Scalar &x() { return m_data[0]; }
-		Scalar &y() { return m_data[1]; }
-		Scalar &z() { return m_data[2]; }
+		Scalar &x() { return at(0); }
+		Scalar &y() { return at(1); }
+		Scalar &z() { return at(2); }
 	};
 
 	template<typename T>

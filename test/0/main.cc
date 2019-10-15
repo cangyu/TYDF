@@ -7,7 +7,7 @@ int test0()
 	const string INPUT_MESH_PATH("fluent.msh");
 	const string OUTPUT_MESH_PATH("blessed.msh");
 
-	XF::MSH msh;
+	XF::MESH msh;
 	int ret = 0;
 
 	cout << "Reading mesh: \"" << INPUT_MESH_PATH << "\" ..." << endl;

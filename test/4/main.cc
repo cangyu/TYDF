@@ -5,7 +5,7 @@ int test0()
 {
 	std::cout << "test0" << std::endl;
 
-	NMF mapping;
+	NMF::MAPPING mapping;
 	mapping.readFromFile("mapping0.nmf");
 	mapping.writeToFile("mapping0_blessed.nmf");
 
@@ -18,7 +18,7 @@ int test1()
 {
 	std::cout << "test1" << std::endl;
 
-	NMF mapping;
+	NMF::MAPPING mapping;
 	mapping.readFromFile("mapping1.nmf");
 	mapping.writeToFile("mapping1_blessed.nmf");
 	return 0;

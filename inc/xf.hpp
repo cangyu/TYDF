@@ -160,23 +160,7 @@ namespace XF
 
 		static bool isValidBCIdx(int x)
 		{
-			static const std::set<int> candidate_set{
-					INTERIOR,
-					WALL,
-					PRESSURE_INLET,
-					PRESSURE_OUTLET,
-					SYMMETRY,
-					PERIODIC_SHADOW,
-					PRESSURE_FAR_FIELD,
-					VELOCITY_INLET,
-					PERIODIC,
-					FAN,
-					MASS_FLOW_INLET,
-					INTERFACE,
-					PARENT,
-					OUTFLOW,
-					AXIS
-			};
+			static const std::set<int> candidate_set{ INTERIOR,	WALL, PRESSURE_INLET, PRESSURE_OUTLET, SYMMETRY, PERIODIC_SHADOW, PRESSURE_FAR_FIELD, VELOCITY_INLET, PERIODIC, FAN, MASS_FLOW_INLET, INTERFACE, PARENT, OUTFLOW, AXIS };
 
 			return candidate_set.find(x) != candidate_set.end();
 		}
@@ -184,21 +168,21 @@ namespace XF
 		static bool isValidBCStr(const std::string &x)
 		{
 			static const std::set<std::string> candidate_set{
-					"interior",
-					"wall",
-					"pressure-inlet", "inlet-vent", "intake-fan",
-					"pressure-outlet", "exhaust-fan", "outlet-vent",
-					"symmetry",
-					"periodic-shadow",
-					"pressure-far-field",
-					"velocity-inlet",
-					"periodic",
-					"fan", "porous-jump", "radiator",
-					"mass-flow-inlet",
-					"interface",
-					"parent",
-					"outflow",
-					"axis"
+				"interior",
+				"wall",
+				"pressure-inlet", "inlet-vent", "intake-fan",
+				"pressure-outlet", "exhaust-fan", "outlet-vent",
+				"symmetry",
+				"periodic-shadow",
+				"pressure-far-field",
+				"velocity-inlet",
+				"periodic",
+				"fan", "porous-jump", "radiator",
+				"mass-flow-inlet",
+				"interface",
+				"parent",
+				"outflow",
+				"axis"
 			};
 
 			std::string x_(x);
@@ -209,21 +193,21 @@ namespace XF
 		static const std::string &idx2str(int x)
 		{
 			static const std::map<int, std::string> mapping_set{
-					std::pair<int, std::string>(INTERIOR, "interior"),
-					std::pair<int, std::string>(WALL, "wall"),
-					std::pair<int, std::string>(PRESSURE_INLET, "pressure-inlet"),
-					std::pair<int, std::string>(PRESSURE_OUTLET, "pressure-outlet"),
-					std::pair<int, std::string>(SYMMETRY, "symmetry"),
-					std::pair<int, std::string>(PERIODIC_SHADOW, "periodic-shadow"),
-					std::pair<int, std::string>(PRESSURE_FAR_FIELD, "pressure-far-field"),
-					std::pair<int, std::string>(VELOCITY_INLET, "velocity-inlet"),
-					std::pair<int, std::string>(PERIODIC, "periodic"),
-					std::pair<int, std::string>(FAN, "fan"),
-					std::pair<int, std::string>(MASS_FLOW_INLET, "mass-flow-inlet"),
-					std::pair<int, std::string>(INTERFACE, "interface"),
-					std::pair<int, std::string>(PARENT, "parent"),
-					std::pair<int, std::string>(OUTFLOW, "outflow"),
-					std::pair<int, std::string>(AXIS, "axis")
+				std::pair<int, std::string>(INTERIOR, "interior"),
+				std::pair<int, std::string>(WALL, "wall"),
+				std::pair<int, std::string>(PRESSURE_INLET, "pressure-inlet"),
+				std::pair<int, std::string>(PRESSURE_OUTLET, "pressure-outlet"),
+				std::pair<int, std::string>(SYMMETRY, "symmetry"),
+				std::pair<int, std::string>(PERIODIC_SHADOW, "periodic-shadow"),
+				std::pair<int, std::string>(PRESSURE_FAR_FIELD, "pressure-far-field"),
+				std::pair<int, std::string>(VELOCITY_INLET, "velocity-inlet"),
+				std::pair<int, std::string>(PERIODIC, "periodic"),
+				std::pair<int, std::string>(FAN, "fan"),
+				std::pair<int, std::string>(MASS_FLOW_INLET, "mass-flow-inlet"),
+				std::pair<int, std::string>(INTERFACE, "interface"),
+				std::pair<int, std::string>(PARENT, "parent"),
+				std::pair<int, std::string>(OUTFLOW, "outflow"),
+				std::pair<int, std::string>(AXIS, "axis")
 			};
 
 			auto it = mapping_set.find(x);
@@ -236,27 +220,27 @@ namespace XF
 		static const int str2idx(const std::string &x)
 		{
 			static const std::map<std::string, int> mapping_set{
-					std::pair<std::string, int>("interior", INTERIOR),
-					std::pair<std::string, int>("wall", WALL),
-					std::pair<std::string, int>("pressure-inlet", PRESSURE_INLET),
-					std::pair<std::string, int>("inlet-vent", INLET_VENT),
-					std::pair<std::string, int>("intake-fan", INTAKE_FAN),
-					std::pair<std::string, int>("pressure-outlet", PRESSURE_OUTLET),
-					std::pair<std::string, int>("exhaust-fan", EXHAUST_FAN),
-					std::pair<std::string, int>("outlet-vent", OUTLET_VENT),
-					std::pair<std::string, int>("symmetry", SYMMETRY),
-					std::pair<std::string, int>("periodic-shadow", PERIODIC_SHADOW),
-					std::pair<std::string, int>("pressure-far-field", PRESSURE_FAR_FIELD),
-					std::pair<std::string, int>("velocity-inlet", VELOCITY_INLET),
-					std::pair<std::string, int>("periodic", PERIODIC),
-					std::pair<std::string, int>("fan", FAN),
-					std::pair<std::string, int>("porous-jump", POROUS_JUMP),
-					std::pair<std::string, int>("radiator", RADIATOR),
-					std::pair<std::string, int>("mass-flow-inlet", MASS_FLOW_INLET),
-					std::pair<std::string, int>("interface", INTERFACE),
-					std::pair<std::string, int>("parent", PARENT),
-					std::pair<std::string, int>("outflow", OUTFLOW),
-					std::pair<std::string, int>("axis", AXIS)
+				std::pair<std::string, int>("interior", INTERIOR),
+				std::pair<std::string, int>("wall", WALL),
+				std::pair<std::string, int>("pressure-inlet", PRESSURE_INLET),
+				std::pair<std::string, int>("inlet-vent", INLET_VENT),
+				std::pair<std::string, int>("intake-fan", INTAKE_FAN),
+				std::pair<std::string, int>("pressure-outlet", PRESSURE_OUTLET),
+				std::pair<std::string, int>("exhaust-fan", EXHAUST_FAN),
+				std::pair<std::string, int>("outlet-vent", OUTLET_VENT),
+				std::pair<std::string, int>("symmetry", SYMMETRY),
+				std::pair<std::string, int>("periodic-shadow", PERIODIC_SHADOW),
+				std::pair<std::string, int>("pressure-far-field", PRESSURE_FAR_FIELD),
+				std::pair<std::string, int>("velocity-inlet", VELOCITY_INLET),
+				std::pair<std::string, int>("periodic", PERIODIC),
+				std::pair<std::string, int>("fan", FAN),
+				std::pair<std::string, int>("porous-jump", POROUS_JUMP),
+				std::pair<std::string, int>("radiator", RADIATOR),
+				std::pair<std::string, int>("mass-flow-inlet", MASS_FLOW_INLET),
+				std::pair<std::string, int>("interface", INTERFACE),
+				std::pair<std::string, int>("parent", PARENT),
+				std::pair<std::string, int>("outflow", OUTFLOW),
+				std::pair<std::string, int>("axis", AXIS)
 			};
 
 			std::string x_(x);

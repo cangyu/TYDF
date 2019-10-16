@@ -21,6 +21,7 @@ namespace NMF
 	class Array1D : public std::vector<T>
 	{
 	public:
+	    Array1D() : std::vector<T>() {}
 		Array1D(size_t n) : std::vector<T>(n) {}
 		Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
 
@@ -29,82 +30,188 @@ namespace NMF
 		const T &operator()(size_t i) const { return std::vector<T>::at(i - 1); }
 	};
 
-	class BLOCK
+	class CELL
+    {
+    private:
+        size_t m_cell; // 1-based sequence
+        Array1D<size_t> m_node; // 1-based sequence
+        Array1D<size_t> m_face; // 1-based sequence
+
+    public:
+        CELL() = delete;
+        CELL(bool is3D) : m_cell(0), m_node(is3D ? 8 : 4, 0), m_face(is3D ? 6 : 4, 0) {}
+        virtual ~CELL() = default;
+
+        size_t CellSeq() const { return m_cell; }
+        size_t &CellSeq() { return m_cell; }
+
+        // 1-based indexing of node
+        size_t NodeSeq(int n) const { return m_node[n - 1]; }
+        size_t &NodeSeq(int n) { return m_node[n - 1]; }
+
+        // 1-based indexing of face
+        size_t FaceSeq(int n) const { return m_face[n - 1]; }
+        size_t &FaceSeq(int n) { return m_face[n - 1]; }
+    };
+
+	class QUAD_CELL : public CELL
+    {
+    public:
+        QUAD_CELL() : CELL(false) {}
+        ~QUAD_CELL() = default;
+	};
+
+    class HEX_CELL : public CELL
+    {
+    public:
+        HEX_CELL() : CELL(true) {}
+        ~HEX_CELL() = default;
+    };
+
+    class DIM
+    {
+    protected:
+        bool m_is3D;
+        int m_dim;
+
+    public:
+        DIM() = delete;
+        DIM(int dim) : m_dim(dim)
+        {
+            if (dim == 2)
+                m_is3D = false;
+            else if (dim == 3)
+                m_is3D = true;
+            else
+                throw std::runtime_error("Invalid dimension: " + std::to_string(dim));
+        }
+        DIM(bool is3d) : m_is3D(is3d), m_dim(is3d ? 3 : 2) {}
+        virtual ~DIM() = default;
+
+        bool is3D() const { return m_is3D; }
+        int dimension() const { return m_dim; }
+    };
+
+    // The frame of a block
+    struct EDGE
+    {
+        size_t index;
+
+        EDGE() : index(0) {}
+    };
+
+	class BLOCK : public DIM
 	{
 	private:
-		class HEX_CELL
-		{
-		private:
-			size_t m_cell; // 1-based sequence
-			size_t m_node[8]; // 1-based sequence
-			size_t m_face[6]; // 1-based sequence
-
-		public:
-			HEX_CELL() : m_cell(0), m_node{ 0 }, m_face{ 0 } {}
-
-			size_t CellSeq() const { return m_cell; }
-
-			size_t &CellSeq() { return m_cell; }
-
-			size_t NodeSeq(int n) const { return m_node[n - 1]; } // 1-based indexing
-
-			size_t &NodeSeq(int n) { return m_node[n - 1]; } // 1-based indexing
-
-			size_t FaceSeq(int n) const { return m_face[n - 1]; } // 1-based indexing
-
-			size_t &FaceSeq(int n) { return m_face[n - 1]; } // 1-based indexing
-		};
+        size_t m_nI, m_nJ, m_nK;
+        Array1D<CELL*> m_cell;
+        Array1D<EDGE> m_edge;
 
 	public:
-		BLOCK(size_t nI, size_t nJ, size_t nK) : m_hex((nI - 1)*(nJ - 1)*(nK - 1))
-		{
-			m_nI = nI;
-			m_nJ = nJ;
-			m_nK = nK;
-		}
+	    BLOCK() = delete;
+        BLOCK(size_t nI, size_t nJ) :
+            DIM(2),
+            m_nI(nI), m_nJ(nJ), m_nK(1),
+            m_cell(cell_num(), nullptr),
+            m_edge(4)
+        {
+            if(nI < 2 || nJ < 2)
+                throw std::invalid_argument("Invalid dimension.");
 
+            for(auto &e : m_cell)
+            {
+                e = new QUAD_CELL();
+                if(!e)
+                    throw std::bad_alloc();
+            }
+        }
+		BLOCK(size_t nI, size_t nJ, size_t nK) :
+		    DIM(3),
+		    m_nI(nI), m_nJ(nJ), m_nK(nK),
+		    m_cell(cell_num(), nullptr),
+		    m_edge(12)
+        {
+		    if(nI < 2 || nJ < 2 || nK < 2)
+		        throw std::runtime_error("Invalid dimension.");
+
+		    for(auto &e : m_cell)
+            {
+		        e = new HEX_CELL();
+		        if(!e)
+		            throw std::bad_alloc();
+            }
+		}
+		~BLOCK()
+        {
+		    for(auto e : m_cell)
+		        if(e)
+		            delete e;
+        }
+
+        // Dimensions
 		size_t IDIM() const { return m_nI; }
 		size_t JDIM() const { return m_nJ; }
 		size_t KDIM() const { return m_nK; }
 
-		size_t &IDIM() { return m_nI; }
-		size_t &JDIM() { return m_nJ; }
-		size_t &KDIM() { return m_nK; }
-
-		size_t node_num() const { return IDIM() * JDIM() * KDIM(); }
+		// Total num of geom entities
+		size_t node_num() const
+		{
+            if(is3D())
+                return IDIM() * JDIM() * KDIM();
+            else
+                return IDIM() * JDIM();
+        }
 		size_t face_num() const
 		{
 			size_t ret = 0;
-			ret += (IDIM() - 1) * JDIM() * KDIM();
-			ret += IDIM() * (JDIM() - 1) * KDIM();
-			ret += IDIM() * JDIM() * (KDIM() - 1);
+			if(is3D())
+			{
+                ret += (IDIM() - 1) * JDIM() * KDIM();
+                ret += IDIM() * (JDIM() - 1) * KDIM();
+                ret += IDIM() * JDIM() * (KDIM() - 1);
+            }
+			else
+            {
+                ret += (IDIM() - 1) * JDIM();
+                ret += IDIM() * (JDIM() - 1);
+            }
 			return ret;
 		}
-		size_t cell_num() const { return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1); }
-
-		HEX_CELL &cell(size_t i, size_t j)
+		size_t cell_num() const
 		{
-			// Convert 1-based index to 0-based
-			const size_t i0 = i - 1;
-			const size_t j0 = j - 1;
-
-			// Access
-			return m_hex.at(i0 + (m_nI - 1) * j0);
-		}
-		HEX_CELL &cell(size_t i, size_t j, size_t k)
-		{
-			// Convert 1-based index to 0-based
-			const size_t i0 = i - 1;
-			const size_t j0 = j - 1;
-			const size_t k0 = k - 1;
-
-			// Access
-			return m_hex.at(i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0));
+		    if(is3D())
+		        return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1);
+		    else
+                return (IDIM() - 1) * (JDIM() - 1);
 		}
 
-	private:
-		size_t m_nI, m_nJ, m_nK;
-		Array1D<HEX_CELL> m_hex;
+		// Access internal cell through 1-based index.
+		// Indexing convention:
+		//      "i" ranges from 1 to IDIM()-1;
+		//      "j" ranges from 1 to JDIM()-1;
+		//      "k" ranges from 1 to KDIM()-1;
+		// When the IJK-axis follows the right-hand convention, (i, j, k) represents
+		// the left-most, bottom-most and back-most node of the selected cell.
+ 		QUAD_CELL *cell(size_t i, size_t j)
+		{
+			const size_t i0 = i - 1, j0 = j - 1; // Convert 1-based index to 0-based
+            return static_cast<QUAD_CELL *>(m_cell.at(i0 + (m_nI - 1) * j0));
+		}
+		HEX_CELL *cell(size_t i, size_t j, size_t k)
+		{
+			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
+            return static_cast<HEX_CELL *>(m_cell.at(i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0)));
+		}
+
+		// Num of block frame edges
+        size_t edge_num() const { return m_edge.size(); }
+
+        // Access the frame edging through 1-based index.
+		// The indexing convention follows NMF specification.
+		EDGE &edge(size_t r)
+        {
+            return m_edge.at(r-1);
+        }
 	};
 
 	class RANGE
@@ -118,58 +225,26 @@ namespace NMF
 		size_t m_e2; // Secondary direction ending index, 1-based.
 
 	public:
-		RANGE()
-		{
-			m_blk = 0;
-			m_face = 0;
-			m_s1 = 0;
-			m_e1 = 0;
-			m_s2 = 0;
-			m_e2 = 0;
-		}
-
-		RANGE(size_t *src)
-		{
-			m_blk = src[0];
-			m_face = src[1];
-			m_s1 = src[2];
-			m_e1 = src[3];
-			m_s2 = src[4];
-			m_e2 = src[5];
-		}
-
-		RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2)
-		{
-			m_blk = b;
-			m_face = f;
-			m_s1 = s1;
-			m_e1 = e1;
-			m_s2 = s2;
-			m_e2 = e2;
-		}
+		RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
+		RANGE(size_t *src) : m_blk(src[0]), m_face(src[1]), m_s1(src[2]), m_e1(src[3]), m_s2(src[4]), m_e2(src[5]) {}
+		RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) : m_blk(b), m_face(f), m_s1(s1), m_e1(e1), m_s2(s2), m_e2(e2) {}
 
 		size_t B() const { return m_blk; }
-
 		size_t &B() { return m_blk; }
 
 		size_t F() const { return m_face; }
-
 		size_t &F() { return m_face; }
 
 		size_t S1() const { return m_s1; }
-
 		size_t &S1() { return m_s1; }
 
 		size_t E1() const { return m_e1; }
-
 		size_t &E1() { return m_e1; }
 
 		size_t S2() const { return m_s2; }
-
 		size_t &S2() { return m_s2; }
 
 		size_t E2() const { return m_e2; }
-
 		size_t &E2() { return m_e2; }
 
 		// Check if given index is within this range.
@@ -230,14 +305,39 @@ namespace NMF
 
 		static bool isValidBCIdx(int x)
 		{
-			static const std::set<int> candidate_set{ COLLAPSED, ONE_TO_ONE, PATCHED, POLE_DIR1, POLE_DIR2, SYM_X, SYM_Y, SYM_Z, UNPROCESSED, WALL, SYM, INFLOW, OUTFLOW };
+			static const std::set<int> candidate_set{
+			    COLLAPSED,
+			    ONE_TO_ONE,
+			    PATCHED,
+			    POLE_DIR1,
+			    POLE_DIR2,
+			    SYM_X,
+			    SYM_Y,
+			    SYM_Z,
+			    UNPROCESSED,
+			    WALL,
+			    SYM,
+			    INFLOW,
+			    OUTFLOW
+			};
 
 			return candidate_set.find(x) != candidate_set.end();
 		}
 
 		static bool isValidBCStr(const std::string &x)
 		{
-			static const std::set<std::string> candidate_set{ "COLLAPSED", "ONE_TO_ONE", "PATCHED", "POLE_DIR1", "POLE_DIR2", "SYM_X", "SYM_Y", "SYM_Z", "UNPROCESSED", "WALL", "SYM", "INFLOW", "OUTFLOW" };
+			static const std::set<std::string> candidate_set{
+			    "COLLAPSED",
+			    "ONE_TO_ONE",
+			    "PATCHED",
+			    "POLE_DIR1", "POLE_DIR2",
+			    "SYM_X", "SYM_Y", "SYM_Z",
+			    "UNPROCESSED",
+			    "WALL",
+			    "SYM",
+			    "INFLOW",
+			    "OUTFLOW"
+			};
 
 			std::string x_(x);
 			str_formalize(x_);
@@ -307,77 +407,104 @@ namespace NMF
 	{
 	private:
 		int m_bc;
-		RANGE m_rg1, m_rg2;
+		RANGE *m_rg1, *m_rg2;
 		bool m_swap;
 
 	public:
-		ENTRY(const std::string &t, size_t *s) : m_rg1(s), m_rg2(), m_swap(false)
+		ENTRY(const std::string &t, size_t *s) :
+		    m_rg1(new RANGE(s)),
+		    m_rg2(nullptr),
+		    m_swap(false)
 		{
 			if (BC::isValidBCStr(t))
 				m_bc = BC::str2idx(t);
 			else
 				throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
 		}
-
-		ENTRY(const std::string &t, size_t *s1, size_t *s2, bool f) : m_rg1(s1), m_rg2(s2), m_swap(f)
+		ENTRY(const std::string &t, size_t *s1, size_t *s2, bool f) :
+		    m_rg1(new RANGE(s1)),
+		    m_rg2(new RANGE(s2)),
+		    m_swap(f)
 		{
 			if (BC::isValidBCStr(t))
 				m_bc = BC::str2idx(t);
 			else
 				throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
 		}
+		~ENTRY()
+        {
+		    if(m_rg1)
+		        delete m_rg1;
+		    if(m_rg2)
+		        delete m_rg2;
+        }
 
 		int Type() const { return m_bc; }
-
 		int &Type() { return m_bc; }
 
-		size_t B1() const { return m_rg1.B(); }
+		size_t B1() const { return m_rg1->B(); }
+		size_t &B1() { return m_rg1->B(); }
 
-		size_t &B1() { return m_rg1.B(); }
+		size_t F1() const { return m_rg1->F(); }
+		size_t &F1() { return m_rg1->F(); }
 
-		size_t F1() const { return m_rg1.F(); }
+		size_t B2() const { return m_rg2->B(); }
+		size_t &B2() { return m_rg2->B(); }
 
-		size_t &F1() { return m_rg1.F(); }
+		size_t F2() const { return m_rg2->F(); }
+		size_t &F2() { return m_rg2->F(); }
 
-		size_t B2() const { return m_rg2.B(); }
+        const RANGE &Range1() const { return *m_rg1; }
+        RANGE &Range1() { return *m_rg1; }
 
-		size_t &B2() { return m_rg2.B(); }
-
-		size_t F2() const { return m_rg2.F(); }
-
-		size_t &F2() { return m_rg2.F(); }
-
-		RANGE &Range1() { return m_rg1; }
-
-		RANGE &Range2() { return m_rg2; }
+        const RANGE &Range2() const { return *m_rg2; }
+        RANGE &Range2() { return *m_rg2; }
 
 		bool Swap() const { return m_swap; }
-
 		bool &Swap() { return m_swap; }
 
-		size_t node_num() const { return m_rg1.node_num(); }
+		size_t node_num() const { return m_rg1->node_num(); }
 
-		size_t face_num() const { return m_rg1.face_num(); }
+		size_t face_num() const { return m_rg1->face_num(); }
 
-		int contains(size_t bs, size_t fs, size_t lpri, size_t lsec)
+		int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const
 		{
 			// Left
 			if (B1() == bs && F1() == fs && Range1().constains(lpri, lsec))
 				return 1;
-			else if (B2() == bs && F2() == fs && Range2().constains(lpri, lsec))
+			else if (m_rg2 && B2() == bs && F2() == fs && Range2().constains(lpri, lsec))
 				return 2;
 			else
 				return 0;
 		}
 	};
 
-	class EDGE
-	{
-		// TODO
-	};
-
 	class MAPPING
 	{
+    private:
+        Array1D<BLOCK> m_blk;
+        Array1D<ENTRY> m_entry;
+
+        void coloring_block_frame()
+        {
+            size_t cnt = 0;
+            for(auto &blk : m_blk)
+            {
+                const auto NE = blk.edge_num();
+                for(size_t n = 1; n <= NE; ++n)
+                {
+                    auto &curEdge = blk.edge(n);
+                    if(curEdge.index == 0)
+                    {
+                        curEdge.index = ++cnt;
+
+                        // TODO
+
+                    }
+                }
+            }
+        }
+
 	public:
 		MAPPING() = default;
 
@@ -523,7 +650,7 @@ namespace NMF
 			return 0;
 		}
 
-		size_t nHex() const
+		size_t nCell() const
 		{
 			size_t ret = 0;
 			for (const auto & blk : m_blk)
@@ -531,14 +658,14 @@ namespace NMF
 			return ret;
 		}
 
-		size_t nQuad() const
+		size_t nFace() const
 		{
 			size_t ret = 0;
-			for (const auto & blk : m_blk)
+			for (const auto &blk : m_blk)
 				ret += blk.cell_num();
 
 			// Sustract duplicated interface
-			for (const auto & e : m_entry)
+			for (const auto &e : m_entry)
 				if (e.Type() == BC::ONE_TO_ONE)
 					ret -= e.face_num();
 
@@ -558,10 +685,12 @@ namespace NMF
 				for (size_t k = 1; k < cK; ++k)
 					for (size_t j = 1; j < cJ; ++j)
 						for (size_t i = 1; i < cI; ++i)
-							blk.cell(i, j, k).CellSeq() = ++cnt;
+							blk.cell(i, j, k)->CellSeq() = ++cnt;
 			}
 
-			const size_t totalCellNum = nHex();
+			const size_t totalCellNum = nCell();
+			if(cnt != totalCellNum)
+			    throw std::length_error("Inconsistent num of cells detected.");
 
 			// Indexing of faces
 			cnt = 0;
@@ -571,11 +700,11 @@ namespace NMF
 				const size_t cJ = blk.JDIM();
 				const size_t cK = blk.KDIM();
 
-
-
+                // TODO
 			}
-			const size_t totalFaceNum = nQuad();
-			//assert(cnt == totalFaceNum);
+			const size_t totalFaceNum = nFace();
+            if(cnt != totalFaceNum)
+                throw std::length_error("Inconsistent num of cells detected.");
 
 			// Indexing of nodes
 			cnt = 0;
@@ -583,10 +712,6 @@ namespace NMF
 
 			return 0;
 		}
-
-	private:
-		std::vector<BLOCK> m_blk;
-		std::vector<ENTRY> m_entry;
 	};
 }
 

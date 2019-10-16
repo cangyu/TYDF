@@ -49,7 +49,6 @@ namespace XF
 	{
 	public:
 		Array1D(size_t n = 0) : std::vector<T>(n) {}
-
 		Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
 
 		~Array1D() = default;
@@ -68,7 +67,6 @@ namespace XF
 
 			return false;
 		}
-
 		bool contains(const T &a, const T &b) const
 		{
 			bool flag_a = false, flag_b = false;
@@ -885,7 +883,7 @@ namespace XF
 			int type;
 			Vector center;
 			double area;
-			Array1D<size_t> node;
+			Array1D<size_t> includedNode;
 			size_t leftCell, rightCell;
 			bool atBdry;
 			Vector n_LR; // Surface unit normal
@@ -897,9 +895,9 @@ namespace XF
 			int type;
 			Vector center;
 			double volume;
-			Array1D<size_t> face;
-			Array1D<size_t> node;
-			Array1D<size_t> adjCell;
+			Array1D<size_t> includedFace;
+			Array1D<size_t> includedNode;
+			Array1D<size_t> adjacentCell;
 			Array1D<Vector> n;
 			Array1D<Vector> S;
 		};
@@ -1538,16 +1536,16 @@ namespace XF
 							face(i).type = ft;
 
 						// Nodes within this face, 1-based node index are stored, right-hand convention is preserved.
-						face(i).node.assign(cnct.n, cnct.n + cnct.x);
+						face(i).includedNode.assign(cnct.n, cnct.n + cnct.x);
 
 						// Adjacent cells, 1-based cell index are stored, 0 stands for boundary, right-hand convention is preserved.
 						size_t lc = cnct.cl(), rc = cnct.cr();
 						face(i).leftCell = lc;
 						face(i).rightCell = rc;
 						if (lc != 0)
-							cell(lc).face.push_back(i);
+							cell(lc).includedFace.push_back(i);
 						if (rc != 0)
-							cell(rc).face.push_back(i);
+							cell(rc).includedFace.push_back(i);
 
 						// Face on boundary or not
 						face(i).atBdry = (cnct.c0() == 0 || cnct.c1() == 0);
@@ -1664,22 +1662,22 @@ namespace XF
 						cell_standardization(curCell);
 
 						// Adjacent cells and normal
-						curCell.adjCell.resize(curCell.face.size());
-						curCell.n.resize(curCell.face.size());
-						curCell.S.resize(curCell.face.size());
-						for (size_t j = 0; j < curCell.face.size(); ++j)
+						curCell.adjacentCell.resize(curCell.includedFace.size());
+						curCell.n.resize(curCell.includedFace.size());
+						curCell.S.resize(curCell.includedFace.size());
+						for (size_t j = 0; j < curCell.includedFace.size(); ++j)
 						{
-							const auto f_idx = curCell.face[j];
+							const auto f_idx = curCell.includedFace[j];
 							const auto &f = face(f_idx);
 							const auto c0 = f.leftCell, c1 = f.rightCell;
 							if (c0 == i)
 							{
-								curCell.adjCell[j] = c1;
+								curCell.adjacentCell[j] = c1;
 								curCell.n[j] = f.n_LR;
 							}
 							else if (c1 == i)
 							{
-								curCell.adjCell[j] = c0;
+								curCell.adjacentCell[j] = c0;
 								curCell.n[j] = f.n_RL;
 							}
 							else
@@ -1693,9 +1691,9 @@ namespace XF
 						// Based on the divergence theorem. See (5.15) and (5.17) of Jiri Blazek's CFD book.
 						curCell.volume = 0.0;
 						curCell.center.x() = 0.0; curCell.center.y() = 0.0; curCell.center.z() = 0.0;
-						for (size_t j = 0; j < curCell.face.size(); ++j)
+						for (size_t j = 0; j < curCell.includedFace.size(); ++j)
 						{
-							const auto cfi = curCell.face.at(j);
+							const auto cfi = curCell.includedFace.at(j);
 							const auto &cf = face(cfi);
 							const auto &cf_c = cf.center;
 							const auto &cf_S = curCell.S.at(j);
@@ -1761,41 +1759,41 @@ namespace XF
 		void tet_standardization(CELL_ELEM &tet)
 		{
 			// Check num of total faces
-			if (tet.face.size() != 4)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(tet.type) + R"(" and num of faces: )" + std::to_string(tet.face.size()));
+			if (tet.includedFace.size() != 4)
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(tet.type) + R"(" and num of faces: )" + std::to_string(tet.includedFace.size()));
 
 			// Ensure all faces are triangular
-			const auto &f0 = face(tet.face.at(0));
+			const auto &f0 = face(tet.includedFace.at(0));
 			if (f0.type != FACE::TRIANGULAR)
 				throw std::runtime_error("Internal error.");
 
-			const auto &f1 = face(tet.face.at(1));
+			const auto &f1 = face(tet.includedFace.at(1));
 			if (f1.type != FACE::TRIANGULAR)
 				throw std::runtime_error("Internal error.");
 
-			const auto &f2 = face(tet.face.at(2));
+			const auto &f2 = face(tet.includedFace.at(2));
 			if (f2.type != FACE::TRIANGULAR)
 				throw std::runtime_error("Internal error.");
 
-			const auto &f3 = face(tet.face.at(3));
+			const auto &f3 = face(tet.includedFace.at(3));
 			if (f3.type != FACE::TRIANGULAR)
 				throw std::runtime_error("Internal error.");
 
 			// Find all 4 nodes
-			size_t n1 = f0.node.at(0);
+			size_t n1 = f0.includedNode.at(0);
 			if (n1 == 0)
 				throw std::runtime_error("Internal error.");
 
-			size_t n2 = f0.node.at(1);
+			size_t n2 = f0.includedNode.at(1);
 			if (n2 == 0)
 				throw std::runtime_error("Internal error.");
 
-			size_t n3 = f0.node.at(2);
+			size_t n3 = f0.includedNode.at(2);
 			if (n3 == 0)
 				throw std::runtime_error("Internal error.");
 
 			size_t n0 = 0;
-			for (auto e : f2.node)
+			for (auto e : f2.includedNode)
 				if (e != n1 && e != n2 && e != n3)
 				{
 					n0 = e;
@@ -1805,22 +1803,22 @@ namespace XF
 				throw std::runtime_error("Internal error.");
 
 			// Assign node index
-			tet.node.resize(4);
-			tet.node.at(0) = n0;
-			tet.node.at(1) = n1;
-			tet.node.at(2) = n2;
-			tet.node.at(3) = n3;
+			tet.includedNode.resize(4);
+			tet.includedNode.at(0) = n0;
+			tet.includedNode.at(1) = n1;
+			tet.includedNode.at(2) = n2;
+			tet.includedNode.at(3) = n3;
 		}
 
 		void pyramid_standardization(CELL_ELEM &pyramid)
 		{
 			// Check num of total faces
-			if (pyramid.face.size() != 5)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.face.size()));
+			if (pyramid.includedFace.size() != 5)
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.includedFace.size()));
 
 			// Find the bottom quad and ensure other faces are triangular.
 			size_t f0_idx = 0;
-			for (auto e : pyramid.face)
+			for (auto e : pyramid.includedFace)
 			{
 				const auto &f = face(e);
 				if (f.type == FACE::QUADRILATERAL)
@@ -1841,31 +1839,31 @@ namespace XF
 			// Nodes at bottom
 			const auto &f0 = face(f0_idx);
 
-			const size_t n0 = f0.node.at(0);
+			const size_t n0 = f0.includedNode.at(0);
 			if (n0 == 0)
 				throw std::runtime_error("Internal error.");
 
-			const size_t n1 = f0.node.at(1);
+			const size_t n1 = f0.includedNode.at(1);
 			if (n1 == 0)
 				throw std::runtime_error("Internal error.");
 
-			const size_t n2 = f0.node.at(2);
+			const size_t n2 = f0.includedNode.at(2);
 			if (n2 == 0)
 				throw std::runtime_error("Internal error.");
 
-			const size_t n3 = f0.node.at(3);
+			const size_t n3 = f0.includedNode.at(3);
 			if (n3 == 0)
 				throw std::runtime_error("Internal error.");
 
 			// Find other 4 triangles
 			size_t f1_idx = 0;
-			for (auto e : pyramid.face)
+			for (auto e : pyramid.includedFace)
 			{
 				if (e == f0_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n0, n3))
+				if (f.includedNode.contains(n0, n3))
 				{
 					f1_idx = e;
 					break;
@@ -1875,13 +1873,13 @@ namespace XF
 				throw std::runtime_error("Internal error.");
 
 			size_t f2_idx = 0;
-			for (auto e : pyramid.face)
+			for (auto e : pyramid.includedFace)
 			{
 				if (e == f0_idx || e == f1_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n3, n2))
+				if (f.includedNode.contains(n3, n2))
 				{
 					f2_idx = e;
 					break;
@@ -1891,13 +1889,13 @@ namespace XF
 				throw std::runtime_error("Internal error.");
 
 			size_t f3_idx = 0;
-			for (auto e : pyramid.face)
+			for (auto e : pyramid.includedFace)
 			{
 				if (e == f0_idx || e == f1_idx || e == f2_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n2, n1))
+				if (f.includedNode.contains(n2, n1))
 				{
 					f3_idx = e;
 					break;
@@ -1907,13 +1905,13 @@ namespace XF
 				throw std::runtime_error("Internal error.");
 
 			size_t f4_idx = 0;
-			for (auto e : pyramid.face)
+			for (auto e : pyramid.includedFace)
 			{
 				if (e != f0_idx && e != f1_idx && e != f2_idx && e != f3_idx)
 				{
 					f4_idx = e;
 					const auto &f = face(e);
-					if (!f.node.contains(n1, n0))
+					if (!f.includedNode.contains(n1, n0))
 						throw std::runtime_error("Internal error.");
 
 					break;
@@ -1923,16 +1921,16 @@ namespace XF
 				throw std::runtime_error("Internal error.");
 
 			// Assign face index
-			pyramid.face.at(0) = f0_idx;
-			pyramid.face.at(1) = f1_idx;
-			pyramid.face.at(2) = f2_idx;
-			pyramid.face.at(3) = f3_idx;
-			pyramid.face.at(4) = f4_idx;
+			pyramid.includedFace.at(0) = f0_idx;
+			pyramid.includedFace.at(1) = f1_idx;
+			pyramid.includedFace.at(2) = f2_idx;
+			pyramid.includedFace.at(3) = f3_idx;
+			pyramid.includedFace.at(4) = f4_idx;
 
 			// The last node
 			size_t n4 = 0;
 			const auto &f1 = face(f1_idx);
-			for (auto e : f1.node)
+			for (auto e : f1.includedNode)
 				if (e != n0 && e != n3)
 				{
 					n4 = e;
@@ -1942,23 +1940,23 @@ namespace XF
 				throw std::runtime_error("Internal error.");
 
 			// Assign node index
-			pyramid.node.resize(5);
-			pyramid.node.at(0) = n0;
-			pyramid.node.at(1) = n1;
-			pyramid.node.at(2) = n2;
-			pyramid.node.at(3) = n3;
-			pyramid.node.at(4) = n4;
+			pyramid.includedNode.resize(5);
+			pyramid.includedNode.at(0) = n0;
+			pyramid.includedNode.at(1) = n1;
+			pyramid.includedNode.at(2) = n2;
+			pyramid.includedNode.at(3) = n3;
+			pyramid.includedNode.at(4) = n4;
 		}
 
 		void prism_standardization(CELL_ELEM &prism)
 		{
 			// Check num of total faces
-			if (prism.face.size() != 5)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(prism.type) + R"(" and num of faces: )" + std::to_string(prism.face.size()));
+			if (prism.includedFace.size() != 5)
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(prism.type) + R"(" and num of faces: )" + std::to_string(prism.includedFace.size()));
 
 			// Ensure there're only 2 triangle and 3 quad
 			size_t f0_idx = 0, f1_idx = 0;
-			for (auto e : prism.face)
+			for (auto e : prism.includedFace)
 			{
 				const auto &f = face(e);
 				if (f.type == FACE::TRIANGULAR)
@@ -1983,16 +1981,16 @@ namespace XF
 			const auto &f1 = face(f1_idx);
 
 			// 3 nodes on the bottom triangular face
-			const size_t n0 = f0.node.at(0);
-			const size_t n1 = f0.node.at(1);
-			const size_t n2 = f0.node.at(2);
+			const size_t n0 = f0.includedNode.at(0);
+			const size_t n1 = f0.includedNode.at(1);
+			const size_t n2 = f0.includedNode.at(2);
 
 			// Find face 4
 			size_t f4_idx = 0;
-			for (auto e : prism.face)
+			for (auto e : prism.includedFace)
 			{
 				const auto &f = face(e);
-				if (f.type == FACE::QUADRILATERAL && f.node.contains(n0, n1))
+				if (f.type == FACE::QUADRILATERAL && f.includedNode.contains(n0, n1))
 				{
 					if (f4_idx == 0)
 						f4_idx = e;
@@ -2007,10 +2005,10 @@ namespace XF
 
 			// Find face 3
 			size_t f3_idx = 0;
-			for (auto e : prism.face)
+			for (auto e : prism.includedFace)
 			{
 				const auto &f = face(e);
-				if (f.type == FACE::QUADRILATERAL && f.node.contains(n1, n2))
+				if (f.type == FACE::QUADRILATERAL && f.includedNode.contains(n1, n2))
 				{
 					if (f3_idx == 0)
 						f3_idx = e;
@@ -2025,7 +2023,7 @@ namespace XF
 
 			// Find face 2
 			size_t f2_idx = 0;
-			for (auto e : prism.face)
+			for (auto e : prism.includedFace)
 			{
 				const auto &f = face(e);
 				if (f.type == FACE::QUADRILATERAL)
@@ -2041,19 +2039,19 @@ namespace XF
 				throw std::runtime_error("Missing face 2.");
 
 			const auto &f2 = face(f2_idx);
-			if (!f2.node.contains(n2, n0))
+			if (!f2.includedNode.contains(n2, n0))
 				throw std::runtime_error("Inconsistent face composition.");
 
 			// Assign face index
-			prism.face.at(0) = f0_idx;
-			prism.face.at(1) = f1_idx;
-			prism.face.at(2) = f2_idx;
-			prism.face.at(3) = f3_idx;
-			prism.face.at(4) = f4_idx;
+			prism.includedFace.at(0) = f0_idx;
+			prism.includedFace.at(1) = f1_idx;
+			prism.includedFace.at(2) = f2_idx;
+			prism.includedFace.at(3) = f3_idx;
+			prism.includedFace.at(4) = f4_idx;
 
 			// 3 nodes on the top triangular face to be defined
 			size_t n3 = 0, n5 = 0, n4 = 0;
-			for (auto e : f2.node)
+			for (auto e : f2.includedNode)
 			{
 				if (e != n0 && e != n2)
 				{
@@ -2069,15 +2067,15 @@ namespace XF
 				throw std::runtime_error("Missing nodes on the top");
 
 			// Check if n3 and n5 needs to be swaped
-			if (!(f1.node.contains(n3) && f4.node.contains(n3)))
+			if (!(f1.includedNode.contains(n3) && f4.includedNode.contains(n3)))
 				std::swap(n3, n5);
 
 			// Ensure n5 located on f1, f2 and f3
-			if (!(f1.node.contains(n5) && f3.node.contains(n5)))
+			if (!(f1.includedNode.contains(n5) && f3.includedNode.contains(n5)))
 				throw std::runtime_error("Internal error.");
 
 			// Find n4
-			for (auto e : f1.node)
+			for (auto e : f1.includedNode)
 			{
 				if (e != n3 && e != n5)
 				{
@@ -2091,23 +2089,23 @@ namespace XF
 				throw std::runtime_error("Internal error.");
 
 			// Assign node index
-			prism.node.resize(6);
-			prism.node.at(0) = n0;
-			prism.node.at(1) = n1;
-			prism.node.at(2) = n2;
-			prism.node.at(3) = n3;
-			prism.node.at(4) = n4;
-			prism.node.at(5) = n5;
+			prism.includedNode.resize(6);
+			prism.includedNode.at(0) = n0;
+			prism.includedNode.at(1) = n1;
+			prism.includedNode.at(2) = n2;
+			prism.includedNode.at(3) = n3;
+			prism.includedNode.at(4) = n4;
+			prism.includedNode.at(5) = n5;
 		}
 
 		void hex_standardization(CELL_ELEM &hex)
 		{
 			// Check num of total faces
-			if (hex.face.size() != 6)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(hex.type) + R"(" and num of faces: )" + std::to_string(hex.face.size()));
+			if (hex.includedFace.size() != 6)
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(hex.type) + R"(" and num of faces: )" + std::to_string(hex.includedFace.size()));
 
 			// Ensure all faces are quad
-			for (auto e : hex.face)
+			for (auto e : hex.includedFace)
 			{
 				if (e == 0)
 					throw std::runtime_error("Internal error.");
@@ -2117,24 +2115,24 @@ namespace XF
 			}
 
 			// Face 4 at bottom
-			const size_t f4_idx = hex.face.at(0);
+			const size_t f4_idx = hex.includedFace.at(0);
 			const auto &f4 = face(f4_idx);
-			const size_t n0 = f4.node.at(0);
-			const size_t n1 = f4.node.at(1);
-			const size_t n2 = f4.node.at(2);
-			const size_t n3 = f4.node.at(3);
+			const size_t n0 = f4.includedNode.at(0);
+			const size_t n1 = f4.includedNode.at(1);
+			const size_t n2 = f4.includedNode.at(2);
+			const size_t n3 = f4.includedNode.at(3);
 			if (n0 == 0 || n1 == 0 || n2 == 0 || n3 == 0)
 				throw std::runtime_error("Internal error.");
 
 			// Face 0
 			size_t f0_idx = 0;
-			for (auto e : hex.face)
+			for (auto e : hex.includedFace)
 			{
 				if (e == f4_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n3, n0))
+				if (f.includedNode.contains(n3, n0))
 				{
 					if (f0_idx == 0)
 						f0_idx = e;
@@ -2146,18 +2144,18 @@ namespace XF
 				throw std::runtime_error("Missing face 0");
 
 			const auto &f0 = face(f0_idx);
-			if (f0.node.size() != 4)
+			if (f0.includedNode.size() != 4)
 				throw std::runtime_error("Internal error.");
 
 			// Face 2
 			size_t f2_idx = 0;
-			for (auto e : hex.face)
+			for (auto e : hex.includedFace)
 			{
 				if (e == f4_idx || e == f0_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n0, n1))
+				if (f.includedNode.contains(n0, n1))
 				{
 					if (f2_idx == 0)
 						f2_idx = e;
@@ -2169,18 +2167,18 @@ namespace XF
 				throw std::runtime_error("Missing face 2");
 
 			const auto &f2 = face(f2_idx);
-			if (f2.node.size() != 4)
+			if (f2.includedNode.size() != 4)
 				throw std::runtime_error("Internal error.");
 
 			// Face 1
 			size_t f1_idx = 0;
-			for (auto e : hex.face)
+			for (auto e : hex.includedFace)
 			{
 				if (e == f4_idx || e == f0_idx || e == f2_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n1, n2))
+				if (f.includedNode.contains(n1, n2))
 				{
 					if (f1_idx == 0)
 						f1_idx = e;
@@ -2192,18 +2190,18 @@ namespace XF
 				throw std::runtime_error("Missing face 1");
 
 			const auto &f1 = face(f1_idx);
-			if (f1.node.size() != 4)
+			if (f1.includedNode.size() != 4)
 				throw std::runtime_error("Internal error.");
 
 			// Face 3
 			size_t f3_idx = 0;
-			for (auto e : hex.face)
+			for (auto e : hex.includedFace)
 			{
 				if (e == f4_idx || e == f0_idx || e == f2_idx || e == f1_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n2, n3))
+				if (f.includedNode.contains(n2, n3))
 				{
 					if (f3_idx == 0)
 						f3_idx = e;
@@ -2215,12 +2213,12 @@ namespace XF
 				throw std::runtime_error("Missing face 3");
 
 			const auto &f3 = face(f3_idx);
-			if (f3.node.size() != 4)
+			if (f3.includedNode.size() != 4)
 				throw std::runtime_error("Internal error.");
 
 			// Face 5
 			size_t f5_idx = 0;
-			for (auto e : hex.face)
+			for (auto e : hex.includedFace)
 			{
 				if (e == f4_idx || e == f0_idx || e == f2_idx || e == f1_idx || e == f3_idx)
 					continue;
@@ -2232,24 +2230,24 @@ namespace XF
 				throw std::runtime_error("Missing face 5");
 
 			const auto &f5 = face(f5_idx);
-			if (f5.node.size() != 4)
+			if (f5.includedNode.size() != 4)
 				throw std::runtime_error("Internal error.");
 
 			// Assign face index
-			hex.face.at(0) = f0_idx;
-			hex.face.at(1) = f1_idx;
-			hex.face.at(2) = f2_idx;
-			hex.face.at(3) = f3_idx;
-			hex.face.at(4) = f4_idx;
-			hex.face.at(5) = f5_idx;
+			hex.includedFace.at(0) = f0_idx;
+			hex.includedFace.at(1) = f1_idx;
+			hex.includedFace.at(2) = f2_idx;
+			hex.includedFace.at(3) = f3_idx;
+			hex.includedFace.at(4) = f4_idx;
+			hex.includedFace.at(5) = f5_idx;
 
 			// 4 nodes at top to be defined
 			size_t n4 = 0, n5 = 0, n6 = 0, n7 = 0;
 
 			// Node 4
-			for (auto e : f5.node)
+			for (auto e : f5.includedNode)
 			{
-				if (f0.node.contains(e) && f2.node.contains(e))
+				if (f0.includedNode.contains(e) && f2.includedNode.contains(e))
 				{
 					n4 = e;
 					break;
@@ -2259,7 +2257,7 @@ namespace XF
 				throw std::runtime_error("Missing node 4");
 
 			// Node 5
-			for (auto e : f2.node)
+			for (auto e : f2.includedNode)
 			{
 				if (e == n0 || e == n1 || e == n4)
 					continue;
@@ -2271,7 +2269,7 @@ namespace XF
 				throw std::runtime_error("Missing node 5");
 
 			// Node 6
-			for (auto e : f1.node)
+			for (auto e : f1.includedNode)
 			{
 				if (e == n1 || e == n2 || e == n5)
 					continue;
@@ -2283,7 +2281,7 @@ namespace XF
 				throw std::runtime_error("Missing node 6");
 
 			// Node 7
-			for (auto e : f0.node)
+			for (auto e : f0.includedNode)
 			{
 				if (e == n0 || e == n3 || e == n4)
 					continue;
@@ -2294,102 +2292,102 @@ namespace XF
 			if (n7 == 0)
 				throw std::runtime_error("Missing node 7");
 
-			if (!f3.node.contains(n6, n7))
+			if (!f3.includedNode.contains(n6, n7))
 				throw std::runtime_error("Inconsistent node composition.");
 
 			// Assign node index
-			hex.node.resize(8);
-			hex.node.at(0) = n0;
-			hex.node.at(1) = n1;
-			hex.node.at(2) = n2;
-			hex.node.at(3) = n3;
-			hex.node.at(4) = n4;
-			hex.node.at(5) = n5;
-			hex.node.at(6) = n6;
-			hex.node.at(7) = n7;
+			hex.includedNode.resize(8);
+			hex.includedNode.at(0) = n0;
+			hex.includedNode.at(1) = n1;
+			hex.includedNode.at(2) = n2;
+			hex.includedNode.at(3) = n3;
+			hex.includedNode.at(4) = n4;
+			hex.includedNode.at(5) = n5;
+			hex.includedNode.at(6) = n6;
+			hex.includedNode.at(7) = n7;
 		}
 
 		void triangle_standardization(CELL_ELEM &tri)
 		{
 			// Check num of total faces
-			if (tri.face.size() != 3)
+			if (tri.includedFace.size() != 3)
 				throw std::runtime_error("Inconsitent face composition.");
 
 			// Ensure all faces are lines
-			for (auto e : tri.face)
+			for (auto e : tri.includedFace)
 			{
 				const auto &f = face(e);
-				if (e == 0 || f.type != FACE::LINEAR || f.node.size() != 2)
+				if (e == 0 || f.type != FACE::LINEAR || f.includedNode.size() != 2)
 					throw std::runtime_error("Invalid face detected.");
 			}
 
 			// Faces
 			// Keep the order of faces as it is.
 			// Doesn't matter as any order of the 3 faces is valid.
-			const auto f0_idx = tri.face.at(0);
-			const auto f1_idx = tri.face.at(1);
-			const auto f2_idx = tri.face.at(2);
+			const auto f0_idx = tri.includedFace.at(0);
+			const auto f1_idx = tri.includedFace.at(1);
+			const auto f2_idx = tri.includedFace.at(2);
 
 			const auto &f0 = face(f0_idx);
 			const auto &f1 = face(f1_idx);
 			const auto &f2 = face(f2_idx);
 
 			// Nodes
-			const size_t n0 = f0.node.at(0);
-			const size_t n1 = f0.node.at(1);
+			const size_t n0 = f0.includedNode.at(0);
+			const size_t n1 = f0.includedNode.at(1);
 			if (n0 == 0 || n1 == 0 || n0 == n1)
 				throw std::runtime_error("Missing node detected.");
 
 			size_t n2 = 0;
-			for (auto e : f1.node)
+			for (auto e : f1.includedNode)
 			{
-				if (f0.node.contains(e))
+				if (f0.includedNode.contains(e))
 					continue;
 
 				n2 = e;
 				break;
 			}
-			if (n2 == 0 || n2 == n0 || n2 == n1 || !f2.node.contains(n2))
+			if (n2 == 0 || n2 == n0 || n2 == n1 || !f2.includedNode.contains(n2))
 				throw std::runtime_error("Node 2 is missing.");
 
 			// Assign node index
-			tri.node.resize(3);
-			tri.node.at(0) = n0;
-			tri.node.at(1) = n1;
-			tri.node.at(2) = n2;
+			tri.includedNode.resize(3);
+			tri.includedNode.at(0) = n0;
+			tri.includedNode.at(1) = n1;
+			tri.includedNode.at(2) = n2;
 		}
 
 		void quad_standardization(CELL_ELEM &quad)
 		{
 			// Check num of total faces
-			if (quad.face.size() != 4)
+			if (quad.includedFace.size() != 4)
 				throw std::runtime_error("Inconsitent face composition.");
 
 			// Ensure all faces are lines
-			for (auto e : quad.face)
+			for (auto e : quad.includedFace)
 			{
 				const auto &f = face(e);
-				if (e == 0 || f.type != FACE::LINEAR || f.node.size() != 2)
+				if (e == 0 || f.type != FACE::LINEAR || f.includedNode.size() != 2)
 					throw std::runtime_error("Invalid face detected.");
 			}
 
 			// Face 0
-			const auto f0_idx = quad.face.at(0);
+			const auto f0_idx = quad.includedFace.at(0);
 			const auto &f0 = face(f0_idx);
 
 			// Node 0 and 1
-			const auto n0 = f0.node.at(0);
-			const auto n1 = f0.node.at(1);
+			const auto n0 = f0.includedNode.at(0);
+			const auto n1 = f0.includedNode.at(1);
 
 			// Face 1
 			size_t f1_idx = 0;
-			for (auto e : quad.face)
+			for (auto e : quad.includedFace)
 			{
 				if (e == f0_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n1))
+				if (f.includedNode.contains(n1))
 				{
 					f1_idx = e;
 					break;
@@ -2401,17 +2399,17 @@ namespace XF
 			const auto &f1 = face(f1_idx);
 
 			// Node 2
-			const size_t n2 = f1.node.at(0) == n1 ? f1.node.at(1) : f1.node.at(0);
+			const size_t n2 = f1.includedNode.at(0) == n1 ? f1.includedNode.at(1) : f1.includedNode.at(0);
 
 			// Face 3
 			size_t f3_idx = 0;
-			for (auto e : quad.face)
+			for (auto e : quad.includedFace)
 			{
 				if (e == f0_idx || e == f1_idx)
 					continue;
 
 				const auto &f = face(e);
-				if (f.node.contains(n0))
+				if (f.includedNode.contains(n0))
 				{
 					f3_idx = e;
 					break;
@@ -2423,11 +2421,11 @@ namespace XF
 			const auto &f3 = face(f3_idx);
 
 			// Node 3
-			const size_t n3 = f3.node.at(0) == n0 ? f3.node.at(1) : f3.node.at(0);
+			const size_t n3 = f3.includedNode.at(0) == n0 ? f3.includedNode.at(1) : f3.includedNode.at(0);
 
 			// Check face 2
 			size_t f2_idx = 0;
-			for (auto e : quad.face)
+			for (auto e : quad.includedFace)
 			{
 				if (e == f0_idx || e == f1_idx || e == f3_idx)
 					continue;
@@ -2439,20 +2437,20 @@ namespace XF
 				throw std::runtime_error("Missing face 2");
 
 			const auto &f2 = face(f2_idx);
-			if (!f2.node.contains(n2, n3))
+			if (!f2.includedNode.contains(n2, n3))
 				throw std::runtime_error("Inconsistent node and face includance on face 2");
 
 			// Assign face index
-			quad.face.at(1) = f1_idx;
-			quad.face.at(2) = f2_idx;
-			quad.face.at(3) = f3_idx;
+			quad.includedFace.at(1) = f1_idx;
+			quad.includedFace.at(2) = f2_idx;
+			quad.includedFace.at(3) = f3_idx;
 
 			// Assign node index
-			quad.node.resize(4);
-			quad.node.at(0) = n0;
-			quad.node.at(1) = n1;
-			quad.node.at(2) = n2;
-			quad.node.at(3) = n3;
+			quad.includedNode.resize(4);
+			quad.includedNode.at(0) = n0;
+			quad.includedNode.at(1) = n1;
+			quad.includedNode.at(2) = n2;
+			quad.includedNode.at(3) = n3;
 		}
 
 		void cell_standardization(CELL_ELEM &c)

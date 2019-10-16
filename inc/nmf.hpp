@@ -29,7 +29,7 @@ namespace NMF
 		const T &operator()(size_t i) const { return std::vector<T>::at(i - 1); }
 	};
 
-	class Block
+	class BLOCK
 	{
 	private:
 		class HEX_CELL
@@ -56,7 +56,7 @@ namespace NMF
 		};
 
 	public:
-		Block(size_t nI, size_t nJ, size_t nK) : m_hex((nI - 1)*(nJ - 1)*(nK - 1))
+		BLOCK(size_t nI, size_t nJ, size_t nK) : m_hex((nI - 1)*(nJ - 1)*(nK - 1))
 		{
 			m_nI = nI;
 			m_nJ = nJ;
@@ -107,7 +107,7 @@ namespace NMF
 		Array1D<HEX_CELL> m_hex;
 	};
 
-	class Range
+	class RANGE
 	{
 	private:
 		size_t m_blk; // Block index, 1-based.
@@ -118,7 +118,7 @@ namespace NMF
 		size_t m_e2; // Secondary direction ending index, 1-based.
 
 	public:
-		Range()
+		RANGE()
 		{
 			m_blk = 0;
 			m_face = 0;
@@ -128,7 +128,7 @@ namespace NMF
 			m_e2 = 0;
 		}
 
-		Range(size_t *src)
+		RANGE(size_t *src)
 		{
 			m_blk = src[0];
 			m_face = src[1];
@@ -138,7 +138,7 @@ namespace NMF
 			m_e2 = src[5];
 		}
 
-		Range(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2)
+		RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2)
 		{
 			m_blk = b;
 			m_face = f;
@@ -303,15 +303,15 @@ namespace NMF
 		~BC() = default;
 	};
 
-	class Entry
+	class ENTRY
 	{
 	private:
 		int m_bc;
-		Range m_rg1, m_rg2;
+		RANGE m_rg1, m_rg2;
 		bool m_swap;
 
 	public:
-		Entry(const std::string &t, size_t *s) : m_rg1(s), m_rg2(), m_swap(false)
+		ENTRY(const std::string &t, size_t *s) : m_rg1(s), m_rg2(), m_swap(false)
 		{
 			if (BC::isValidBCStr(t))
 				m_bc = BC::str2idx(t);
@@ -319,7 +319,7 @@ namespace NMF
 				throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
 		}
 
-		Entry(const std::string &t, size_t *s1, size_t *s2, bool f) : m_rg1(s1), m_rg2(s2), m_swap(f)
+		ENTRY(const std::string &t, size_t *s1, size_t *s2, bool f) : m_rg1(s1), m_rg2(s2), m_swap(f)
 		{
 			if (BC::isValidBCStr(t))
 				m_bc = BC::str2idx(t);
@@ -347,9 +347,9 @@ namespace NMF
 
 		size_t &F2() { return m_rg2.F(); }
 
-		Range &Range1() { return m_rg1; }
+		RANGE &Range1() { return m_rg1; }
 
-		Range &Range2() { return m_rg2; }
+		RANGE &Range2() { return m_rg2; }
 
 		bool Swap() const { return m_swap; }
 
@@ -369,6 +369,11 @@ namespace NMF
 			else
 				return 0;
 		}
+	};
+
+	class EDGE
+	{
+		// TODO
 	};
 
 	class MAPPING
@@ -517,6 +522,7 @@ namespace NMF
 			f_out.close();
 			return 0;
 		}
+
 		size_t nHex() const
 		{
 			size_t ret = 0;
@@ -579,8 +585,8 @@ namespace NMF
 		}
 
 	private:
-		std::vector<Block> m_blk;
-		std::vector<Entry> m_entry;
+		std::vector<BLOCK> m_blk;
+		std::vector<ENTRY> m_entry;
 	};
 }
 

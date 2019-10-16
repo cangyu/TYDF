@@ -230,13 +230,10 @@ namespace PLOT3D
 					delete m_blk[i];
 		}
 
-		size_t nBLK() const { return m_nBLK; }
+		size_t numOfBlock() const { return m_nBLK; }
 
-		// Access block through 0-based indexing
-		pBLK at(size_t idx) { return m_blk[idx]; }
-
-		// Access block through 1-based indexing
-		pBLK operator()(size_t idx) { return at(idx - 1); }
+		// 0-based indexing
+		pBLK block(size_t loc_idx) { return m_blk[loc_idx]; }
 
 		int readFromFile(const std::string &src)
 		{

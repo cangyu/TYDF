@@ -17,7 +17,11 @@
 #include <cmath>
 #include <stdexcept>
 
-#define EXTRACT_NODE_CONNECTIVITY 1
+/**
+	If connectivity info concerning each node is required, uncomment the following
+	line or define the marco somewhere else in the compiling environment.
+ */
+ // #define XF_EXTRACT_NODE_CONNECTIVITY
 
 namespace XF
 {
@@ -50,7 +54,6 @@ namespace XF
 	public:
 		Array1D(size_t n = 0) : std::vector<T>(n) {}
 		Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
-
 		~Array1D() = default;
 
 		// 1-based indexing
@@ -95,7 +98,6 @@ namespace XF
 		enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
 
 		SECTION(int id) : m_identity(id) {}
-
 		virtual ~SECTION() = default;
 
 		virtual void repr(std::ostream &out) = 0;
@@ -110,7 +112,6 @@ namespace XF
 
 	public:
 		STR(int id, const std::string &msg) : SECTION(id), m_msg(msg) {}
-
 		virtual ~STR() = default;
 
 		static void formalize(std::string &s)
@@ -268,7 +269,6 @@ namespace XF
 		}
 
 		BC() = delete;
-
 		~BC() = default;
 	};
 
@@ -276,7 +276,6 @@ namespace XF
 	{
 	public:
 		COMMENT(const std::string &info) : STR(SECTION::COMMENT, info) {}
-
 		~COMMENT() = default;
 	};
 
@@ -284,7 +283,6 @@ namespace XF
 	{
 	public:
 		HEADER(const std::string &info) : STR(SECTION::HEADER, info) {}
-
 		~HEADER() = default;
 	};
 
@@ -295,7 +293,7 @@ namespace XF
 		int m_dim;
 
 	public:
-		DIM(int dim)
+		DIM(int dim) : m_dim(dim)
 		{
 			if (dim == 2)
 				m_is3D = false;
@@ -303,12 +301,8 @@ namespace XF
 				m_is3D = true;
 			else
 				throw std::runtime_error("Invalid dimension: " + std::to_string(dim));
-
-			m_dim = dim;
 		}
-
 		DIM(bool is3d) : m_is3D(is3d), m_dim(is3d ? 3 : 2) {}
-
 		virtual ~DIM() = default;
 
 		bool is3D() const { return m_is3D; }
@@ -320,7 +314,6 @@ namespace XF
 	{
 	public:
 		DIMENSION(int dim) : SECTION(SECTION::DIMENSION), DIM(dim) {}
-
 		~DIMENSION() = default;
 
 		int ND() const { return dimension(); }
@@ -343,7 +336,6 @@ namespace XF
 			if (first > last)
 				throw std::runtime_error("Invalid node index!");
 		}
-
 		virtual ~RANGE() = default;
 
 		size_t zone() const { return m_zone; }
@@ -417,7 +409,6 @@ namespace XF
 			if (!isValidNodeTypeIdx(type))
 				throw std::runtime_error("Invalid description of node type!");
 		}
-
 		~NODE() = default;
 
 		int type() const { return m_type; }
@@ -609,7 +600,6 @@ namespace XF
 				std::fill(m_mixedElemDesc.begin(), m_mixedElemDesc.end(), CELL::MIXED);
 			}
 		}
-
 		~CELL() = default;
 
 		int type() const { return m_type; }
@@ -669,7 +659,6 @@ namespace XF
 
 	public:
 		CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
-
 		~CONNECTIVITY() = default;
 
 		size_t cl() const { return c[0]; }
@@ -791,7 +780,6 @@ namespace XF
 			// Resize local storage
 			m_connectivity.resize(num());
 		}
-
 		~FACE() = default;
 
 		int bc_type() const { return m_bc; }
@@ -846,7 +834,6 @@ namespace XF
 
 	public:
 		ZONE(int zone, const std::string &type, const std::string &name) : SECTION(SECTION::ZONE), m_zoneID(zone), m_zoneType(type), m_zoneName(name), m_domainID(0) {}
-
 		~ZONE() = default;
 
 		int zone() const { return m_zoneID; }
@@ -871,11 +858,11 @@ namespace XF
 		{
 			Vector coordinate;
 			bool atBdry;
-#if EXTRACT_NODE_CONNECTIVITY
+#ifdef XF_EXTRACT_NODE_CONNECTIVITY
 			Array1D<size_t> adjacentNode;
 			Array1D<size_t> dependentFace;
 			Array1D<size_t> dependentCell;
-#endif // EXTRACT_NODE_CONNECTIVITY
+#endif // XF_EXTRACT_NODE_CONNECTIVITY
 		};
 
 		struct FACE_ELEM
@@ -927,12 +914,10 @@ namespace XF
 
 	public:
 		MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {}
-
 		MESH(const std::string &inp) : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0)
 		{
 			readFromFile(inp);
 		}
-
 		~MESH() { clear_entry(); }
 
 		int readFromFile(const std::string &src)
@@ -1472,11 +1457,11 @@ namespace XF
 			{
 				e.coordinate.z() = 0.0;
 				e.atBdry = false;
-#if EXTRACT_NODE_CONNECTIVITY
+#ifdef XF_EXTRACT_NODE_CONNECTIVITY
 				e.adjacentNode.clear();
 				e.dependentFace.clear();
 				e.dependentCell.clear();
-#endif // EXTRACT_NODE_CONNECTIVITY
+#endif // XF_EXTRACT_NODE_CONNECTIVITY
 			}
 			for (auto &e : m_face)
 			{
@@ -1585,7 +1570,7 @@ namespace XF
 					}
 				}
 			}
-#if EXTRACT_NODE_CONNECTIVITY
+#ifdef XF_EXTRACT_NODE_CONNECTIVITY
 			// Adjacent nodes, dependent faces, and dependent cells of each node
 			for (auto curPtr : m_content) // Count all occurance
 			{
@@ -1638,7 +1623,7 @@ namespace XF
 				const std::set<size_t> st2(curNode.dependentCell.begin(), curNode.dependentCell.end());
 				curNode.dependentCell.assign(st2.begin(), st2.end());
 			}
-#endif  // EXTRACT_NODE_CONNECTIVITY
+#endif  // XF_EXTRACT_NODE_CONNECTIVITY
 
 			/*********************** Parse records of cell ************************/
 			for (auto curPtr : m_content)

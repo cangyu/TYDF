@@ -1012,7 +1012,7 @@ namespace XF
 						auto e = new NODE(zone, first, last, tp, nd);
 						eat(fin, ')');
 						eat(fin, '(');
-						std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << ") ... ";
+						std::cout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << "), whose type is \"" << NODE::idx2str(tp) << "\"  ... ";
 
 						if (nd != dimension())
 							throw std::runtime_error("Inconsistent with previous DIMENSION declaration!");
@@ -1138,8 +1138,7 @@ namespace XF
 						auto e = new FACE(zone, first, last, bc, face);
 						eat(fin, ')');
 						eat(fin, '(');
-
-						std::cout << "Reading " << e->num() << " faces in zone " << zone << " (from " << first << " to " << last << ") ... ";
+						std::cout << "Reading " << e->num() << " " << FACE::idx2str(face) << " faces in zone " << zone << " (from " << first << " to " << last << "), whose B.C. is \"" << BC::idx2str(bc) << "\" ... ";
 
 						size_t tmp_n[4];
 						size_t tmp_c[2];

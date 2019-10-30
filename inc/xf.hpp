@@ -33,6 +33,7 @@ namespace XF
 		Vector() : std::array<Scalar, 3>{ 0.0, 0.0, 0.0 } {}
 		Vector(Scalar val) : std::array<Scalar, 3>{ val, val, val } {}
 		Vector(Scalar v1, Scalar v2, Scalar v3) : std::array<Scalar, 3>{ v1, v2, v3 } {}
+		~Vector() = default;
 
 		// 1-based indexing
 		Scalar operator()(int idx) const { return at(idx - 1); }
@@ -95,7 +96,16 @@ namespace XF
 		int m_identity;
 
 	public:
-		enum { COMMENT = 0, HEADER = 1, DIMENSION = 2, NODE = 10, CELL = 12, FACE = 13, EDGE = 11, ZONE = 39 };
+		enum {
+			COMMENT = 0,
+			HEADER = 1,
+			DIMENSION = 2,
+			NODE = 10,
+			CELL = 12,
+			FACE = 13,
+			EDGE = 11,
+			ZONE = 39, ZONE_MESHING = 45
+		};
 
 		SECTION(int id) : m_identity(id) {}
 		virtual ~SECTION() = default;
@@ -913,11 +923,8 @@ namespace XF
 		Array1D<ZONE_ELEM> m_zone;
 
 	public:
-		MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {}
-		MESH(const std::string &inp) : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0)
-		{
-			readFromFile(inp);
-		}
+		MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {} // 3D by default
+		MESH(const std::string &inp) : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) { readFromFile(inp); }
 		~MESH() { clear_entry(); }
 
 		int readFromFile(const std::string &src)
@@ -1136,18 +1143,41 @@ namespace XF
 
 						size_t tmp_n[4];
 						size_t tmp_c[2];
-						for (size_t i = first; i <= last; ++i)
+						if (face == FACE::MIXED)
 						{
-							// Local index
-							size_t i_loc = i - first;
+							int x = -1;
+							for (size_t i = first; i <= last; ++i)
+							{
+								// Local index
+								size_t i_loc = i - first;
 
-							// Read connectivity record
-							for (int j = 0; j < face; ++j)
-								fin >> tmp_n[j];
-							fin >> tmp_c[0] >> tmp_c[1];
+								// Read connectivity record
+								fin >> x;
+								if (x <= 1 || x >= 5)
+									throw std::invalid_argument("Invalid node num in the mixed face.");
+								for (int j = 0; j < x; ++j)
+									fin >> tmp_n[j];
+								fin >> tmp_c[0] >> tmp_c[1];
 
-							// Store current connectivity info
-							e->connectivity(i_loc).set(face, tmp_n, tmp_c);
+								// Store current connectivity info
+								e->connectivity(i_loc).set(x, tmp_n, tmp_c);
+							}
+						}
+						else
+						{
+							for (size_t i = first; i <= last; ++i)
+							{
+								// Local index
+								size_t i_loc = i - first;
+
+								// Read connectivity record
+								for (int j = 0; j < face; ++j)
+									fin >> tmp_n[j];
+								fin >> tmp_c[0] >> tmp_c[1];
+
+								// Store current connectivity info
+								e->connectivity(i_loc).set(face, tmp_n, tmp_c);
+							}
 						}
 						eat(fin, ')');
 						eat(fin, ')');
@@ -1156,7 +1186,7 @@ namespace XF
 					}
 					skip_white(fin);
 				}
-				else if (ti == SECTION::ZONE)
+				else if (ti == SECTION::ZONE || ti == SECTION::ZONE_MESHING)
 				{
 					eat(fin, '(');
 					int zone;
@@ -1514,8 +1544,10 @@ namespace XF
 					{
 						const auto &cnct = curObj->connectivity(i - cur_first);
 
-						// Face type
-						if (cnct.x != ft)
+						// Check consistency of face-type
+						if (ft == 0)
+							face(i).type = cnct.x;
+						else if (cnct.x != ft)
 							throw std::runtime_error("Internal error!");
 						else
 							face(i).type = ft;

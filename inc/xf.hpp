@@ -663,9 +663,9 @@ namespace XF
 	class CONNECTIVITY
 	{
 	public:
-		int x; // Num of nodes
-		size_t n[4];
-		size_t c[2];
+		int x; // Num of nodes.
+		size_t n[4]; // At most 4 nodes within a single face, polygon faces are not supported currently.
+		size_t c[2]; // Adjacent cells.
 
 	public:
 		CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
@@ -925,6 +925,8 @@ namespace XF
 	public:
 		MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {} // 3D by default
 		MESH(const std::string &inp) : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) { readFromFile(inp); }
+		MESH(const MESH &rhs) = delete;
+		MESH &operator=(MESH rhs) = delete;
 		~MESH() { clear_entry(); }
 
 		int readFromFile(const std::string &src)

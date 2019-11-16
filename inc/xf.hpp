@@ -33,11 +33,8 @@ namespace XF
 		Vector() : std::array<Scalar, 3>{ 0.0, 0.0, 0.0 } {}
 		Vector(Scalar val) : std::array<Scalar, 3>{ val, val, val } {}
 		Vector(Scalar v1, Scalar v2, Scalar v3) : std::array<Scalar, 3>{ v1, v2, v3 } {}
+		Vector(const Vector &obj) : std::array<Scalar, 3>{ obj.x(), obj.y(), obj.z() } {}
 		~Vector() = default;
-
-		// 1-based indexing
-		Scalar operator()(int idx) const { return at(idx - 1); }
-		Scalar &operator()(int idx) { return at(idx - 1); }
 
 		// Access through component
 		Scalar x() const { return at(0); }
@@ -47,6 +44,81 @@ namespace XF
 		Scalar &x() { return at(0); }
 		Scalar &y() { return at(1); }
 		Scalar &z() { return at(2); }
+
+		// Operators
+		Vector &operator=(const Vector &rhs)
+		{
+			x() = rhs.x();
+			y() = rhs.y();
+			z() = rhs.z();
+		}
+		Vector &operator+=(const Vector &rhs)
+		{
+			x() += rhs.x();
+			y() += rhs.y();
+			z() += rhs.z();
+		}
+		Vector &operator-=(const Vector &rhs)
+		{
+			x() -= rhs.x();
+			y() -= rhs.y();
+			z() -= rhs.z();
+		}
+		Vector &operator*=(Scalar a)
+		{
+			x() *= a;
+			y() *= a;
+			z() *= a;
+		}
+		Vector &operator/=(Scalar a)
+		{
+			x() /= a;
+			y() /= a;
+			z() /= a;
+		}
+
+		// 1-based indexing
+		Scalar operator()(int idx) const 
+		{ 
+			switch(idx)
+			{
+			case 1:
+				return x();
+			case 2:
+				return y();
+			case 3:
+				return z();			
+			case -1:
+				return z();
+			case -2:
+				return y();
+			case -3:
+				return x();
+			default:
+				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid index.");
+			}
+		}
+
+		Scalar &operator()(int idx) 
+		{ 
+			switch(idx)
+			{
+			case 1:
+				return x();
+			case 2:
+				return y();
+			case 3:
+				return z();			
+			case -1:
+				return z();
+			case -2:
+				return y();
+			case -3:
+				return x();
+			default:
+				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid index.");
+			}
+		}
 	};
 
 	template<typename T>
@@ -55,11 +127,35 @@ namespace XF
 	public:
 		Array1D(size_t n = 0) : std::vector<T>(n) {}
 		Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
+		Array1D(const Array1D &obj) = delete; // Avoid copy to ensure correctness.
 		~Array1D() = default;
 
+		// Operators
+		Array1D &operator=(Array1D obj) = delete; // Avoid explicit assignment for both correctness and efficiency.
+
 		// 1-based indexing
-		T &operator()(size_t i) { return this->at(i - 1); }
-		const T &operator()(size_t i) const { return this->at(i - 1); }
+		T &operator()(int i) 
+		{ 
+			const int N = size();
+
+			if(1 <= i && i <= N)
+				return this->at(i - 1); 
+			else if(-N <= i && i <= -1)
+				return this->at(N + i);
+			else
+				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");	
+		}
+		const T &operator()(int i) const 
+		{ 
+			const int N = size();
+
+			if(1 <= i && i <= N)
+				return this->at(i - 1); 
+			else if(-N <= i && i <= -1)
+				return this->at(N + i);
+			else
+				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");	
+		}
 
 		// Check includances
 		bool contains(const T &x) const
@@ -107,7 +203,9 @@ namespace XF
 			ZONE = 39, ZONE_MESHING = 45
 		};
 
+		SECTION() = delete;
 		SECTION(int id) : m_identity(id) {}
+		SECTION(const SECTION &obj) = delete;
 		virtual ~SECTION() = default;
 
 		virtual void repr(std::ostream &out) = 0;
@@ -121,9 +219,12 @@ namespace XF
 		std::string m_msg;
 
 	public:
+		STR() = delete;
 		STR(int id, const std::string &msg) : SECTION(id), m_msg(msg) {}
 		virtual ~STR() = default;
 
+		// Convert a boundary condition string literal to unified form within the scope of this code.
+		// Outcome will be composed of LOWER case lettes and '-' only!
 		static void formalize(std::string &s)
 		{
 			std::transform(s.begin(), s.end(), s.begin(), ::tolower);

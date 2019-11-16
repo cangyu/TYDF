@@ -51,43 +51,53 @@ namespace XF
 			x() = rhs.x();
 			y() = rhs.y();
 			z() = rhs.z();
+
+			return *this;
 		}
 		Vector &operator+=(const Vector &rhs)
 		{
 			x() += rhs.x();
 			y() += rhs.y();
 			z() += rhs.z();
+
+			return *this;
 		}
 		Vector &operator-=(const Vector &rhs)
 		{
 			x() -= rhs.x();
 			y() -= rhs.y();
 			z() -= rhs.z();
+
+			return *this;
 		}
 		Vector &operator*=(Scalar a)
 		{
 			x() *= a;
 			y() *= a;
 			z() *= a;
+
+			return *this;
 		}
 		Vector &operator/=(Scalar a)
 		{
 			x() /= a;
 			y() /= a;
 			z() /= a;
+
+			return *this;
 		}
 
 		// 1-based indexing
-		Scalar operator()(int idx) const 
-		{ 
-			switch(idx)
+		Scalar operator()(int idx) const
+		{
+			switch (idx)
 			{
 			case 1:
 				return x();
 			case 2:
 				return y();
 			case 3:
-				return z();			
+				return z();
 			case -1:
 				return z();
 			case -2:
@@ -95,20 +105,19 @@ namespace XF
 			case -3:
 				return x();
 			default:
-				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid index.");
+				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid 1-based index.");
 			}
 		}
-
-		Scalar &operator()(int idx) 
-		{ 
-			switch(idx)
+		Scalar &operator()(int idx)
+		{
+			switch (idx)
 			{
 			case 1:
 				return x();
 			case 2:
 				return y();
 			case 3:
-				return z();			
+				return z();
 			case -1:
 				return z();
 			case -2:
@@ -116,7 +125,7 @@ namespace XF
 			case -3:
 				return x();
 			default:
-				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid index.");
+				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid 1-based index.");
 			}
 		}
 	};
@@ -127,34 +136,34 @@ namespace XF
 	public:
 		Array1D(size_t n = 0) : std::vector<T>(n) {}
 		Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
-		Array1D(const Array1D &obj) = delete; // Avoid copy to ensure correctness.
+		Array1D(const Array1D &obj) = default;
 		~Array1D() = default;
 
 		// Operators
 		Array1D &operator=(Array1D obj) = delete; // Avoid explicit assignment for both correctness and efficiency.
 
 		// 1-based indexing
-		T &operator()(int i) 
-		{ 
-			const int N = size();
+		T &operator()(int i)
+		{
+			const int N = this->size();
 
-			if(1 <= i && i <= N)
-				return this->at(i - 1); 
-			else if(-N <= i && i <= -1)
+			if (1 <= i && i <= N)
+				return this->at(i - 1);
+			else if (-N <= i && i <= -1)
 				return this->at(N + i);
 			else
-				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");	
+				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");
 		}
-		const T &operator()(int i) const 
-		{ 
-			const int N = size();
+		const T &operator()(int i) const
+		{
+			const int N = this->size();
 
-			if(1 <= i && i <= N)
-				return this->at(i - 1); 
-			else if(-N <= i && i <= -1)
+			if (1 <= i && i <= N)
+				return this->at(i - 1);
+			else if (-N <= i && i <= -1)
 				return this->at(N + i);
 			else
-				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");	
+				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");
 		}
 
 		// Check includances
@@ -205,7 +214,6 @@ namespace XF
 
 		SECTION() = delete;
 		SECTION(int id) : m_identity(id) {}
-		SECTION(const SECTION &obj) = delete;
 		virtual ~SECTION() = default;
 
 		virtual void repr(std::ostream &out) = 0;
@@ -386,6 +394,7 @@ namespace XF
 	class COMMENT : public STR
 	{
 	public:
+		COMMENT() = delete;
 		COMMENT(const std::string &info) : STR(SECTION::COMMENT, info) {}
 		~COMMENT() = default;
 	};
@@ -393,6 +402,7 @@ namespace XF
 	class HEADER : public STR
 	{
 	public:
+		HEADER() = delete;
 		HEADER(const std::string &info) : STR(SECTION::HEADER, info) {}
 		~HEADER() = default;
 	};
@@ -404,6 +414,7 @@ namespace XF
 		int m_dim;
 
 	public:
+		DIM() = delete;
 		DIM(int dim) : m_dim(dim)
 		{
 			if (dim == 2)
@@ -424,6 +435,7 @@ namespace XF
 	class DIMENSION :public SECTION, public DIM
 	{
 	public:
+		DIMENSION() = delete;
 		DIMENSION(int dim) : SECTION(SECTION::DIMENSION), DIM(dim) {}
 		~DIMENSION() = default;
 
@@ -442,7 +454,12 @@ namespace XF
 		size_t m_first, m_last;
 
 	public:
-		RANGE(int id, size_t zone, size_t first, size_t last) : SECTION(id), m_zone(zone), m_first(first), m_last(last)
+		RANGE() = delete;
+		RANGE(int id, size_t zone, size_t first, size_t last) :
+			SECTION(id),
+			m_zone(zone),
+			m_first(first),
+			m_last(last)
 		{
 			if (first > last)
 				throw std::runtime_error("Invalid node index!");
@@ -515,7 +532,12 @@ namespace XF
 				return it->second;
 		}
 
-		NODE(size_t zone, size_t first, size_t last, int type, int ND) : RANGE(SECTION::NODE, zone, first, last), DIM(ND), m_type(type), m_node(num())
+		NODE() = delete;
+		NODE(size_t zone, size_t first, size_t last, int type, int ND) :
+			RANGE(SECTION::NODE, zone, first, last),
+			DIM(ND),
+			m_type(type),
+			m_node(num())
 		{
 			if (!isValidNodeTypeIdx(type))
 				throw std::runtime_error("Invalid description of node type!");
@@ -576,7 +598,7 @@ namespace XF
 	private:
 		int m_type;
 		int m_elem;
-		std::vector<int> m_mixedElemDesc; // Only effective when 'm_elem == MIXED'.
+		std::vector<int> m_mixedElemDesc; // Only effective when 'm_elem == MIXED', empty otherwise.
 
 	public:
 		enum { DEAD = 0, FLUID = 1, SOLID = 17 }; // Cell type.
@@ -690,7 +712,9 @@ namespace XF
 				return it->second;
 		}
 
-		CELL(size_t zone, size_t first, size_t last, int type, int elem_type) : RANGE(SECTION::CELL, zone, first, last)
+		CELL() = delete;
+		CELL(size_t zone, size_t first, size_t last, int type, int elem_type) :
+			RANGE(SECTION::CELL, zone, first, last)
 		{
 			// Check cell type before assign
 			if (!isValidCellTypeIdx(type))
@@ -1380,10 +1404,10 @@ namespace XF
 		size_t numOfZone() const { return m_totalZoneNum; }
 
 		// 1-based indexing
-		const NODE_ELEM &node(size_t id) const { return m_node(id); }
-		const FACE_ELEM &face(size_t id) const { return m_face(id); }
-		const CELL_ELEM &cell(size_t id) const { return m_cell(id); }
-		const ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) const
+		const NODE_ELEM &node(int id) const { return m_node(id); }
+		const FACE_ELEM &face(int id) const { return m_face(id); }
+		const CELL_ELEM &cell(int id) const { return m_cell(id); }
+		const ZONE_ELEM &zone(int id, bool isRealZoneID = false) const
 		{
 			// If "isRealZoneID" is "true", then "id" is the real zone index,
 			// otherwise, "id" is the internal storage index.
@@ -1395,10 +1419,10 @@ namespace XF
 				return m_zone(id);
 		}
 
-		NODE_ELEM &node(size_t id) { return m_node(id); }
-		FACE_ELEM &face(size_t id) { return m_face(id); }
-		CELL_ELEM &cell(size_t id) { return m_cell(id); }
-		ZONE_ELEM &zone(size_t id, bool isRealZoneID = false)
+		NODE_ELEM &node(int id) { return m_node(id); }
+		FACE_ELEM &face(int id) { return m_face(id); }
+		CELL_ELEM &cell(int id) { return m_cell(id); }
+		ZONE_ELEM &zone(int id, bool isRealZoneID = false)
 		{
 			// If "isRealZoneID" is "true", then "id" is the real zone index,
 			// otherwise, "id" is the internal storage index.

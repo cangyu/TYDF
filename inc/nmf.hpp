@@ -341,7 +341,7 @@ namespace NMF
 			for (size_t i = 0; i < m_edge.size(); ++i)
 				m_edge[i].local_index = i + 1;
 		}
-		Block2D(const Block2D &rhs) = delete;
+		Block2D(const Block2D &rhs) = default;
 		~Block2D() = default;
 
 		// Access internal cell through 1-based index.
@@ -405,7 +405,6 @@ namespace NMF
 			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
 			std::array<EDGE*, 4> includedEdge{ nullptr, nullptr, nullptr, nullptr };
 			Block3D *dependentBlock = nullptr;
-			Block3D *neighbourBlock = nullptr;
 			SURF *neighbourSurf = nullptr;
 		};
 
@@ -455,7 +454,7 @@ namespace NMF
 			m_edge[10].dependentSurf = { &m_surf[1], &m_surf[3] };
 			m_edge[11].dependentSurf = { &m_surf[3], &m_surf[0] };
 		}
-		Block3D(const Block3D &rhs) = delete;
+		Block3D(const Block3D &rhs) = default;
 		~Block3D() = default;
 
 		// Access internal cell through 1-based index.

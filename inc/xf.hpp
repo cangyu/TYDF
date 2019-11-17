@@ -588,9 +588,9 @@ namespace XF
 			out << "))" << std::endl;
 		}
 
-		bool is_virtual_node() const { return m_type == NODE::VIRTUAL; }
-		bool is_boundary_node() const { return m_type == NODE::BOUNDARY; }
-		bool is_internal_node() const { return m_type == NODE::ANY; }
+		bool is_virtual_node() const { return type() == NODE::VIRTUAL; }
+		bool is_boundary_node() const { return type() == NODE::BOUNDARY; }
+		bool is_internal_node() const { return type() == NODE::ANY; }
 	};
 
 	class CELL : public RANGE
@@ -811,7 +811,7 @@ namespace XF
 		{
 			if (x_ > 4)
 				throw std::invalid_argument("Too many nodes within a face, polygon face are not supported currently.");
-			if (x < 1)
+			if (x_ < 1)
 				throw std::invalid_argument("Invalid num of nodes within a face.");
 
 			x = x_;

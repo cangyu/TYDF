@@ -1,7 +1,6 @@
 #ifndef __NMF_HPP__
 #define __NMF_HPP__
 
-#include <vector>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -9,6 +8,8 @@
 #include <cctype>
 #include <algorithm>
 #include <cstddef>
+#include <vector>
+#include <array>
 #include <string>
 #include <map>
 #include <set>
@@ -28,290 +29,28 @@ namespace NMF
 		~Array1D() = default;
 
 		// 1-based indexing
-		T &operator()(int i) { return std::vector<T>::at(i - 1); }
-		const T &operator()(int i) const { return std::vector<T>::at(i - 1); }
-	};
-
-	class CELL
-	{
-	protected:
-		size_t m_cell; // 1-based sequence
-		Array1D<size_t> m_node; // 1-based sequence
-		Array1D<size_t> m_face; // 1-based sequence
-
-	public:
-		CELL() = delete;
-		CELL(bool is3D) : m_cell(0), m_node((is3D ? 8 : 4), 0), m_face((is3D ? 6 : 4), 0) {}
-		CELL(const CELL &rhs) : m_cell(rhs.m_cell), m_node(rhs.m_node), m_face(rhs.m_face) {}
-		virtual ~CELL() = default;
-
-		size_t CellSeq() const { return m_cell; }
-		size_t &CellSeq() { return m_cell; }
-
-		// 1-based indexing of node
-		size_t NodeSeq(int n) const { return m_node.at(n - 1); }
-		size_t &NodeSeq(int n) { return m_node.at(n - 1); }
-
-		// 1-based indexing of face
-		size_t FaceSeq(int n) const { return m_face.at(n - 1); }
-		size_t &FaceSeq(int n) { return m_face.at(n - 1); }
-	};
-
-	class QUAD_CELL : public CELL
-	{
-	public:
-		QUAD_CELL() : CELL(false) {}
-		QUAD_CELL(const QUAD_CELL &rhs) = default;
-		~QUAD_CELL() = default;
-	};
-
-	class HEX_CELL : public CELL
-	{
-	public:
-		HEX_CELL() : CELL(true) {}
-		HEX_CELL(const HEX_CELL &rhs) = default;
-		~HEX_CELL() = default;
-	};
-
-	class DIM
-	{
-	protected:
-		bool m_is3D;
-		int m_dim;
-
-	public:
-		DIM() = delete;
-		DIM(int dim) : m_dim(dim)
+		T &operator()(long long i)
 		{
-			if (dim == 2)
-				m_is3D = false;
-			else if (dim == 3)
-				m_is3D = true;
+			const long long N = this->size();
+
+			if (1 <= i && i <= N)
+				return this->at(i - 1);
+			else if (-N <= i && i <= -1)
+				return this->at(N + i);
 			else
-				throw std::invalid_argument("Invalid dimension: " + std::to_string(dim));
+				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");
 		}
-		DIM(bool is3d) : m_is3D(is3d), m_dim(is3d ? 3 : 2) {}
-		DIM(const DIM &rhs) : m_is3D(rhs.m_is3D), m_dim(rhs.m_dim) {}
-		virtual ~DIM() = default;
-
-		bool is3D() const { return m_is3D; }
-		int dimension() const { return m_dim; }
-	};
-
-	// The frame of a block
-	struct EDGE
-	{
-		size_t index; // 1-based, set to 0 when uninitialized.
-
-		EDGE() : index(0) {}
-	};
-
-	// The face of a block
-	struct FACE
-	{
-		size_t index; // 1-based, set to 0 when uninitialized.
-
-		FACE() : index(0) {}
-	};
-
-	class BLOCK : public DIM
-	{
-	private:
-		size_t m_nI, m_nJ, m_nK;
-		Array1D<CELL*> m_cell;
-		Array1D<EDGE> m_edge;
-
-	public:
-		BLOCK() = delete;
-		BLOCK(size_t nI, size_t nJ) :
-			DIM(2),
-			m_nI(nI), m_nJ(nJ), m_nK(1),
-			m_cell(cell_num(), nullptr),
-			m_edge(4)
+		const T &operator()(long long i) const
 		{
-			if (nI < 2 || nJ < 2)
-				throw std::invalid_argument("Invalid dimension.");
+			const long long N = this->size();
 
-			for (auto &e : m_cell)
-			{
-				e = new QUAD_CELL();
-				if (!e)
-					throw std::bad_alloc();
-			}
-		}
-		BLOCK(size_t nI, size_t nJ, size_t nK) :
-			DIM(3),
-			m_nI(nI), m_nJ(nJ), m_nK(nK),
-			m_cell(cell_num(), nullptr),
-			m_edge(12)
-		{
-			if (nI < 2 || nJ < 2 || nK < 2)
-				throw std::invalid_argument("Invalid dimension.");
-
-			for (auto &e : m_cell)
-			{
-				e = new HEX_CELL();
-				if (!e)
-					throw std::bad_alloc();
-			}
-		}
-		BLOCK(const BLOCK &rhs) = delete;
-		~BLOCK()
-		{
-			for (auto e : m_cell)
-				if (e)
-					delete e;
-		}
-
-		// Dimensions
-		size_t IDIM() const { return m_nI; }
-		size_t JDIM() const { return m_nJ; }
-		size_t KDIM() const { return m_nK; }
-
-		// Total num of geom entities
-		size_t node_num() const
-		{
-			if (is3D())
-				return IDIM() * JDIM() * KDIM();
+			if (1 <= i && i <= N)
+				return this->at(i - 1);
+			else if (-N <= i && i <= -1)
+				return this->at(N + i);
 			else
-				return IDIM() * JDIM();
+				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");
 		}
-		size_t face_num() const
-		{
-			size_t ret = 0;
-			if (is3D())
-			{
-				ret += (IDIM() - 1) * JDIM() * KDIM();
-				ret += IDIM() * (JDIM() - 1) * KDIM();
-				ret += IDIM() * JDIM() * (KDIM() - 1);
-			}
-			else
-			{
-				ret += (IDIM() - 1) * JDIM();
-				ret += IDIM() * (JDIM() - 1);
-			}
-			return ret;
-		}
-		size_t cell_num() const
-		{
-			if (is3D())
-				return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1);
-			else
-				return (IDIM() - 1) * (JDIM() - 1);
-		}
-
-		// Access internal cell through 1-based index.
-		// Indexing convention:
-		//      "i" ranges from 1 to IDIM()-1;
-		//      "j" ranges from 1 to JDIM()-1;
-		//      "k" ranges from 1 to KDIM()-1;
-		// When the IJK-axis follows the right-hand convention, (i, j, k) represents
-		// the left-most, bottom-most and back-most node of the selected cell.
-		QUAD_CELL *cell(size_t i, size_t j)
-		{
-			const size_t i0 = i - 1, j0 = j - 1; // Convert 1-based index to 0-based
-			const size_t idx = i0 + (m_nI - 1) * j0;
-			auto ret = m_cell.at(idx);
-			return static_cast<QUAD_CELL *>(ret);
-		}
-		HEX_CELL *cell(size_t i, size_t j, size_t k)
-		{
-			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
-			const size_t idx = i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0);
-			auto ret = m_cell.at(idx);
-			return static_cast<HEX_CELL *>(ret);
-		}
-
-		// Num of block frame edges
-		size_t edge_num() const { return m_edge.size(); }
-
-		// Access the frame edging through 1-based index.
-		// The indexing convention follows NMF specification.
-		EDGE &edge(size_t r)
-		{
-			return m_edge.at(r - 1);
-		}
-	};
-
-	class Block2D : public BLOCK
-	{
-	public:
-		Block2D() = delete;
-		Block2D(size_t nI, size_t nJ): BLOCK(nI, nJ) {}
-		~Block2D() = default;
-	};
-
-	class Block3D : public BLOCK
-	{
-	private:
-		Array1D<FACE> m_face;
-
-	public:
-		Block3D() = delete;
-		Block3D(size_t nI, size_t nJ, size_t nK) : BLOCK(nI, nJ, nK) {}
-		~Block3D() = default;
-	};
-
-	class RANGE
-	{
-	private:
-		size_t m_blk; // Block index, 1-based.
-		size_t m_face; // Face index, ranges from 1 to 6.
-		size_t m_s1; // Primary direction starting index, 1-based.
-		size_t m_e1; // Primary direction ending index, 1-based.
-		size_t m_s2; // Secondary direction starting index, 1-based.
-		size_t m_e2; // Secondary direction ending index, 1-based.
-
-	public:
-		RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
-		RANGE(size_t *src) : m_blk(src[0]), m_face(src[1]), m_s1(src[2]), m_e1(src[3]), m_s2(src[4]), m_e2(src[5]) {}
-		RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) : m_blk(b), m_face(f), m_s1(s1), m_e1(e1), m_s2(s2), m_e2(e2) {}
-
-		size_t B() const { return m_blk; }
-		size_t &B() { return m_blk; }
-
-		size_t F() const { return m_face; }
-		size_t &F() { return m_face; }
-
-		size_t S1() const { return m_s1; }
-		size_t &S1() { return m_s1; }
-
-		size_t E1() const { return m_e1; }
-		size_t &E1() { return m_e1; }
-
-		size_t S2() const { return m_s2; }
-		size_t &S2() { return m_s2; }
-
-		size_t E2() const { return m_e2; }
-		size_t &E2() { return m_e2; }
-
-		// Check if given index is within this range.
-		bool constains(size_t pri, size_t sec) const
-		{
-			const bool t1 = (m_s1 <= pri) && (pri <= m_e1);
-			const bool t2 = (m_s2 <= sec) && (sec <= m_e2);
-			return t1 && t2;
-		}
-
-		// Nodes in primary direction.
-		size_t pri_node_num() const { return m_e1 - m_s1 + 1; }
-
-		// Nodes in secondary direction.
-		size_t sec_node_num() const { return m_e2 - m_s2 + 1; }
-
-		// Total nodes on this interface.
-		size_t node_num() const { return pri_node_num() * sec_node_num(); }
-
-		// Total edges on this interface.
-		size_t edge_num() const
-		{
-			const size_t n_pri = (pri_node_num() - 1) * sec_node_num();
-			const size_t n_sec = (sec_node_num() - 1) * pri_node_num();
-			return n_pri + n_sec;
-		}
-
-		// Total quad cells on this interface.
-		size_t face_num() const { return (pri_node_num() - 1) * (sec_node_num() - 1); }
 	};
 
 	static void str_formalize(std::string &s)
@@ -440,6 +179,415 @@ namespace NMF
 		~BC() = default;
 	};
 
+	class CELL
+	{
+	protected:
+		size_t m_cell; // 1-based sequence
+		Array1D<size_t> m_node; // 1-based sequence
+		Array1D<size_t> m_face; // 1-based sequence
+
+	public:
+		CELL() = delete;
+		CELL(bool is3D) : m_cell(0), m_node((is3D ? 8 : 4), 0), m_face((is3D ? 6 : 4), 0) {}
+		CELL(const CELL &rhs) : m_cell(rhs.m_cell), m_node(rhs.m_node), m_face(rhs.m_face) {}
+		virtual ~CELL() = default;
+
+		size_t CellSeq() const { return m_cell; }
+		size_t &CellSeq() { return m_cell; }
+
+		// 1-based indexing of node
+		size_t NodeSeq(int n) const { return m_node.at(n - 1); }
+		size_t &NodeSeq(int n) { return m_node.at(n - 1); }
+
+		// 1-based indexing of face
+		size_t FaceSeq(int n) const { return m_face.at(n - 1); }
+		size_t &FaceSeq(int n) { return m_face.at(n - 1); }
+	};
+
+	class QUAD_CELL : public CELL
+	{
+	public:
+		QUAD_CELL() : CELL(false) {}
+		QUAD_CELL(const QUAD_CELL &rhs) = default;
+		~QUAD_CELL() = default;
+	};
+
+	class HEX_CELL : public CELL
+	{
+	public:
+		HEX_CELL() : CELL(true) {}
+		HEX_CELL(const HEX_CELL &rhs) = default;
+		~HEX_CELL() = default;
+	};
+
+	class DIM
+	{
+	protected:
+		bool m_is3D;
+		int m_dim;
+
+	public:
+		DIM() = delete;
+		DIM(int dim) : m_dim(dim)
+		{
+			if (dim == 2)
+				m_is3D = false;
+			else if (dim == 3)
+				m_is3D = true;
+			else
+				throw std::invalid_argument("Invalid dimension: " + std::to_string(dim));
+		}
+		DIM(bool is3d) : m_is3D(is3d), m_dim(is3d ? 3 : 2) {}
+		DIM(const DIM &rhs) = default;
+		virtual ~DIM() = default;
+
+		bool is3D() const { return m_is3D; }
+
+		int dimension() const { return m_dim; }
+	};
+
+	class BLOCK : public DIM
+	{
+	protected:
+		size_t idx; // 1-based global index
+		size_t m_nI, m_nJ, m_nK; // Dimensions
+
+	public:
+		BLOCK() = delete;
+		BLOCK(int nI, int nJ) :
+			DIM(false),
+			idx(0),
+			m_nI(nI),
+			m_nJ(nJ),
+			m_nK(1)
+		{
+			if (nI < 2 || nJ < 2)
+				throw std::invalid_argument("Invalid dimension.");
+		}
+		BLOCK(int nI, int nJ, int nK) :
+			DIM(true),
+			idx(0),
+			m_nI(nI),
+			m_nJ(nJ),
+			m_nK(nK)
+		{
+			if (nI < 2 || nJ < 2 || nK < 2)
+				throw std::invalid_argument("Invalid dimension.");
+		}
+		BLOCK(const BLOCK &rhs) = default;
+		virtual ~BLOCK() = default;
+
+		size_t index() const { return idx; }
+		size_t &index() { return idx; }
+
+		size_t IDIM() const { return m_nI; }
+		size_t JDIM() const { return m_nJ; }
+		size_t KDIM() const { return m_nK; }
+
+		// Here the terms 'node', 'face' and 'cell' are 
+		// consistent with that in ANSYS Fluent convention.
+		size_t node_num() const
+		{
+			if (is3D())
+				return IDIM() * JDIM() * KDIM();
+			else
+				return IDIM() * JDIM();
+		}
+		size_t face_num() const
+		{
+			size_t ret = 0;
+			if (is3D())
+			{
+				ret += (IDIM() - 1) * JDIM() * KDIM();
+				ret += IDIM() * (JDIM() - 1) * KDIM();
+				ret += IDIM() * JDIM() * (KDIM() - 1);
+			}
+			else
+			{
+				ret += (IDIM() - 1) * JDIM();
+				ret += IDIM() * (JDIM() - 1);
+			}
+			return ret;
+		}
+		size_t cell_num() const
+		{
+			if (is3D())
+				return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1);
+			else
+				return (IDIM() - 1) * (JDIM() - 1);
+		}
+	};
+
+	class Block2D : public BLOCK
+	{
+	private:
+		struct EDGE
+		{
+			short local_index = 0; // Ranges from 1 to 4, set to 0 when uninitialized.
+			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			Block2D *dependentBlock = nullptr;
+			Block2D *neighbourBlock = nullptr;
+		};
+
+	public:
+		static const short NumOfEdge = 4;
+
+		Block2D() = delete;
+		Block2D(int nI, int nJ) :
+			BLOCK(nI, nJ),
+			m_cell(cell_num()),
+			m_edge(NumOfEdge)
+		{
+			for (size_t i = 0; i < m_edge.size(); ++i)
+				m_edge[i].local_index = i + 1;
+		}
+		Block2D(const Block2D &rhs) = delete;
+		~Block2D() = default;
+
+		// Access internal cell through 1-based index.
+		// Indexing convention:
+		//      "i" ranges from 1 to IDIM()-1;
+		//      "j" ranges from 1 to JDIM()-1;
+		// When the IJ-axis follows the right-hand convention, (i, j) represents
+		// the left-most, bottom-most node of the selected cell.
+		QUAD_CELL &cell(size_t i, size_t j)
+		{
+			const size_t i0 = i - 1, j0 = j - 1; // Convert 1-based index to 0-based
+			const size_t idx = i0 + (m_nI - 1) * j0;
+			return m_cell.at(idx);
+		}
+		const QUAD_CELL &cell(size_t i, size_t j) const
+		{
+			const size_t i0 = i - 1, j0 = j - 1; // Convert 1-based index to 0-based
+			const size_t idx = i0 + (m_nI - 1) * j0;
+			return m_cell.at(idx);
+		}
+
+		// Access the frame edges through 1-based index.
+		// The indexing convention follows NMF specification.
+		EDGE &edge(int n)
+		{
+			if (1 <= n && n <= NumOfEdge)
+				return m_edge.at(n - 1);
+			else if (-NumOfEdge <= n && n <= -1)
+				return m_edge.at(NumOfEdge + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid edge index for a 2D block.");
+		}
+		const EDGE &edge(int n) const
+		{
+			if (1 <= n && n <= NumOfEdge)
+				return m_edge.at(n - 1);
+			else if (-NumOfEdge <= n && n <= -1)
+				return m_edge.at(NumOfEdge + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid edge index for a 2D block.");
+		}
+
+	private:
+		Array1D<QUAD_CELL> m_cell;
+		Array1D<EDGE> m_edge;
+	};
+
+	class Block3D : public BLOCK
+	{
+	private:
+		struct SURF;
+		struct EDGE
+		{
+			short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
+			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			Block3D *dependentBlock = nullptr;
+			std::array<SURF*, 2> dependentSurf{ nullptr, nullptr };
+		};
+		struct SURF
+		{
+			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
+			std::array<EDGE*, 4> includedEdge{ nullptr, nullptr, nullptr, nullptr };
+			Block3D *dependentBlock = nullptr;
+			Block3D *neighbourBlock = nullptr;
+			SURF *neighbourSurf = nullptr;
+		};
+
+	public:
+		static const short NumOfEdge = 12;
+		static const short NumOfSurf = 6;
+
+		Block3D() = delete;
+		Block3D(int nI, int nJ, int nK) :
+			BLOCK(nI, nJ, nK),
+			m_cell(cell_num()),
+			m_edge(NumOfEdge),
+			m_surf(NumOfSurf)
+		{
+			for (size_t i = 0; i < m_edge.size(); ++i)
+			{
+				auto &e = m_edge[i];
+				e.local_index = i + 1;
+				e.dependentBlock = this;
+			}
+
+			for (size_t i = 0; i < m_surf.size(); ++i)
+			{
+				auto &s = m_surf[i];
+				s.local_index = i + 1;
+				s.dependentBlock = this;
+			}
+
+			// Connection between frame edges and surrounding surfaces
+			m_surf[0].includedEdge = { &m_edge[4], &m_edge[8], &m_edge[7], &m_edge[11] };
+			m_surf[1].includedEdge = { &m_edge[5], &m_edge[10], &m_edge[6], &m_edge[9] };
+			m_surf[2].includedEdge = { &m_edge[0], &m_edge[9], &m_edge[3], &m_edge[8] };
+			m_surf[3].includedEdge = { &m_edge[1], &m_edge[11], &m_edge[2], &m_edge[10] };
+			m_surf[4].includedEdge = { &m_edge[0], &m_edge[4], &m_edge[1], &m_edge[5] };
+			m_surf[5].includedEdge = { &m_edge[2], &m_edge[7], &m_edge[3], &m_edge[6] };
+
+			m_edge[0].dependentSurf = { &m_surf[2], &m_surf[4] };
+			m_edge[1].dependentSurf = { &m_surf[4], &m_surf[3] };
+			m_edge[2].dependentSurf = { &m_surf[3], &m_surf[5] };
+			m_edge[3].dependentSurf = { &m_surf[5], &m_surf[2] };
+			m_edge[4].dependentSurf = { &m_surf[0], &m_surf[4] };
+			m_edge[5].dependentSurf = { &m_surf[4], &m_surf[1] };
+			m_edge[6].dependentSurf = { &m_surf[1], &m_surf[5] };
+			m_edge[7].dependentSurf = { &m_surf[5], &m_surf[0] };
+			m_edge[8].dependentSurf = { &m_surf[0], &m_surf[2] };
+			m_edge[9].dependentSurf = { &m_surf[2], &m_surf[1] };
+			m_edge[10].dependentSurf = { &m_surf[1], &m_surf[3] };
+			m_edge[11].dependentSurf = { &m_surf[3], &m_surf[0] };
+		}
+		Block3D(const Block3D &rhs) = delete;
+		~Block3D() = default;
+
+		// Access internal cell through 1-based index.
+		// Indexing convention:
+		//      "i" ranges from 1 to IDIM()-1;
+		//      "j" ranges from 1 to JDIM()-1;
+		//      "k" ranges from 1 to KDIM()-1;
+		// When the IJK-axis follows the right-hand convention, (i, j, k) represents
+		// the left-most, bottom-most and back-most node of the selected cell.
+		HEX_CELL &cell(size_t i, size_t j, size_t k)
+		{
+			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
+			const size_t idx = i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0);
+			return m_cell.at(idx);
+		}
+		const HEX_CELL &cell(size_t i, size_t j, size_t k) const
+		{
+			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
+			const size_t idx = i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0);
+			return m_cell.at(idx);
+		}
+
+		// Access the frame edges through 1-based index.
+		// The indexing convention follows NMF specification.
+		EDGE &edge(int n)
+		{
+			if (1 <= n && n <= NumOfEdge)
+				return m_edge.at(n - 1);
+			else if (-NumOfEdge <= n && n <= -1)
+				return m_edge.at(NumOfEdge + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid edge index for a 3D block.");
+		}
+		const EDGE &edge(int n) const
+		{
+			if (1 <= n && n <= NumOfEdge)
+				return m_edge.at(n - 1);
+			else if (-NumOfEdge <= n && n <= -1)
+				return m_edge.at(NumOfEdge + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid edge index for a 3D block.");
+		}
+
+		// Access surrounding surface through 1-based index.
+		// The index follows NMF convection.
+		SURF &surf(int n)
+		{
+			if (1 <= n && n <= NumOfSurf)
+				return m_surf.at(n - 1);
+			else if (-NumOfSurf <= n && n <= -1)
+				return m_surf.at(NumOfSurf + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
+		}
+		const SURF &surf(int n) const
+		{
+			if (1 <= n && n <= NumOfSurf)
+				return m_surf.at(n - 1);
+			else if (-NumOfSurf <= n && n <= -1)
+				return m_surf.at(NumOfSurf + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
+		}
+
+	private:
+		Array1D<HEX_CELL> m_cell;
+		Array1D<EDGE> m_edge;
+		Array1D<SURF> m_surf;
+	};
+
+	class RANGE
+	{
+	private:
+		size_t m_blk; // Block index, 1-based.
+		size_t m_face; // Face index, ranges from 1 to 6.
+		size_t m_s1; // Primary direction starting index, 1-based.
+		size_t m_e1; // Primary direction ending index, 1-based.
+		size_t m_s2; // Secondary direction starting index, 1-based.
+		size_t m_e2; // Secondary direction ending index, 1-based.
+
+	public:
+		RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
+		RANGE(size_t *src) : m_blk(src[0]), m_face(src[1]), m_s1(src[2]), m_e1(src[3]), m_s2(src[4]), m_e2(src[5]) {}
+		RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) : m_blk(b), m_face(f), m_s1(s1), m_e1(e1), m_s2(s2), m_e2(e2) {}
+
+		size_t B() const { return m_blk; }
+		size_t &B() { return m_blk; }
+
+		size_t F() const { return m_face; }
+		size_t &F() { return m_face; }
+
+		size_t S1() const { return m_s1; }
+		size_t &S1() { return m_s1; }
+
+		size_t E1() const { return m_e1; }
+		size_t &E1() { return m_e1; }
+
+		size_t S2() const { return m_s2; }
+		size_t &S2() { return m_s2; }
+
+		size_t E2() const { return m_e2; }
+		size_t &E2() { return m_e2; }
+
+		// Check if given index is within this range.
+		bool constains(size_t pri, size_t sec) const
+		{
+			const bool t1 = (m_s1 <= pri) && (pri <= m_e1);
+			const bool t2 = (m_s2 <= sec) && (sec <= m_e2);
+			return t1 && t2;
+		}
+
+		// Nodes in primary direction.
+		size_t pri_node_num() const { return m_e1 - m_s1 + 1; }
+
+		// Nodes in secondary direction.
+		size_t sec_node_num() const { return m_e2 - m_s2 + 1; }
+
+		// Total nodes on this interface.
+		size_t node_num() const { return pri_node_num() * sec_node_num(); }
+
+		// Total edges on this interface.
+		size_t edge_num() const
+		{
+			const size_t n_pri = (pri_node_num() - 1) * sec_node_num();
+			const size_t n_sec = (sec_node_num() - 1) * pri_node_num();
+			return n_pri + n_sec;
+		}
+
+		// Total quad cells on this interface.
+		size_t face_num() const { return (pri_node_num() - 1) * (sec_node_num() - 1); }
+	};
+
 	class ENTRY
 	{
 	private:
@@ -510,36 +658,23 @@ namespace NMF
 		}
 	};
 
-	class MAPPING
+	class Mapping3D
 	{
 	private:
-		Array1D<BLOCK> m_blk;
+		Array1D<Block3D> m_blk;
 		Array1D<ENTRY> m_entry;
 
 		void coloring_block_frame()
 		{
-			size_t cnt = 0;
 			for (auto &blk : m_blk)
 			{
-				const auto NE = blk.edge_num();
-				for (size_t n = 1; n <= NE; ++n)
-				{
-					auto &curEdge = blk.edge(n);
-					if (curEdge.index == 0)
-					{
-						curEdge.index = ++cnt;
-
-						// TODO
-
-					}
-				}
+				// TODO
 			}
 		}
 
 	public:
-		MAPPING() = default;
-
-		~MAPPING() = default;
+		Mapping3D() = default;
+		~Mapping3D() = default;
 
 		size_t nBlk() const { return m_blk.size(); }
 
@@ -551,7 +686,7 @@ namespace NMF
 			//Load file
 			std::ifstream mfp(path);
 			if (mfp.fail())
-				throw std::runtime_error("Can not open target input file: " + path);
+				throw std::runtime_error("Can not open target input file: \"" + path + "\".");
 
 			//Skip header
 			do {
@@ -716,7 +851,7 @@ namespace NMF
 				for (size_t k = 1; k < cK; ++k)
 					for (size_t j = 1; j < cJ; ++j)
 						for (size_t i = 1; i < cI; ++i)
-							blk.cell(i, j, k)->CellSeq() = ++cnt;
+							blk.cell(i, j, k).CellSeq() = ++cnt;
 			}
 
 			const size_t totalCellNum = nCell();

@@ -737,12 +737,16 @@ namespace XF
 		}
 		~CELL() = default;
 
+		// Type of cells within this section: DEAD cell, FLUOID cell or SOLID cell.
 		int type() const { return m_type; }
 		int &type() { return m_type; }
 
+		// General description of ALL cell elements within this section.
 		int element_type() const { return m_elem; }
 		int &element_type() { return m_elem; }
 
+		// Element-Type of each cell within this section.
+		// Typically used when "element_type() == MIXED".
 		int elem(size_t loc_idx) const
 		{
 			int et = element_type();
@@ -794,6 +798,7 @@ namespace XF
 
 	public:
 		CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
+		CONNECTIVITY(const CONNECTIVITY &rhs) = default;
 		~CONNECTIVITY() = default;
 
 		size_t cl() const { return c[0]; }
@@ -804,12 +809,17 @@ namespace XF
 
 		void set(int x_, size_t *n_, size_t *c_)
 		{
+			if (x_ > 4)
+				throw std::invalid_argument("Too many nodes within a face, polygon face are not supported currently.");
+			if (x < 1)
+				throw std::invalid_argument("Invalid num of nodes within a face.");
+
 			x = x_;
 			c[0] = c_[0];
 			c[1] = c_[1];
 
-			int i;
-			for (i = 0; i < x_; ++i)
+			int i = 0;
+			for (; i < x_; ++i)
 				n[i] = n_[i];
 			while (i < 4)
 			{
@@ -818,6 +828,7 @@ namespace XF
 			}
 		}
 
+		// Index of its left-hand side node.
 		size_t leftAdj(int loc_idx) const
 		{
 			if (loc_idx == 0)
@@ -826,6 +837,7 @@ namespace XF
 				return n[loc_idx - 1];
 		}
 
+		// Index of its right-hand side node.
 		size_t rightAdj(int loc_idx) const
 		{
 			if (loc_idx == x - 1)
@@ -896,7 +908,9 @@ namespace XF
 				return it->second;
 		}
 
-		FACE(size_t zone, size_t first, size_t last, int bc, int face) : RANGE(SECTION::FACE, zone, first, last)
+		FACE() = delete;
+		FACE(size_t zone, size_t first, size_t last, int bc, int face) :
+			RANGE(SECTION::FACE, zone, first, last)
 		{
 			// Check B.C. before assign
 			if (!BC::isValidBCIdx(bc))
@@ -917,14 +931,15 @@ namespace XF
 		}
 		~FACE() = default;
 
+		// The B.C. of this group of faces.
 		int bc_type() const { return m_bc; }
 
+		// The shape of this group of faces.
 		int face_type() const { return m_face; }
 
 		// 0-based local indexing
-		const CONNECTIVITY &connectivity(size_t loc_idx) const { return m_connectivity[loc_idx]; }
-
-		CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity[loc_idx]; }
+		const CONNECTIVITY &connectivity(size_t loc_idx) const { return m_connectivity.at(loc_idx); }
+		CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity.at(loc_idx); }
 
 		void repr(std::ostream &out)
 		{
@@ -963,20 +978,25 @@ namespace XF
 	class ZONE :public SECTION
 	{
 	private:
-		int m_zoneID;
+		size_t m_zoneID;
 		std::string m_zoneType, m_zoneName;
 		int m_domainID;
 
 	public:
+		ZONE() = delete;
 		ZONE(int zone, const std::string &type, const std::string &name) : SECTION(SECTION::ZONE), m_zoneID(zone), m_zoneType(type), m_zoneName(name), m_domainID(0) {}
 		~ZONE() = default;
 
-		int zone() const { return m_zoneID; }
+		// The index of this zone, may be any non-consecutive positive integer.
+		size_t zone() const { return m_zoneID; }
 
+		// The B.C. string literal.
 		const std::string &type() const { return m_zoneType; }
 
+		// The name of this zone.
 		const std::string &name() const { return m_zoneName; }
 
+		// NOT used.
 		int domain() const { return m_domainID; }
 
 		void repr(std::ostream &out)
@@ -988,7 +1008,7 @@ namespace XF
 	class MESH : public DIM
 	{
 	private:
-		// Index of node, face, and cell start from 1 and increase continuously.
+		// Index of node, face, and cell starts from 1 and increase continuously.
 		struct NODE_ELEM
 		{
 			Vector coordinate;
@@ -1019,7 +1039,7 @@ namespace XF
 			double volume;
 			Array1D<size_t> includedFace;
 			Array1D<size_t> includedNode;
-			Array1D<size_t> adjacentCell;
+			Array1D<size_t> adjacentCell; // The size is equal to that of "includedFace", set to 0 if the adjacent cell is boundary.
 			Array1D<Vector> n;
 			Array1D<Vector> S;
 		};
@@ -1049,17 +1069,27 @@ namespace XF
 
 	public:
 		MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {} // 3D by default
-		MESH(const std::string &inp) : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) { readFromFile(inp); }
+		MESH(const std::string &inp) :
+			DIM(3),
+			m_totalNodeNum(0),
+			m_totalCellNum(0),
+			m_totalFaceNum(0),
+			m_totalZoneNum(0)
+		{
+			readFromFile(inp);
+		}
 		MESH(const MESH &rhs) = delete;
-		MESH &operator=(MESH rhs) = delete;
-		~MESH() { clear_entry(); }
+		~MESH()
+		{
+			clear_entry();
+		}
 
 		int readFromFile(const std::string &src)
 		{
 			// Open grid file
 			std::ifstream fin(src);
 			if (fin.fail())
-				throw std::runtime_error("Failed to open input grid file: " + src);
+				throw std::runtime_error("Failed to open input grid file: \"" + src + "\".");
 
 			// Clear existing records if any.
 			clear_entry();
@@ -1588,7 +1618,10 @@ namespace XF
 				dst_r[i] = -dst[i];
 		}
 
-		void add_entry(SECTION *e) { m_content.push_back(e); }
+		void add_entry(SECTION *e)
+		{
+			m_content.push_back(e);
+		}
 
 		void clear_entry()
 		{

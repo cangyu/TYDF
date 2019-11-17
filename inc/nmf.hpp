@@ -24,40 +24,44 @@ namespace NMF
 		Array1D() : std::vector<T>() {}
 		Array1D(size_t n) : std::vector<T>(n) {}
 		Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
+		Array1D(const Array1D &rhs) = default;
+		~Array1D() = default;
 
 		// 1-based indexing
-		T &operator()(size_t i) { return std::vector<T>::at(i - 1); }
-		const T &operator()(size_t i) const { return std::vector<T>::at(i - 1); }
+		T &operator()(int i) { return std::vector<T>::at(i - 1); }
+		const T &operator()(int i) const { return std::vector<T>::at(i - 1); }
 	};
 
 	class CELL
 	{
-	private:
+	protected:
 		size_t m_cell; // 1-based sequence
 		Array1D<size_t> m_node; // 1-based sequence
 		Array1D<size_t> m_face; // 1-based sequence
 
 	public:
 		CELL() = delete;
-		CELL(bool is3D) : m_cell(0), m_node(is3D ? 8 : 4, 0), m_face(is3D ? 6 : 4, 0) {}
+		CELL(bool is3D) : m_cell(0), m_node((is3D ? 8 : 4), 0), m_face((is3D ? 6 : 4), 0) {}
+		CELL(const CELL &rhs) : m_cell(rhs.m_cell), m_node(rhs.m_node), m_face(rhs.m_face) {}
 		virtual ~CELL() = default;
 
 		size_t CellSeq() const { return m_cell; }
 		size_t &CellSeq() { return m_cell; }
 
 		// 1-based indexing of node
-		size_t NodeSeq(int n) const { return m_node[n - 1]; }
-		size_t &NodeSeq(int n) { return m_node[n - 1]; }
+		size_t NodeSeq(int n) const { return m_node.at(n - 1); }
+		size_t &NodeSeq(int n) { return m_node.at(n - 1); }
 
 		// 1-based indexing of face
-		size_t FaceSeq(int n) const { return m_face[n - 1]; }
-		size_t &FaceSeq(int n) { return m_face[n - 1]; }
+		size_t FaceSeq(int n) const { return m_face.at(n - 1); }
+		size_t &FaceSeq(int n) { return m_face.at(n - 1); }
 	};
 
 	class QUAD_CELL : public CELL
 	{
 	public:
 		QUAD_CELL() : CELL(false) {}
+		QUAD_CELL(const QUAD_CELL &rhs) = default;
 		~QUAD_CELL() = default;
 	};
 
@@ -65,6 +69,7 @@ namespace NMF
 	{
 	public:
 		HEX_CELL() : CELL(true) {}
+		HEX_CELL(const HEX_CELL &rhs) = default;
 		~HEX_CELL() = default;
 	};
 
@@ -83,9 +88,10 @@ namespace NMF
 			else if (dim == 3)
 				m_is3D = true;
 			else
-				throw std::runtime_error("Invalid dimension: " + std::to_string(dim));
+				throw std::invalid_argument("Invalid dimension: " + std::to_string(dim));
 		}
 		DIM(bool is3d) : m_is3D(is3d), m_dim(is3d ? 3 : 2) {}
+		DIM(const DIM &rhs) : m_is3D(rhs.m_is3D), m_dim(rhs.m_dim) {}
 		virtual ~DIM() = default;
 
 		bool is3D() const { return m_is3D; }
@@ -95,9 +101,17 @@ namespace NMF
 	// The frame of a block
 	struct EDGE
 	{
-		size_t index;
+		size_t index; // 1-based, set to 0 when uninitialized.
 
 		EDGE() : index(0) {}
+	};
+
+	// The face of a block
+	struct FACE
+	{
+		size_t index; // 1-based, set to 0 when uninitialized.
+
+		FACE() : index(0) {}
 	};
 
 	class BLOCK : public DIM
@@ -132,7 +146,7 @@ namespace NMF
 			m_edge(12)
 		{
 			if (nI < 2 || nJ < 2 || nK < 2)
-				throw std::runtime_error("Invalid dimension.");
+				throw std::invalid_argument("Invalid dimension.");
 
 			for (auto &e : m_cell)
 			{
@@ -141,6 +155,7 @@ namespace NMF
 					throw std::bad_alloc();
 			}
 		}
+		BLOCK(const BLOCK &rhs) = delete;
 		~BLOCK()
 		{
 			for (auto e : m_cell)
@@ -195,12 +210,16 @@ namespace NMF
 		QUAD_CELL *cell(size_t i, size_t j)
 		{
 			const size_t i0 = i - 1, j0 = j - 1; // Convert 1-based index to 0-based
-			return static_cast<QUAD_CELL *>(m_cell.at(i0 + (m_nI - 1) * j0));
+			const size_t idx = i0 + (m_nI - 1) * j0;
+			auto ret = m_cell.at(idx);
+			return static_cast<QUAD_CELL *>(ret);
 		}
 		HEX_CELL *cell(size_t i, size_t j, size_t k)
 		{
 			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
-			return static_cast<HEX_CELL *>(m_cell.at(i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0)));
+			const size_t idx = i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0);
+			auto ret = m_cell.at(idx);
+			return static_cast<HEX_CELL *>(ret);
 		}
 
 		// Num of block frame edges
@@ -212,6 +231,25 @@ namespace NMF
 		{
 			return m_edge.at(r - 1);
 		}
+	};
+
+	class Block2D : public BLOCK
+	{
+	public:
+		Block2D() = delete;
+		Block2D(size_t nI, size_t nJ): BLOCK(nI, nJ) {}
+		~Block2D() = default;
+	};
+
+	class Block3D : public BLOCK
+	{
+	private:
+		Array1D<FACE> m_face;
+
+	public:
+		Block3D() = delete;
+		Block3D(size_t nI, size_t nJ, size_t nK) : BLOCK(nI, nJ, nK) {}
+		~Block3D() = default;
 	};
 
 	class RANGE

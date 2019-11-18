@@ -15,6 +15,7 @@
 #include <set>
 #include <utility>
 #include <stdexcept>
+#include <regex>
 
 namespace NMF
 {
@@ -539,6 +540,8 @@ namespace NMF
 		RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
 		RANGE(size_t *src) : m_blk(src[0]), m_face(src[1]), m_s1(src[2]), m_e1(src[3]), m_s2(src[4]), m_e2(src[5]) {}
 		RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) : m_blk(b), m_face(f), m_s1(s1), m_e1(e1), m_s2(s2), m_e2(e2) {}
+		RANGE(const RANGE &rhs) = default;
+		~RANGE() = default;
 
 		size_t B() const { return m_blk; }
 		size_t &B() { return m_blk; }
@@ -591,7 +594,7 @@ namespace NMF
 	{
 	private:
 		int m_bc;
-		RANGE *m_rg1, *m_rg2;
+		RANGE *m_rg1, *m_rg2; // The ownership is restricted to the object only, can not be assigned from outside to prevent possible errors.
 		bool m_swap;
 
 	public:
@@ -608,6 +611,16 @@ namespace NMF
 				m_bc = BC::str2idx(t);
 			else
 				throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
+		}
+		ENTRY(const ENTRY &rhs) : m_bc(rhs.m_bc), m_rg1(nullptr), m_rg2(nullptr), m_swap(rhs.m_swap)
+		{
+			if (rhs.m_rg1)
+				m_rg1 = new RANGE(*rhs.m_rg1);
+			else
+				throw std::runtime_error("The first range object should EXIST.");
+
+			if (rhs.m_rg2)
+				m_rg2 = new RANGE(*rhs.m_rg2);
 		}
 		~ENTRY()
 		{
@@ -647,8 +660,7 @@ namespace NMF
 
 		int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const
 		{
-			// Left
-			if (B1() == bs && F1() == fs && Range1().constains(lpri, lsec))
+			if (B1() == bs && F1() == fs && Range1().constains(lpri, lsec)) // Left
 				return 1;
 			else if (m_rg2 && B2() == bs && F2() == fs && Range2().constains(lpri, lsec))
 				return 2;
@@ -660,72 +672,96 @@ namespace NMF
 	class Mapping3D
 	{
 	private:
-		Array1D<Block3D> m_blk;
+		Array1D<Block3D*> m_blk;
 		Array1D<ENTRY> m_entry;
-
-		void coloring_block_frame()
-		{
-			for (auto &blk : m_blk)
-			{
-				// TODO
-			}
-		}
 
 	public:
 		Mapping3D() = default;
-		~Mapping3D() = default;
-
-		size_t nBlk() const { return m_blk.size(); }
+		Mapping3D(const std::string &inp)
+		{
+			readFromFile(inp);
+		}
+		Mapping3D(const Mapping3D &rhs) : m_entry(rhs.m_entry)
+		{
+			m_blk.resize(rhs.nBlk());
+			for (size_t i = 0; i < m_blk.size(); ++i)
+				m_blk[i] = new Block3D(*rhs.m_blk[i]);
+		}
+		~Mapping3D()
+		{
+			for (auto e : m_blk)
+				if (e)
+					delete e;
+		}
 
 		int readFromFile(const std::string &path)
 		{
 			std::string s;
 			std::stringstream ss;
 
-			//Load file
+			//Open file
 			std::ifstream mfp(path);
 			if (mfp.fail())
 				throw std::runtime_error("Can not open target input file: \"" + path + "\".");
 
 			//Skip header
 			do {
-				std::getline(mfp, s, '\n');
-			} while (s.find('#') != std::string::npos);
+				std::getline(mfp, s);
+			} while (isBlankLine(s) || checkStarting(s, '#'));
 
-			//Read block dimension info
-			size_t NumOfBlk;
-			ss << s;
-			ss >> NumOfBlk;
-			if (NumOfBlk == 0)
-				throw std::runtime_error("Invalid num of blocks: " + std::to_string(NumOfBlk));
-
-			m_blk.clear();
-			for (size_t i = 1; i <= NumOfBlk; i++)
+			//Read block nums
+			int NumOfBlk = -1;
+			static const std::regex pattern1(R"(\s*(\d+)\s*)");
+			std::smatch res1;
+			if (std::regex_match(s, res1, pattern1))
 			{
-				size_t idx, i_max, j_max, k_max;
-				std::getline(mfp, s, '\n');
-				ss.clear();
-				ss << s;
-				ss >> idx >> i_max >> j_max >> k_max;
+				NumOfBlk = std::stoi(res1[1].str());
+				if (NumOfBlk <= 0)
+					throw std::runtime_error("Invalid num of blocks: \"" + res1[1].str() + "\".");
+				else
+					m_blk.resize(NumOfBlk, nullptr);
+			}
+			else
+				throw std::runtime_error("Failed to match the single line, where only the num of blocks is specified.");
 
-				if (idx != i)
+			// Read dimension info of each block
+			static const std::regex pattern2(R"(\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*)");
+			for (int i = 0; i < NumOfBlk; i++)
+			{
+				int idx = -1, i_max = -1, j_max = -1, k_max = -1;
+
+				std::getline(mfp, s);
+				std::smatch res2;
+				if (std::regex_match(s, res2, pattern2))
+				{
+					idx = std::stoi(res2[1].str());
+					i_max = std::stoi(res2[2].str());
+					j_max = std::stoi(res2[3].str());
+					k_max = std::stoi(res2[4].str());
+				}
+				else
+					throw std::runtime_error("Failed to match 4 integers.");
+
+				if (idx < 1 || idx > NumOfBlk)
 					throw std::runtime_error("Invalid order of block: " + std::to_string(idx));
-				if (i_max == 0)
+				if (i_max < 1)
 					throw std::runtime_error("Invalid I dimension: " + std::to_string(i_max));
-				if (j_max == 0)
+				if (j_max < 1)
 					throw std::runtime_error("Invalid J dimension: " + std::to_string(j_max));
-				if (k_max == 0)
+				if (k_max < 1)
 					throw std::runtime_error("Invalid K dimension: " + std::to_string(k_max));
 
-				m_blk.emplace_back(i_max, j_max, k_max);
+				auto &e = m_blk(idx);
+				e = new Block3D(i_max, j_max, k_max);
+				e->index() = idx;
 			}
 
 			//Skip separators
 			do {
-				std::getline(mfp, s, '\n');
-			} while (s.find('#') != std::string::npos);
+				std::getline(mfp, s);
+			} while (isBlankLine(s) || checkStarting(s, '#'));
 
-			//Read bc mappings
+			//Read connections
 			m_entry.clear();
 			do {
 				str_formalize(s);
@@ -778,9 +814,9 @@ namespace NMF
 			for (size_t i = 0; i < NumOfBlk; i++)
 			{
 				f_out << std::setw(8) << std::right << i + 1;
-				f_out << std::setw(8) << std::right << m_blk[i].IDIM();
-				f_out << std::setw(8) << std::right << m_blk[i].JDIM();
-				f_out << std::setw(8) << std::right << m_blk[i].KDIM();
+				f_out << std::setw(8) << std::right << m_blk[i]->IDIM();
+				f_out << std::setw(8) << std::right << m_blk[i]->JDIM();
+				f_out << std::setw(8) << std::right << m_blk[i]->KDIM();
 				f_out << std::endl;
 			}
 
@@ -815,11 +851,13 @@ namespace NMF
 			return 0;
 		}
 
+		size_t nBlk() const { return m_blk.size(); }
+
 		size_t nCell() const
 		{
 			size_t ret = 0;
 			for (const auto & blk : m_blk)
-				ret += blk.cell_num();
+				ret += blk->cell_num();
 			return ret;
 		}
 
@@ -827,9 +865,9 @@ namespace NMF
 		{
 			size_t ret = 0;
 			for (const auto &blk : m_blk)
-				ret += blk.cell_num();
+				ret += blk->face_num();
 
-			// Sustract duplicated interface
+			// Substract duplicated interface
 			for (const auto &e : m_entry)
 				if (e.Type() == BC::ONE_TO_ONE)
 					ret -= e.face_num();
@@ -843,14 +881,14 @@ namespace NMF
 			size_t cnt = 0;
 			for (auto &blk : m_blk)
 			{
-				const size_t cI = blk.IDIM();
-				const size_t cJ = blk.JDIM();
-				const size_t cK = blk.KDIM();
+				const size_t cI = blk->IDIM();
+				const size_t cJ = blk->JDIM();
+				const size_t cK = blk->KDIM();
 
 				for (size_t k = 1; k < cK; ++k)
 					for (size_t j = 1; j < cJ; ++j)
 						for (size_t i = 1; i < cI; ++i)
-							blk.cell(i, j, k).CellSeq() = ++cnt;
+							blk->cell(i, j, k).CellSeq() = ++cnt;
 			}
 
 			const size_t totalCellNum = nCell();
@@ -861,9 +899,9 @@ namespace NMF
 			cnt = 0;
 			for (auto &blk : m_blk)
 			{
-				const size_t cI = blk.IDIM();
-				const size_t cJ = blk.JDIM();
-				const size_t cK = blk.KDIM();
+				const size_t cI = blk->IDIM();
+				const size_t cJ = blk->JDIM();
+				const size_t cK = blk->KDIM();
 
 				// TODO
 			}
@@ -876,6 +914,40 @@ namespace NMF
 			// TODO
 
 			return 0;
+		}
+
+	private:
+		void coloring_block_frame()
+		{
+			for (auto &blk : m_blk)
+			{
+				// TODO
+			}
+		}
+
+		static bool isWhite(char c)
+		{
+			return c == '\n' || c == ' ' || c == '\t';
+		}
+
+		static bool isBlankLine(const std::string &s)
+		{
+			for (const auto &e : s)
+				if (!isWhite(e))
+					return false;
+			return true;
+		}
+
+		static bool checkStarting(const std::string &s, char c)
+		{
+			for (const auto &e : s)
+			{
+				if (isWhite(e))
+					continue;
+				else
+					return e == c;
+			}
+			return false;
 		}
 	};
 }

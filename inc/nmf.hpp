@@ -177,6 +177,7 @@ namespace NMF
 		}
 
 		BC() = delete;
+		BC(const BC &rhs) = delete;
 		~BC() = default;
 	};
 
@@ -229,7 +230,8 @@ namespace NMF
 
 	public:
 		DIM() = delete;
-		DIM(int dim) : m_dim(dim)
+		DIM(int dim) :
+		    m_dim(dim)
 		{
 			if (dim == 2)
 				m_is3D = false;
@@ -690,6 +692,7 @@ namespace NMF
 		Mapping3D(const std::string &inp)
 		{
 			readFromFile(inp);
+			compute_topology();
 		}
 		Mapping3D(const Mapping3D &rhs) :
 			m_blk(rhs.nBlk(), nullptr),
@@ -938,9 +941,11 @@ namespace NMF
 				f_out << std::endl;
 			}
 
-			// Finalize
+			// Close output file
 			f_out.close();
-			return 0;
+
+            // Finalize
+            return 0;
 		}
 
 		size_t nBlk() const { return m_blk.size(); }
@@ -962,10 +967,7 @@ namespace NMF
 			// Substract duplicated interface
 			for (const auto &e : m_entry)
 				if (e->Type() == BC::ONE_TO_ONE)
-				{
-					auto p = dynamic_cast<DoubleSideEntry*>(e);
-					ret -= p->Range1().face_num();
-				}
+					ret -= e->Range1().face_num();
 
 			return ret;
 		}

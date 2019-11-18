@@ -526,154 +526,164 @@ namespace NMF
 		Array1D<SURF> m_surf;
 	};
 
-	class RANGE
+	class Mapping2D
 	{
-	private:
-		size_t m_blk; // Block index, 1-based.
-		size_t m_face; // Face index, ranges from 1 to 6.
-		size_t m_s1; // Primary direction starting index, 1-based.
-		size_t m_e1; // Primary direction ending index, 1-based.
-		size_t m_s2; // Secondary direction starting index, 1-based.
-		size_t m_e2; // Secondary direction ending index, 1-based.
-
 	public:
-		RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
-		RANGE(size_t *src) : m_blk(src[0]), m_face(src[1]), m_s1(src[2]), m_e1(src[3]), m_s2(src[4]), m_e2(src[5]) {}
-		RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) : m_blk(b), m_face(f), m_s1(s1), m_e1(e1), m_s2(s2), m_e2(e2) {}
-		RANGE(const RANGE &rhs) = default;
-		~RANGE() = default;
-
-		size_t B() const { return m_blk; }
-		size_t &B() { return m_blk; }
-
-		size_t F() const { return m_face; }
-		size_t &F() { return m_face; }
-
-		size_t S1() const { return m_s1; }
-		size_t &S1() { return m_s1; }
-
-		size_t E1() const { return m_e1; }
-		size_t &E1() { return m_e1; }
-
-		size_t S2() const { return m_s2; }
-		size_t &S2() { return m_s2; }
-
-		size_t E2() const { return m_e2; }
-		size_t &E2() { return m_e2; }
-
-		// Check if given index is within this range.
-		bool constains(size_t pri, size_t sec) const
-		{
-			const bool t1 = (m_s1 <= pri) && (pri <= m_e1);
-			const bool t2 = (m_s2 <= sec) && (sec <= m_e2);
-			return t1 && t2;
-		}
-
-		// Nodes in primary direction.
-		size_t pri_node_num() const { return m_e1 - m_s1 + 1; }
-
-		// Nodes in secondary direction.
-		size_t sec_node_num() const { return m_e2 - m_s2 + 1; }
-
-		// Total nodes on this interface.
-		size_t node_num() const { return pri_node_num() * sec_node_num(); }
-
-		// Total edges on this interface.
-		size_t edge_num() const
-		{
-			const size_t n_pri = (pri_node_num() - 1) * sec_node_num();
-			const size_t n_sec = (sec_node_num() - 1) * pri_node_num();
-			return n_pri + n_sec;
-		}
-
-		// Total quad cells on this interface.
-		size_t face_num() const { return (pri_node_num() - 1) * (sec_node_num() - 1); }
-	};
-
-	class ENTRY
-	{
-	private:
-		int m_bc;
-		RANGE *m_rg1, *m_rg2; // The ownership is restricted to the object only, can not be assigned from outside to prevent possible errors.
-		bool m_swap;
-
-	public:
-		ENTRY(const std::string &t, size_t *s) : m_rg1(new RANGE(s)), m_rg2(nullptr), m_swap(false)
-		{
-			if (BC::isValidBCStr(t))
-				m_bc = BC::str2idx(t);
-			else
-				throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
-		}
-		ENTRY(const std::string &t, size_t *s1, size_t *s2, bool f) : m_rg1(new RANGE(s1)), m_rg2(new RANGE(s2)), m_swap(f)
-		{
-			if (BC::isValidBCStr(t))
-				m_bc = BC::str2idx(t);
-			else
-				throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
-		}
-		ENTRY(const ENTRY &rhs) : m_bc(rhs.m_bc), m_rg1(nullptr), m_rg2(nullptr), m_swap(rhs.m_swap)
-		{
-			if (rhs.m_rg1)
-				m_rg1 = new RANGE(*rhs.m_rg1);
-			else
-				throw std::runtime_error("The first range object should EXIST.");
-
-			if (rhs.m_rg2)
-				m_rg2 = new RANGE(*rhs.m_rg2);
-		}
-		~ENTRY()
-		{
-			if (m_rg1)
-				delete m_rg1;
-			if (m_rg2)
-				delete m_rg2;
-		}
-
-		int Type() const { return m_bc; }
-		int &Type() { return m_bc; }
-
-		size_t B1() const { return m_rg1->B(); }
-		size_t &B1() { return m_rg1->B(); }
-
-		size_t F1() const { return m_rg1->F(); }
-		size_t &F1() { return m_rg1->F(); }
-
-		size_t B2() const { return m_rg2->B(); }
-		size_t &B2() { return m_rg2->B(); }
-
-		size_t F2() const { return m_rg2->F(); }
-		size_t &F2() { return m_rg2->F(); }
-
-		const RANGE &Range1() const { return *m_rg1; }
-		RANGE &Range1() { return *m_rg1; }
-
-		const RANGE &Range2() const { return *m_rg2; }
-		RANGE &Range2() { return *m_rg2; }
-
-		bool Swap() const { return m_swap; }
-		bool &Swap() { return m_swap; }
-
-		size_t node_num() const { return m_rg1->node_num(); }
-
-		size_t face_num() const { return m_rg1->face_num(); }
-
-		int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const
-		{
-			if (B1() == bs && F1() == fs && Range1().constains(lpri, lsec)) // Left
-				return 1;
-			else if (m_rg2 && B2() == bs && F2() == fs && Range2().constains(lpri, lsec))
-				return 2;
-			else
-				return 0;
-		}
+		Mapping2D() = default;
 	};
 
 	class Mapping3D
 	{
-	private:
-		Array1D<Block3D*> m_blk;
-		Array1D<ENTRY> m_entry;
+	protected:
+		class ENTRY
+		{
+		protected:
+			class RANGE
+			{
+			private:
+				size_t m_blk; // Block index, 1-based.
+				size_t m_face; // Face index, ranges from 1 to 6.
+				size_t m_s1; // Primary direction starting index, 1-based.
+				size_t m_e1; // Primary direction ending index, 1-based.
+				size_t m_s2; // Secondary direction starting index, 1-based.
+				size_t m_e2; // Secondary direction ending index, 1-based.
+
+			public:
+				RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
+				RANGE(size_t *src) : m_blk(src[0]), m_face(src[1]), m_s1(src[2]), m_e1(src[3]), m_s2(src[4]), m_e2(src[5]) {}
+				RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) : m_blk(b), m_face(f), m_s1(s1), m_e1(e1), m_s2(s2), m_e2(e2) {}
+				RANGE(const RANGE &rhs) = default;
+				~RANGE() = default;
+
+				size_t B() const { return m_blk; }
+				size_t &B() { return m_blk; }
+
+				size_t F() const { return m_face; }
+				size_t &F() { return m_face; }
+
+				size_t S1() const { return m_s1; }
+				size_t &S1() { return m_s1; }
+
+				size_t E1() const { return m_e1; }
+				size_t &E1() { return m_e1; }
+
+				size_t S2() const { return m_s2; }
+				size_t &S2() { return m_s2; }
+
+				size_t E2() const { return m_e2; }
+				size_t &E2() { return m_e2; }
+
+				// Check if given index is within this range.
+				bool constains(size_t pri, size_t sec) const
+				{
+					const bool t1 = (m_s1 <= pri) && (pri <= m_e1);
+					const bool t2 = (m_s2 <= sec) && (sec <= m_e2);
+					return t1 && t2;
+				}
+
+				// Nodes in primary direction.
+				size_t pri_node_num() const
+				{
+					return m_e1 - m_s1 + 1;
+				}
+
+				// Nodes in secondary direction.
+				size_t sec_node_num() const
+				{
+					return m_e2 - m_s2 + 1;
+				}
+
+				// Total nodes on this interface.
+				size_t node_num() const
+				{
+					return pri_node_num() * sec_node_num();
+				}
+
+				// Total edges on this interface.
+				size_t edge_num() const
+				{
+					const size_t n_pri = (pri_node_num() - 1) * sec_node_num();
+					const size_t n_sec = (sec_node_num() - 1) * pri_node_num();
+					return n_pri + n_sec;
+				}
+
+				// Total quad cells on this interface.
+				size_t face_num() const
+				{
+					return (pri_node_num() - 1) * (sec_node_num() - 1);
+				}
+			};
+
+		public:
+			ENTRY() = default;
+			ENTRY(const std::string &t, size_t *s) :
+				m_rg1(s)
+			{
+				if (BC::isValidBCStr(t))
+					m_bc = BC::str2idx(t);
+				else
+					throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
+			}
+			ENTRY(const ENTRY &rhs) = default;
+			virtual ~ENTRY() = default;
+
+			int Type() const { return m_bc; }
+			int &Type() { return m_bc; }
+
+			RANGE &Range1() { return m_rg1; }
+			const RANGE &Range1() const { return m_rg1; }
+
+			virtual int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const = 0;
+
+		private:
+			int m_bc;
+			RANGE m_rg1;
+		};
+		class SingleSideEntry : public ENTRY
+		{
+		public:
+			SingleSideEntry() = default;
+			SingleSideEntry(const std::string &t, size_t *s) : ENTRY(t, s) {}
+			SingleSideEntry(const SingleSideEntry &rhs) = default;
+			~SingleSideEntry() = default;
+
+			int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const
+			{
+				const auto &rg = this->Range1();
+				return (rg.B() == bs && rg.F() == fs && rg.constains(lpri, lsec)) ? 1 : 0;
+			}
+		};
+		class DoubleSideEntry : public ENTRY
+		{
+		public:
+			DoubleSideEntry() = default;
+			DoubleSideEntry(const std::string &t, size_t *s1, size_t *s2, bool f) : ENTRY(t, s1), m_rg2(s2), m_swap(f) {}
+			DoubleSideEntry(const DoubleSideEntry &rhs) = default;
+			~DoubleSideEntry() = default;
+
+			RANGE &Range2() { return m_rg2; }
+			const RANGE &Range2() const { return m_rg2; }
+
+			bool Swap() const { return m_swap; }
+			bool &Swap() { return m_swap; }
+
+			int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const
+			{
+				const auto &rg1 = this->Range1();
+				const auto &rg2 = this->Range2();
+
+				if (rg1.B() == bs && rg1.F() == fs && rg1.constains(lpri, lsec))
+					return 1;
+				else if (rg2.B() == bs && rg2.F() == fs && rg2.constains(lpri, lsec))
+					return 2;
+				else
+					return 0;
+			}
+
+		private:
+			RANGE m_rg2;
+			bool m_swap;
+		};
 
 	public:
 		Mapping3D() = default;
@@ -681,15 +691,35 @@ namespace NMF
 		{
 			readFromFile(inp);
 		}
-		Mapping3D(const Mapping3D &rhs) : m_entry(rhs.m_entry)
+		Mapping3D(const Mapping3D &rhs) :
+			m_blk(rhs.nBlk(), nullptr),
+			m_entry(rhs.m_entry.size(), nullptr)
 		{
-			m_blk.resize(rhs.nBlk());
+			// Copy block info.
 			for (size_t i = 0; i < m_blk.size(); ++i)
 				m_blk[i] = new Block3D(*rhs.m_blk[i]);
+
+			// Copy entry info.
+			for (size_t i = 0; i < m_entry.size(); ++i)
+			{
+				auto ptr1 = dynamic_cast<SingleSideEntry*>(rhs.m_entry[i]);
+				auto ptr2 = dynamic_cast<DoubleSideEntry*>(rhs.m_entry[i]);
+
+				if (ptr2)
+					m_entry[i] = new DoubleSideEntry(*ptr2);
+				else
+					m_entry[i] = new SingleSideEntry(*ptr1);
+			}
 		}
 		~Mapping3D()
 		{
+			// Release memory used for blocks.
 			for (auto e : m_blk)
+				if (e)
+					delete e;
+
+			// Release memory used for entries.
+			for (auto e : m_entry)
 				if (e)
 					delete e;
 		}
@@ -779,16 +809,18 @@ namespace NMF
 					std::string swp;
 					ss >> swp;
 
-					m_entry.emplace_back(bc_str, connectivity[0], connectivity[1], swp == "TRUE");
+					auto ptr = new DoubleSideEntry(bc_str, connectivity[0], connectivity[1], swp == "TRUE");
+					m_entry.push_back(ptr);
 				}
 				else
 				{
 					for (int i = 0; i < 6; i++)
 						ss >> connectivity[0][i];
 
-					m_entry.emplace_back(bc_str, connectivity[0]);
+					auto ptr = new SingleSideEntry(bc_str, connectivity[0]);
+					m_entry.push_back(ptr);
 				}
-			} while (std::getline(mfp, s, '\n'));
+			} while (std::getline(mfp, s));
 
 			// Finalize
 			mfp.close();
@@ -826,22 +858,23 @@ namespace NMF
 			f_out << "# ------------------------------------------------------------------------------------------------------------" << std::endl;
 			for (auto & e : m_entry)
 			{
-				f_out << std::setw(13) << std::left << BC::idx2str(e.Type());
-				f_out << std::setw(6) << std::right << e.B1();
-				f_out << std::setw(6) << std::right << e.F1();
-				f_out << std::setw(9) << std::right << e.Range1().S1();
-				f_out << std::setw(6) << std::right << e.Range1().E1();
-				f_out << std::setw(9) << std::right << e.Range1().S2();
-				f_out << std::setw(6) << std::right << e.Range1().E2();
-				if (e.Type() == BC::ONE_TO_ONE)
+				f_out << std::setw(13) << std::left << BC::idx2str(e->Type());
+				f_out << std::setw(6) << std::right << e->Range1().B();
+				f_out << std::setw(6) << std::right << e->Range1().F();
+				f_out << std::setw(9) << std::right << e->Range1().S1();
+				f_out << std::setw(6) << std::right << e->Range1().E1();
+				f_out << std::setw(9) << std::right << e->Range1().S2();
+				f_out << std::setw(6) << std::right << e->Range1().E2();
+				if (e->Type() == BC::ONE_TO_ONE)
 				{
-					f_out << std::setw(9) << std::right << e.B2();
-					f_out << std::setw(6) << std::right << e.F2();
-					f_out << std::setw(9) << std::right << e.Range2().S1();
-					f_out << std::setw(6) << std::right << e.Range2().E1();
-					f_out << std::setw(9) << std::right << e.Range2().S2();
-					f_out << std::setw(6) << std::right << e.Range2().E2();
-					f_out << std::setw(10) << std::right << (e.Swap() ? "TRUE" : "FALSE");
+					auto p = dynamic_cast<DoubleSideEntry*>(e);
+					f_out << std::setw(9) << std::right << p->Range2().B();
+					f_out << std::setw(6) << std::right << p->Range2().F();
+					f_out << std::setw(9) << std::right << p->Range2().S1();
+					f_out << std::setw(6) << std::right << p->Range2().E1();
+					f_out << std::setw(9) << std::right << p->Range2().S2();
+					f_out << std::setw(6) << std::right << p->Range2().E2();
+					f_out << std::setw(10) << std::right << (p->Swap() ? "TRUE" : "FALSE");
 				}
 				f_out << std::endl;
 			}
@@ -869,8 +902,11 @@ namespace NMF
 
 			// Substract duplicated interface
 			for (const auto &e : m_entry)
-				if (e.Type() == BC::ONE_TO_ONE)
-					ret -= e.face_num();
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					auto p = dynamic_cast<DoubleSideEntry*>(e);
+					ret -= p->Range1().face_num();
+				}
 
 			return ret;
 		}
@@ -949,6 +985,10 @@ namespace NMF
 			}
 			return false;
 		}
+
+	private:
+		Array1D<Block3D*> m_blk;
+		Array1D<ENTRY*> m_entry;
 	};
 }
 

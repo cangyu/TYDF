@@ -822,8 +822,67 @@ namespace NMF
 				}
 			} while (std::getline(mfp, s));
 
-			// Finalize
+			// Close input file
 			mfp.close();
+
+			// Establish connectivity
+			for (auto e : m_entry)
+			{
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					auto p = dynamic_cast<DoubleSideEntry*>(e);
+					auto B1 = m_blk(p->Range1().B());
+					auto B2 = m_blk(p->Range2().B());
+					auto F1 = &B1->surf(p->Range1().F());
+					auto F2 = &B2->surf(p->Range2().F());
+
+					F1->neighbourSurf = F2;
+					F2->neighbourSurf = F1;
+				}
+			}
+
+			// Finalize
+			return 0;
+		}
+
+		int compute_topology()
+		{
+			// Indexing of cells
+			size_t cnt = 0;
+			for (auto &blk : m_blk)
+			{
+				const size_t cI = blk->IDIM();
+				const size_t cJ = blk->JDIM();
+				const size_t cK = blk->KDIM();
+
+				for (size_t k = 1; k < cK; ++k)
+					for (size_t j = 1; j < cJ; ++j)
+						for (size_t i = 1; i < cI; ++i)
+							blk->cell(i, j, k).CellSeq() = ++cnt;
+			}
+
+			const size_t totalCellNum = nCell();
+			if (cnt != totalCellNum)
+				throw std::length_error("Inconsistent num of cells detected.");
+
+			// Indexing of faces
+			cnt = 0;
+			for (auto &blk : m_blk)
+			{
+				const size_t cI = blk->IDIM();
+				const size_t cJ = blk->JDIM();
+				const size_t cK = blk->KDIM();
+
+				// TODO
+			}
+			const size_t totalFaceNum = nFace();
+			if (cnt != totalFaceNum)
+				throw std::length_error("Inconsistent num of cells detected.");
+
+			// Indexing of nodes
+			cnt = 0;
+			// TODO
+
 			return 0;
 		}
 
@@ -911,56 +970,7 @@ namespace NMF
 			return ret;
 		}
 
-		int compute_topology()
-		{
-			// Indexing of cells
-			size_t cnt = 0;
-			for (auto &blk : m_blk)
-			{
-				const size_t cI = blk->IDIM();
-				const size_t cJ = blk->JDIM();
-				const size_t cK = blk->KDIM();
-
-				for (size_t k = 1; k < cK; ++k)
-					for (size_t j = 1; j < cJ; ++j)
-						for (size_t i = 1; i < cI; ++i)
-							blk->cell(i, j, k).CellSeq() = ++cnt;
-			}
-
-			const size_t totalCellNum = nCell();
-			if (cnt != totalCellNum)
-				throw std::length_error("Inconsistent num of cells detected.");
-
-			// Indexing of faces
-			cnt = 0;
-			for (auto &blk : m_blk)
-			{
-				const size_t cI = blk->IDIM();
-				const size_t cJ = blk->JDIM();
-				const size_t cK = blk->KDIM();
-
-				// TODO
-			}
-			const size_t totalFaceNum = nFace();
-			if (cnt != totalFaceNum)
-				throw std::length_error("Inconsistent num of cells detected.");
-
-			// Indexing of nodes
-			cnt = 0;
-			// TODO
-
-			return 0;
-		}
-
 	private:
-		void coloring_block_frame()
-		{
-			for (auto &blk : m_blk)
-			{
-				// TODO
-			}
-		}
-
 		static bool isWhite(char c)
 		{
 			return c == '\n' || c == ' ' || c == '\t';
@@ -984,6 +994,14 @@ namespace NMF
 					return e == c;
 			}
 			return false;
+		}
+
+		void coloring_block_frame()
+		{
+			for (auto &blk : m_blk)
+			{
+				// TODO
+			}
 		}
 
 	private:

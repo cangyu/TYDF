@@ -5,7 +5,7 @@ void test0()
 {
 	NMF::Mapping3D mapping;
 	mapping.readFromFile("mapping0.nmf");
-	//mapping.compute_topology();
+	//mapping.numbering();
 	mapping.writeToFile("mapping0_blessed.nmf");
 }
 

@@ -13,6 +13,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <queue>
 #include <utility>
 #include <stdexcept>
 #include <regex>
@@ -392,8 +393,11 @@ namespace NMF
 		Array1D<EDGE> m_edge;
 	};
 
+	class Mapping3D;
 	class Block3D : public BLOCK
 	{
+		friend class Mapping3D;
+
 	private:
 		struct SURF;
 		struct EDGE
@@ -407,6 +411,7 @@ namespace NMF
 		{
 			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
 			std::array<EDGE*, 4> includedEdge{ nullptr, nullptr, nullptr, nullptr };
+			std::array<EDGE*, 4> counterpartEdge{ nullptr, nullptr, nullptr, nullptr };
 			Block3D *dependentBlock = nullptr;
 			SURF *neighbourSurf = nullptr;
 		};
@@ -692,7 +697,7 @@ namespace NMF
 		Mapping3D(const std::string &inp)
 		{
 			readFromFile(inp);
-			compute_topology();
+			numbering();
 		}
 		Mapping3D(const Mapping3D &rhs) :
 			m_blk(rhs.nBlk(), nullptr),
@@ -842,11 +847,51 @@ namespace NMF
 				}
 			}
 
+			// Counterpart information
+			for (auto e : m_entry)
+			{
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					auto p = dynamic_cast<DoubleSideEntry*>(e);
+					auto B1 = m_blk(p->Range1().B());
+					auto B2 = m_blk(p->Range2().B());
+					auto F1 = &B1->surf(p->Range1().F());
+					auto F2 = &B2->surf(p->Range2().F());
+
+					// There're 4 possible mapping cases.
+					if (p->Swap())
+					{
+						// When the primary directions of F1 and F2 are not aligned,
+						// The primary direction of F1 goes parallel with the secondary 
+						// direction of F2, and the secondary direction of F1 goes
+						// parallel with the primary direction of F2. However, under 
+						// the right-hand convention, there're 2 further possibilities:
+						// One is the primary direction of F1 and the secondary direction
+						// of F2 run in the same direction, in this case, the remaining
+						// pair MUST runs in different direction. The other is the primary
+						// direction of F1 and the secondary direction of F2 run in
+						// different direction, in this case, the remaining pair MUST
+						// run in same direction.
+
+					}
+					else
+					{
+						// Even the primary directions of F1 and F2 are aligned, 
+						// they may be in opposite directions. This is further deteced 
+						// by the compare the trend from S1 to E1 in F1 with that in F2. 
+						// If these 2 trends are the same, the 2 primary directions are 
+						// not only parallel but also in the same directions, otherwise, 
+						// they are only parallel, but runs in different directions.
+					}
+
+				}
+			}
+
 			// Finalize
 			return 0;
 		}
 
-		int compute_topology()
+		int numbering()
 		{
 			// Indexing of cells
 			size_t cnt = 0;
@@ -1012,11 +1057,43 @@ namespace NMF
 			return false;
 		}
 
-		void coloring_block_frame()
+		void coloring()
 		{
-			for (auto &blk : m_blk)
+			int global_cnt = 0;
+			for (size_t i = 1; i <= nBlk(); ++i)
 			{
-				// TODO
+				auto b = m_blk(i);
+				for (size_t j = 1; j <= Block3D::NumOfEdge; ++j)
+				{
+					auto e = &b->edge(j);
+					if (e->global_index != 0)
+						continue;
+
+					++global_cnt;
+					std::queue<Block3D::EDGE*> q;
+					q.push(e);
+
+					// BFS
+					while (!q.empty())
+					{
+						auto ce = q.front();
+						q.pop();
+						ce->global_index = global_cnt;
+
+						auto s1 = ce->dependentSurf[0], s2 = ce->dependentSurf[1];
+						if (!s1 || !s2)
+							throw std::runtime_error("Internal error.");
+
+						if (s1->neighbourSurf)
+						{
+
+						}
+						if (s2->neighbourSurf)
+						{
+
+						}
+					}
+				}
 			}
 		}
 

@@ -54,17 +54,17 @@ namespace NMF
 		}
 	};
 
-	static void str_formalize(std::string &s)
-	{
-		std::transform(s.begin(), s.end(), s.begin(), ::toupper);
-		for (auto &e : s)
-			if (e == '-')
-				e = '_';
-	}
-
 	class BC
 	{
 	public:
+		static void str_formalize(std::string &s)
+		{
+			std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+			for (auto &e : s)
+				if (e == '-')
+					e = '_';
+		}
+
 		enum {
 			COLLAPSED = 1,
 			ONE_TO_ONE = 2,
@@ -231,7 +231,7 @@ namespace NMF
 	public:
 		DIM() = delete;
 		DIM(int dim) :
-		    m_dim(dim)
+			m_dim(dim)
 		{
 			if (dim == 2)
 				m_is3D = false;
@@ -716,15 +716,7 @@ namespace NMF
 		}
 		~Mapping3D()
 		{
-			// Release memory used for blocks.
-			for (auto e : m_blk)
-				if (e)
-					delete e;
-
-			// Release memory used for entries.
-			for (auto e : m_entry)
-				if (e)
-					delete e;
+			release_all();
 		}
 
 		int readFromFile(const std::string &path)
@@ -752,7 +744,14 @@ namespace NMF
 				if (NumOfBlk <= 0)
 					throw std::runtime_error("Invalid num of blocks: \"" + res1[1].str() + "\".");
 				else
+				{
+					// NOT release all existing resources until 
+					// it is ensured that this input file is valid.
+					release_all();
+
+					// Re-Allocate storage for new recordings
 					m_blk.resize(NumOfBlk, nullptr);
+				}
 			}
 			else
 				throw std::runtime_error("Failed to match the single line, where only the num of blocks is specified.");
@@ -795,9 +794,8 @@ namespace NMF
 			} while (isBlankLine(s) || checkStarting(s, '#'));
 
 			//Read connections
-			m_entry.clear();
 			do {
-				str_formalize(s);
+				BC::str_formalize(s);
 				ss.clear();
 				ss << s;
 				std::string bc_str;
@@ -944,8 +942,8 @@ namespace NMF
 			// Close output file
 			f_out.close();
 
-            // Finalize
-            return 0;
+			// Finalize
+			return 0;
 		}
 
 		size_t nBlk() const { return m_blk.size(); }
@@ -973,6 +971,22 @@ namespace NMF
 		}
 
 	private:
+		void release_all()
+		{
+			// Release memory used for blocks.
+			for (auto e : m_blk)
+				if (e)
+					delete e;
+
+			// Release memory used for entries.
+			for (auto e : m_entry)
+				if (e)
+					delete e;
+
+			m_blk.clear();
+			m_entry.clear();
+		}
+
 		static bool isWhite(char c)
 		{
 			return c == '\n' || c == ' ' || c == '\t';

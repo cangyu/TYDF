@@ -442,12 +442,12 @@ namespace NMF
 			}
 
 			// Connection between frame edges and surrounding surfaces
-			m_surf[0].includedEdge = { &m_edge[4], &m_edge[8], &m_edge[7], &m_edge[11] };
+			m_surf[0].includedEdge = { &m_edge[4], &m_edge[11], &m_edge[7], &m_edge[8] };
 			m_surf[1].includedEdge = { &m_edge[5], &m_edge[10], &m_edge[6], &m_edge[9] };
-			m_surf[2].includedEdge = { &m_edge[0], &m_edge[9], &m_edge[3], &m_edge[8] };
-			m_surf[3].includedEdge = { &m_edge[1], &m_edge[11], &m_edge[2], &m_edge[10] };
-			m_surf[4].includedEdge = { &m_edge[0], &m_edge[4], &m_edge[1], &m_edge[5] };
-			m_surf[5].includedEdge = { &m_edge[2], &m_edge[7], &m_edge[3], &m_edge[6] };
+			m_surf[2].includedEdge = { &m_edge[8], &m_edge[3], &m_edge[9], &m_edge[0] };
+			m_surf[3].includedEdge = { &m_edge[11], &m_edge[2], &m_edge[10], &m_edge[1] };
+			m_surf[4].includedEdge = { &m_edge[0], &m_edge[5], &m_edge[1], &m_edge[4] };
+			m_surf[5].includedEdge = { &m_edge[3], &m_edge[6], &m_edge[2], &m_edge[7] };
 
 			m_edge[0].dependentSurf = { &m_surf[2], &m_surf[4] };
 			m_edge[1].dependentSurf = { &m_surf[4], &m_surf[3] };
@@ -486,7 +486,7 @@ namespace NMF
 		}
 
 		// Access the frame edges through 1-based index.
-		// The indexing convention follows NMF specification.
+		// The indexing convention follows OpenFOAM specification.
 		EDGE &edge(int n)
 		{
 			if (1 <= n && n <= NumOfEdge)
@@ -557,8 +557,26 @@ namespace NMF
 
 			public:
 				RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
-				RANGE(size_t *src) : m_blk(src[0]), m_face(src[1]), m_s1(src[2]), m_e1(src[3]), m_s2(src[4]), m_e2(src[5]) {}
-				RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) : m_blk(b), m_face(f), m_s1(s1), m_e1(e1), m_s2(s2), m_e2(e2) {}
+				RANGE(size_t *src) :
+					m_blk(src[0]),
+					m_face(src[1]),
+					m_s1(src[2]),
+					m_e1(src[3]),
+					m_s2(src[4]),
+					m_e2(src[5])
+				{
+					check_param();
+				}
+				RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) :
+					m_blk(b),
+					m_face(f),
+					m_s1(s1),
+					m_e1(e1),
+					m_s2(s2),
+					m_e2(e2)
+				{
+					check_param();
+				}
 				RANGE(const RANGE &rhs) = default;
 				~RANGE() = default;
 
@@ -600,6 +618,20 @@ namespace NMF
 					return m_e2 - m_s2 + 1;
 				}
 
+				// True - Asscending;
+				// False - Descending.
+				bool pri_trend() const
+				{
+					return E1() > S1();
+				}
+
+				// True - Asscending;
+				// False - Descending.
+				bool sec_trend() const
+				{
+					return E2() > S2();
+				}
+
 				// Total nodes on this interface.
 				size_t node_num() const
 				{
@@ -618,6 +650,19 @@ namespace NMF
 				size_t face_num() const
 				{
 					return (pri_node_num() - 1) * (sec_node_num() - 1);
+				}
+
+			private:
+				void check_param()
+				{
+					if (B() == 0)
+						throw std::invalid_argument("Invalid block index, must be positive.");
+					if (F() == 0)
+						throw std::invalid_argument("Invalid face index, must be positive.");
+					if (S1() == E1())
+						throw std::invalid_argument("Starting index and ending index in primary direction must differ,");
+					if (S2() == E2())
+						throw std::invalid_argument("Starting index and ending index in secondary direction must differ,");
 				}
 			};
 
@@ -831,7 +876,7 @@ namespace NMF
 			// Close input file
 			mfp.close();
 
-			// Establish connectivity
+			// Establish face connectivity
 			for (auto e : m_entry)
 			{
 				if (e->Type() == BC::ONE_TO_ONE)
@@ -847,7 +892,7 @@ namespace NMF
 				}
 			}
 
-			// Counterpart information
+			// Edge counterpart information
 			for (auto e : m_entry)
 			{
 				if (e->Type() == BC::ONE_TO_ONE)
@@ -873,6 +918,30 @@ namespace NMF
 						// different direction, in this case, the remaining pair MUST
 						// run in same direction.
 
+						if (p->Range1().pri_trend() == p->Range2().sec_trend()) // case 1
+						{
+							F1->counterpartEdge[0] = F2->includedEdge[1];
+							F1->counterpartEdge[1] = F2->includedEdge[2];
+							F1->counterpartEdge[2] = F2->includedEdge[3];
+							F1->counterpartEdge[3] = F2->includedEdge[0];
+
+							F2->counterpartEdge[0] = F1->includedEdge[3];
+							F2->counterpartEdge[1] = F1->includedEdge[0];
+							F2->counterpartEdge[2] = F1->includedEdge[1];
+							F2->counterpartEdge[3] = F1->includedEdge[2];
+						}
+						else // case 2
+						{
+							F1->counterpartEdge[0] = F2->includedEdge[3];
+							F1->counterpartEdge[1] = F2->includedEdge[0];
+							F1->counterpartEdge[2] = F2->includedEdge[1];
+							F1->counterpartEdge[3] = F2->includedEdge[2];
+
+							F2->counterpartEdge[0] = F1->includedEdge[1];
+							F2->counterpartEdge[1] = F1->includedEdge[2];
+							F2->counterpartEdge[2] = F1->includedEdge[3];
+							F2->counterpartEdge[3] = F1->includedEdge[0];
+						}
 					}
 					else
 					{
@@ -882,11 +951,63 @@ namespace NMF
 						// If these 2 trends are the same, the 2 primary directions are 
 						// not only parallel but also in the same directions, otherwise, 
 						// they are only parallel, but runs in different directions.
-					}
 
+						if (p->Range1().pri_trend() != p->Range2().pri_trend()) // parallel, but opposite.
+						{
+							F1->counterpartEdge[0] = F2->includedEdge[2];
+							F1->counterpartEdge[1] = F2->includedEdge[3];
+							F1->counterpartEdge[2] = F2->includedEdge[0];
+							F1->counterpartEdge[3] = F2->includedEdge[1];
+
+							F2->counterpartEdge[0] = F1->includedEdge[2];
+							F2->counterpartEdge[1] = F1->includedEdge[3];
+							F2->counterpartEdge[2] = F1->includedEdge[0];
+							F2->counterpartEdge[3] = F1->includedEdge[1];
+						}
+						else // parallel, and same direction.
+						{
+							F1->counterpartEdge[0] = F2->includedEdge[0];
+							F1->counterpartEdge[1] = F2->includedEdge[1];
+							F1->counterpartEdge[2] = F2->includedEdge[2];
+							F1->counterpartEdge[3] = F2->includedEdge[3];
+
+							F2->counterpartEdge[0] = F1->includedEdge[0];
+							F2->counterpartEdge[1] = F1->includedEdge[1];
+							F2->counterpartEdge[2] = F1->includedEdge[2];
+							F2->counterpartEdge[3] = F1->includedEdge[3];
+						}
+					}
 				}
 			}
 
+			// Identify block frames
+			const int NumOfFrame = coloring_frame();
+
+			// Output summary
+			std::cout << "=================================== SUMMARY ===================================" << std::endl;
+			std::cout << "Input file: " << path << std::endl;
+			std::cout << "Total num of blocks: " << NumOfBlk << std::endl;
+			std::cout << "Total num of frames: " << NumOfFrame << std::endl;
+			std::cout << "Total num of HEX cells: " << nCell() << std::endl;
+			std::cout << "Total num of QUAD faces: " << nFace() << " (duplication removed)" << std::endl;
+			std::cout << "-------------------------------------------------------------------------------" << std::endl;
+			for (auto &b : m_blk)
+			{
+				std::cout << "Block" << b->index() << ":" << std::endl;
+				std::cout << "\tI=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
+				std::cout << "\tNum of HEX cells: " << b->cell_num() << std::endl;
+				std::cout << "\tNum of QUAD faces: " << b->face_num() << std::endl;
+				std::cout << "\tNum of nodes: " << b->node_num() << std::endl;
+				std::cout << "\tLocal Frame Index:  ";
+				for (int i = 1; i <= Block3D::NumOfEdge; ++i)
+					std::cout << std::setw(4) << std::right << b->edge(i).local_index;
+				std::cout << std::endl;
+				std::cout << "\tGlobal Frame Index: ";
+				for (int i = 1; i <= Block3D::NumOfEdge; ++i)
+					std::cout << std::setw(4) << std::right << b->edge(i).global_index;;
+				std::cout << std::endl;
+			}
+			std::cout << "===================================== END =====================================" << std::endl;
 			// Finalize
 			return 0;
 		}
@@ -1057,12 +1178,12 @@ namespace NMF
 			return false;
 		}
 
-		void coloring()
+		int coloring_frame()
 		{
 			int global_cnt = 0;
 			for (size_t i = 1; i <= nBlk(); ++i)
 			{
-				auto b = m_blk(i);
+				auto &b = m_blk(i);
 				for (size_t j = 1; j <= Block3D::NumOfEdge; ++j)
 				{
 					auto e = &b->edge(j);
@@ -1086,15 +1207,38 @@ namespace NMF
 
 						if (s1->neighbourSurf)
 						{
+							Block3D::EDGE *t = nullptr;
+							for (int i = 0; i < 4; ++i)
+								if (s1->includedEdge[i] == ce)
+								{
+									t = s1->counterpartEdge[i];
+									break;
+								}
+							if (!t)
+								throw std::runtime_error("Internal error.");
 
+							if (t->global_index == 0)
+								q.push(t);
 						}
 						if (s2->neighbourSurf)
 						{
+							Block3D::EDGE *t = nullptr;
+							for (int i = 0; i < 4; ++i)
+								if (s2->includedEdge[i] == ce)
+								{
+									t = s2->counterpartEdge[i];
+									break;
+								}
+							if (!t)
+								throw std::runtime_error("Internal error.");
 
+							if (t->global_index == 0)
+								q.push(t);
 						}
 					}
 				}
 			}
+			return global_cnt;
 		}
 
 	private:

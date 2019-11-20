@@ -906,17 +906,19 @@ namespace NMF
 					// There're 4 possible mapping cases.
 					if (p->Swap())
 					{
-						// When the primary directions of F1 and F2 are not aligned,
-						// The primary direction of F1 goes parallel with the secondary 
-						// direction of F2, and the secondary direction of F1 goes
-						// parallel with the primary direction of F2. However, under 
-						// the right-hand convention, there're 2 further possibilities:
-						// One is the primary direction of F1 and the secondary direction
-						// of F2 run in the same direction, in this case, the remaining
-						// pair MUST runs in different direction. The other is the primary
-						// direction of F1 and the secondary direction of F2 run in
-						// different direction, in this case, the remaining pair MUST
-						// run in same direction.
+                        // When the primary directions of F1 and F2 are not aligned,
+                        // the primary direction of F1 goes parallel with the secondary
+                        // direction of F2, and the secondary direction of F1 goes
+                        // parallel with the primary direction of F2. However, under
+                        // the right-hand convention, there're 2 further possibilities:
+                        // one is the primary direction of F1 and the secondary direction
+                        // of F2 not only go parallel, but also run in the same direction,
+                        // in this case, the remaining pair MUST runs in different direction;
+                        // the other is the primary direction of F1 and the secondary
+                        // direction of F2 go parallel, but run in different direction,
+                        // in this case, the remaining pair MUST run in same direction.
+                        // The exact case is determined by checking the trend of
+                        // corresponding ranges.
 
 						if (p->Range1().pri_trend() == p->Range2().sec_trend()) // case 1
 						{

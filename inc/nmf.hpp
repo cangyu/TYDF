@@ -340,10 +340,10 @@ namespace NMF
 		Block2D(int nI, int nJ) :
 			BLOCK(nI, nJ),
 			m_cell(cell_num()),
-			m_edge(NumOfFrame)
+			m_frame(NumOfFrame)
 		{
-			for (size_t i = 0; i < m_edge.size(); ++i)
-				m_edge[i].local_index = i + 1;
+			for (size_t i = 0; i < m_frame.size(); ++i)
+				m_frame[i].local_index = i + 1;
 		}
 		Block2D(const Block2D &rhs) = default;
 		~Block2D() = default;
@@ -372,25 +372,25 @@ namespace NMF
 		FRAME &frame(int n)
 		{
 			if (1 <= n && n <= NumOfFrame)
-				return m_edge.at(n - 1);
+				return m_frame.at(n - 1);
 			else if (-NumOfFrame <= n && n <= -1)
-				return m_edge.at(NumOfFrame + n);
+				return m_frame.at(NumOfFrame + n);
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
 		}
 		const FRAME &frame(int n) const
 		{
 			if (1 <= n && n <= NumOfFrame)
-				return m_edge.at(n - 1);
+				return m_frame.at(n - 1);
 			else if (-NumOfFrame <= n && n <= -1)
-				return m_edge.at(NumOfFrame + n);
+				return m_frame.at(NumOfFrame + n);
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
 		}
 
 	private:
 		Array1D<QUAD_CELL> m_cell;
-		Array1D<FRAME> m_edge;
+		Array1D<FRAME> m_frame;
 	};
 
 	class Mapping3D;

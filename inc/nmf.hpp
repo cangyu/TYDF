@@ -325,7 +325,7 @@ namespace NMF
 	class Block2D : public BLOCK
 	{
 	private:
-		struct EDGE
+		struct FRAME
 		{
 			short local_index = 0; // Ranges from 1 to 4, set to 0 when uninitialized.
 			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
@@ -334,13 +334,13 @@ namespace NMF
 		};
 
 	public:
-		static const short NumOfEdge = 4;
+		static const short NumOfFrame = 4;
 
 		Block2D() = delete;
 		Block2D(int nI, int nJ) :
 			BLOCK(nI, nJ),
 			m_cell(cell_num()),
-			m_edge(NumOfEdge)
+			m_edge(NumOfFrame)
 		{
 			for (size_t i = 0; i < m_edge.size(); ++i)
 				m_edge[i].local_index = i + 1;
@@ -369,28 +369,28 @@ namespace NMF
 
 		// Access the frame edges through 1-based index.
 		// The indexing convention follows NMF specification.
-		EDGE &edge(int n)
+		FRAME &frame(int n)
 		{
-			if (1 <= n && n <= NumOfEdge)
+			if (1 <= n && n <= NumOfFrame)
 				return m_edge.at(n - 1);
-			else if (-NumOfEdge <= n && n <= -1)
-				return m_edge.at(NumOfEdge + n);
+			else if (-NumOfFrame <= n && n <= -1)
+				return m_edge.at(NumOfFrame + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid edge index for a 2D block.");
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
 		}
-		const EDGE &edge(int n) const
+		const FRAME &frame(int n) const
 		{
-			if (1 <= n && n <= NumOfEdge)
+			if (1 <= n && n <= NumOfFrame)
 				return m_edge.at(n - 1);
-			else if (-NumOfEdge <= n && n <= -1)
-				return m_edge.at(NumOfEdge + n);
+			else if (-NumOfFrame <= n && n <= -1)
+				return m_edge.at(NumOfFrame + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid edge index for a 2D block.");
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
 		}
 
 	private:
 		Array1D<QUAD_CELL> m_cell;
-		Array1D<EDGE> m_edge;
+		Array1D<FRAME> m_edge;
 	};
 
 	class Mapping3D;
@@ -400,7 +400,7 @@ namespace NMF
 
 	private:
 		struct SURF;
-		struct EDGE
+		struct FRAME
 		{
 			short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
 			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
@@ -410,26 +410,26 @@ namespace NMF
 		struct SURF
 		{
 			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
-			std::array<EDGE*, 4> includedEdge{ nullptr, nullptr, nullptr, nullptr };
-			std::array<EDGE*, 4> counterpartEdge{ nullptr, nullptr, nullptr, nullptr };
+			std::array<FRAME*, 4> includedEdge{ nullptr, nullptr, nullptr, nullptr };
+			std::array<FRAME*, 4> counterpartEdge{ nullptr, nullptr, nullptr, nullptr };
 			Block3D *dependentBlock = nullptr;
 			SURF *neighbourSurf = nullptr;
 		};
 
 	public:
-		static const short NumOfEdge = 12;
+		static const short NumOfFrame = 12;
 		static const short NumOfSurf = 6;
 
 		Block3D() = delete;
 		Block3D(int nI, int nJ, int nK) :
 			BLOCK(nI, nJ, nK),
 			m_cell(cell_num()),
-			m_edge(NumOfEdge),
+			m_frame(NumOfFrame),
 			m_surf(NumOfSurf)
 		{
-			for (size_t i = 0; i < m_edge.size(); ++i)
+			for (size_t i = 0; i < m_frame.size(); ++i)
 			{
-				auto &e = m_edge[i];
+				auto &e = m_frame[i];
 				e.local_index = i + 1;
 				e.dependentBlock = this;
 			}
@@ -442,25 +442,25 @@ namespace NMF
 			}
 
 			// Connection between frame edges and surrounding surfaces
-			m_surf[0].includedEdge = { &m_edge[4], &m_edge[11], &m_edge[7], &m_edge[8] };
-			m_surf[1].includedEdge = { &m_edge[5], &m_edge[10], &m_edge[6], &m_edge[9] };
-			m_surf[2].includedEdge = { &m_edge[8], &m_edge[3], &m_edge[9], &m_edge[0] };
-			m_surf[3].includedEdge = { &m_edge[11], &m_edge[2], &m_edge[10], &m_edge[1] };
-			m_surf[4].includedEdge = { &m_edge[0], &m_edge[5], &m_edge[1], &m_edge[4] };
-			m_surf[5].includedEdge = { &m_edge[3], &m_edge[6], &m_edge[2], &m_edge[7] };
+			m_surf[0].includedEdge = { &m_frame[4], &m_frame[11], &m_frame[7], &m_frame[8] };
+			m_surf[1].includedEdge = { &m_frame[5], &m_frame[10], &m_frame[6], &m_frame[9] };
+			m_surf[2].includedEdge = { &m_frame[8], &m_frame[3], &m_frame[9], &m_frame[0] };
+			m_surf[3].includedEdge = { &m_frame[11], &m_frame[2], &m_frame[10], &m_frame[1] };
+			m_surf[4].includedEdge = { &m_frame[0], &m_frame[5], &m_frame[1], &m_frame[4] };
+			m_surf[5].includedEdge = { &m_frame[3], &m_frame[6], &m_frame[2], &m_frame[7] };
 
-			m_edge[0].dependentSurf = { &m_surf[2], &m_surf[4] };
-			m_edge[1].dependentSurf = { &m_surf[4], &m_surf[3] };
-			m_edge[2].dependentSurf = { &m_surf[3], &m_surf[5] };
-			m_edge[3].dependentSurf = { &m_surf[5], &m_surf[2] };
-			m_edge[4].dependentSurf = { &m_surf[0], &m_surf[4] };
-			m_edge[5].dependentSurf = { &m_surf[4], &m_surf[1] };
-			m_edge[6].dependentSurf = { &m_surf[1], &m_surf[5] };
-			m_edge[7].dependentSurf = { &m_surf[5], &m_surf[0] };
-			m_edge[8].dependentSurf = { &m_surf[0], &m_surf[2] };
-			m_edge[9].dependentSurf = { &m_surf[2], &m_surf[1] };
-			m_edge[10].dependentSurf = { &m_surf[1], &m_surf[3] };
-			m_edge[11].dependentSurf = { &m_surf[3], &m_surf[0] };
+			m_frame[0].dependentSurf = { &m_surf[2], &m_surf[4] };
+			m_frame[1].dependentSurf = { &m_surf[4], &m_surf[3] };
+			m_frame[2].dependentSurf = { &m_surf[3], &m_surf[5] };
+			m_frame[3].dependentSurf = { &m_surf[5], &m_surf[2] };
+			m_frame[4].dependentSurf = { &m_surf[0], &m_surf[4] };
+			m_frame[5].dependentSurf = { &m_surf[4], &m_surf[1] };
+			m_frame[6].dependentSurf = { &m_surf[1], &m_surf[5] };
+			m_frame[7].dependentSurf = { &m_surf[5], &m_surf[0] };
+			m_frame[8].dependentSurf = { &m_surf[0], &m_surf[2] };
+			m_frame[9].dependentSurf = { &m_surf[2], &m_surf[1] };
+			m_frame[10].dependentSurf = { &m_surf[1], &m_surf[3] };
+			m_frame[11].dependentSurf = { &m_surf[3], &m_surf[0] };
 		}
 		Block3D(const Block3D &rhs) = default;
 		~Block3D() = default;
@@ -487,23 +487,23 @@ namespace NMF
 
 		// Access the frame edges through 1-based index.
 		// The indexing convention follows OpenFOAM specification.
-		EDGE &edge(int n)
+		FRAME &frame(int n)
 		{
-			if (1 <= n && n <= NumOfEdge)
-				return m_edge.at(n - 1);
-			else if (-NumOfEdge <= n && n <= -1)
-				return m_edge.at(NumOfEdge + n);
+			if (1 <= n && n <= NumOfFrame)
+				return m_frame.at(n - 1);
+			else if (-NumOfFrame <= n && n <= -1)
+				return m_frame.at(NumOfFrame + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid edge index for a 3D block.");
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 3D block.");
 		}
-		const EDGE &edge(int n) const
+		const FRAME &frame(int n) const
 		{
-			if (1 <= n && n <= NumOfEdge)
-				return m_edge.at(n - 1);
-			else if (-NumOfEdge <= n && n <= -1)
-				return m_edge.at(NumOfEdge + n);
+			if (1 <= n && n <= NumOfFrame)
+				return m_frame.at(n - 1);
+			else if (-NumOfFrame <= n && n <= -1)
+				return m_frame.at(NumOfFrame + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid edge index for a 3D block.");
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 3D block.");
 		}
 
 		// Access surrounding surface through 1-based index.
@@ -529,7 +529,7 @@ namespace NMF
 
 	private:
 		Array1D<HEX_CELL> m_cell;
-		Array1D<EDGE> m_edge;
+		Array1D<FRAME> m_frame;
 		Array1D<SURF> m_surf;
 	};
 
@@ -990,21 +990,23 @@ namespace NMF
 			std::cout << "Total num of frames: " << NumOfFrame << std::endl;
 			std::cout << "Total num of HEX cells: " << nCell() << std::endl;
 			std::cout << "Total num of QUAD faces: " << nFace() << " (duplication removed)" << std::endl;
+			std::cout << "Total num of nodes: " << nNode() << " (duplication removed)" << std::endl;
 			std::cout << "-------------------------------------------------------------------------------" << std::endl;
 			for (auto &b : m_blk)
 			{
+				static const std::string sep("    ");
 				std::cout << "Block" << b->index() << ":" << std::endl;
-				std::cout << "\tI=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
-				std::cout << "\tNum of HEX cells: " << b->cell_num() << std::endl;
-				std::cout << "\tNum of QUAD faces: " << b->face_num() << std::endl;
-				std::cout << "\tNum of nodes: " << b->node_num() << std::endl;
-				std::cout << "\tLocal Frame Index:  ";
-				for (int i = 1; i <= Block3D::NumOfEdge; ++i)
-					std::cout << std::setw(4) << std::right << b->edge(i).local_index;
+				std::cout << sep << "I=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
+				std::cout << sep << "Num of HEX cells: " << b->cell_num() << std::endl;
+				std::cout << sep << "Num of QUAD faces: " << b->face_num() << std::endl;
+				std::cout << sep << "Num of nodes: " << b->node_num() << std::endl;
+				std::cout << sep << "Local Frame Index:  ";
+				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+					std::cout << std::setw(4) << std::right << b->frame(i).local_index;
 				std::cout << std::endl;
-				std::cout << "\tGlobal Frame Index: ";
-				for (int i = 1; i <= Block3D::NumOfEdge; ++i)
-					std::cout << std::setw(4) << std::right << b->edge(i).global_index;;
+				std::cout << sep << "Global Frame Index: ";
+				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+					std::cout << std::setw(4) << std::right << b->frame(i).global_index;;
 				std::cout << std::endl;
 			}
 			std::cout << "===================================== END =====================================" << std::endl;
@@ -1136,6 +1138,15 @@ namespace NMF
 			return ret;
 		}
 
+		size_t nNode() const
+		{
+			size_t ret = 0;
+
+			// TODO
+
+			return ret;
+		}
+
 	private:
 		void release_all()
 		{
@@ -1184,14 +1195,14 @@ namespace NMF
 			for (size_t i = 1; i <= nBlk(); ++i)
 			{
 				auto &b = m_blk(i);
-				for (size_t j = 1; j <= Block3D::NumOfEdge; ++j)
+				for (size_t j = 1; j <= Block3D::NumOfFrame; ++j)
 				{
-					auto e = &b->edge(j);
+					auto e = &b->frame(j);
 					if (e->global_index != 0)
 						continue;
 
 					++global_cnt;
-					std::queue<Block3D::EDGE*> q;
+					std::queue<Block3D::FRAME*> q;
 					q.push(e);
 
 					// BFS
@@ -1207,7 +1218,7 @@ namespace NMF
 
 						if (s1->neighbourSurf)
 						{
-							Block3D::EDGE *t = nullptr;
+							Block3D::FRAME *t = nullptr;
 							for (int i = 0; i < 4; ++i)
 								if (s1->includedEdge[i] == ce)
 								{
@@ -1222,7 +1233,7 @@ namespace NMF
 						}
 						if (s2->neighbourSurf)
 						{
-							Block3D::EDGE *t = nullptr;
+							Block3D::FRAME *t = nullptr;
 							for (int i = 0; i < 4; ++i)
 								if (s2->includedEdge[i] == ce)
 								{
@@ -1238,7 +1249,7 @@ namespace NMF
 					}
 				}
 			}
-			return global_cnt;
+			return global_cnt; // The total num of block frames.
 		}
 
 	private:

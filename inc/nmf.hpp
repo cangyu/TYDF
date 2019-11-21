@@ -14,6 +14,7 @@
 #include <map>
 #include <set>
 #include <queue>
+#include <stack>
 #include <utility>
 #include <stdexcept>
 #include <regex>
@@ -431,6 +432,7 @@ namespace NMF
 	{
 	public:
 		struct SURF;
+		struct VERTEX;
 		struct FRAME
 		{
 			short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
@@ -443,6 +445,8 @@ namespace NMF
 			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
 			std::array<FRAME*, 4> includedFrame{ nullptr, nullptr, nullptr, nullptr };
 			std::array<FRAME*, 4> counterpartFrame{ nullptr, nullptr, nullptr, nullptr };
+			std::array<VERTEX*, 4> includedVertex{ nullptr, nullptr, nullptr, nullptr };
+			std::array<VERTEX*, 4> counterpartVertex{ nullptr, nullptr, nullptr, nullptr };
 			Block3D *dependentBlock = nullptr;
 			SURF *neighbourSurf = nullptr;
 		};
@@ -729,8 +733,20 @@ namespace NMF
 				}
 			};
 
+		private:
+			int m_bc;
+			RANGE m_rg1;
+
 		public:
-			ENTRY() = default;
+			ENTRY() : m_bc(-1) {}
+			ENTRY(const std::string &t, size_t B, size_t F, size_t S1, size_t E1, size_t S2, size_t E2) :
+				m_rg1(B, F, S1, E1, S2, E2)
+			{
+				if (BC::isValidBCStr(t))
+					m_bc = BC::str2idx(t);
+				else
+					throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
+			}
 			ENTRY(const std::string &t, size_t *s) :
 				m_rg1(s)
 			{
@@ -749,15 +765,12 @@ namespace NMF
 			const RANGE &Range1() const { return m_rg1; }
 
 			virtual int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const = 0;
-
-		private:
-			int m_bc;
-			RANGE m_rg1;
 		};
 		class SingleSideEntry : public ENTRY
 		{
 		public:
 			SingleSideEntry() = default;
+			SingleSideEntry(const std::string &t, size_t B, size_t F, size_t S1, size_t E1, size_t S2, size_t E2) : ENTRY(t, B, F, S1, E1, S2, E2) {}
 			SingleSideEntry(const std::string &t, size_t *s) : ENTRY(t, s) {}
 			SingleSideEntry(const SingleSideEntry &rhs) = default;
 			~SingleSideEntry() = default;
@@ -770,8 +783,12 @@ namespace NMF
 		};
 		class DoubleSideEntry : public ENTRY
 		{
+		private:
+			RANGE m_rg2;
+			bool m_swap;
+
 		public:
-			DoubleSideEntry() = default;
+			DoubleSideEntry() : m_swap(false) {}
 			DoubleSideEntry(const std::string &t, size_t *s1, size_t *s2, bool f) : ENTRY(t, s1), m_rg2(s2), m_swap(f) {}
 			DoubleSideEntry(const DoubleSideEntry &rhs) = default;
 			~DoubleSideEntry() = default;
@@ -794,28 +811,30 @@ namespace NMF
 				else
 					return 0;
 			}
-
-		private:
-			RANGE m_rg2;
-			bool m_swap;
 		};
+
+	private:
+		Array1D<Block3D*> m_blk;
+		Array1D<ENTRY*> m_entry;
+		Array1D<std::vector<Block3D::VERTEX*>> m_vertex;
+		Array1D<std::vector<Block3D::FRAME*>> m_frame;
 
 	public:
 		Mapping3D() = default;
 		Mapping3D(const std::string &inp)
 		{
 			readFromFile(inp);
-			numbering();
+			compute_topology();
 		}
 		Mapping3D(const Mapping3D &rhs) :
-			m_blk(rhs.nBlk(), nullptr),
+			m_blk(rhs.nBlock(), nullptr),
 			m_entry(rhs.m_entry.size(), nullptr)
 		{
-			// Copy block info.
+			// Copy blocks
 			for (size_t i = 0; i < m_blk.size(); ++i)
 				m_blk[i] = new Block3D(*rhs.m_blk[i]);
 
-			// Copy entry info.
+			// Copy entrys
 			for (size_t i = 0; i < m_entry.size(); ++i)
 			{
 				auto ptr1 = dynamic_cast<SingleSideEntry*>(rhs.m_entry[i]);
@@ -854,9 +873,7 @@ namespace NMF
 			if (std::regex_match(s, res1, pattern1))
 			{
 				NumOfBlk = std::stoi(res1[1].str());
-				if (NumOfBlk <= 0)
-					throw std::runtime_error("Invalid num of blocks: \"" + res1[1].str() + "\".");
-				else
+				if (NumOfBlk > 0)
 				{
 					// NOT release all existing resources until 
 					// it is ensured that this input file is valid.
@@ -865,6 +882,8 @@ namespace NMF
 					// Re-Allocate storage for new recordings
 					m_blk.resize(NumOfBlk, nullptr);
 				}
+				else
+					throw std::runtime_error("Invalid num of blocks: \"" + res1[1].str() + "\".");
 			}
 			else
 				throw std::runtime_error("Failed to match the single line, where only the num of blocks is specified.");
@@ -939,23 +958,314 @@ namespace NMF
 			// Close input file
 			mfp.close();
 
-			// Establish face connectivity
-			for (auto e : m_entry)
-			{
-				if (e->Type() == BC::ONE_TO_ONE)
-				{
-					auto p = dynamic_cast<DoubleSideEntry*>(e);
-					auto B1 = m_blk(p->Range1().B());
-					auto B2 = m_blk(p->Range2().B());
-					auto F1 = &B1->surf(p->Range1().F());
-					auto F2 = &B2->surf(p->Range2().F());
+			// Finalize
+			return 0;
+		}
 
-					F1->neighbourSurf = F2;
-					F2->neighbourSurf = F1;
+		void compute_topology()
+		{
+			connecting();
+
+			const int nfm = coloring_frame();
+			if (nfm < Block3D::NumOfFrame)
+				throw std::runtime_error("Internal error.");
+
+			m_frame.resize(nfm);
+			for (auto &e : m_frame)
+				e.clear();
+			for (const auto &b : m_blk)
+				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+				{
+					auto &e = b->frame(i);
+					m_frame(e.global_index).push_back(&e);
 				}
+
+			/*
+			const int nvt = coloring_vertex();
+			if (nvt < Block3D::NumOfVertex)
+				throw std::runtime_error("Internal error.");
+
+			m_vertex.resize(nvt);
+			for (auto &e : m_vertex)
+				e.clear();
+			for(const auto &b : m_blk)
+				for(int i = 1; i <= Block3D::NumOfVertex; ++i)
+				{
+					auto &v = b->vertex(i);
+					m_vertex(v.global_index).push_back(&v);
+				}
+			*/
+		}
+
+		void summary(std::ostream &out = std::cout)
+		{
+			std::cout << "=================================== SUMMARY ===================================" << std::endl;
+			std::cout << "Total num of blocks: " << nBlock() << std::endl;
+			size_t nSa = 0, nSi = 0, nSb = 0;
+			nSurface(nSa, nSi, nSb);
+			std::cout << "Total num of surfaces: " << nSa << ", among which " << nSi << " are internal, " << nSb << " located at boundary" << std::endl;
+			std::cout << "Total num of frames: " << nFrame() << std::endl;
+			std::cout << "Total num of vertexs: " << nVertex() << std::endl;
+			std::cout << "Total num of HEX cells: " << nCell() << std::endl;
+			std::cout << "Total num of QUAD faces: " << nFace() << " (duplication removed)" << std::endl;
+			std::cout << "Total num of nodes: " << nNode() << " (duplication removed)" << std::endl;
+			std::cout << "-------------------------------------------------------------------------------" << std::endl;
+			static const std::string sep("    ");
+			for (auto &b : m_blk)
+			{
+				std::cout << "Block" << b->index() << ":" << std::endl;
+				std::cout << sep << "I=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
+				std::cout << sep << "Num of HEX cells: " << b->cell_num() << std::endl;
+				std::cout << sep << "Num of QUAD faces: " << b->face_num() << std::endl;
+				std::cout << sep << "Num of nodes: " << b->node_num() << std::endl;
+				std::cout << sep << "Local Frame Index:  ";
+				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+					std::cout << std::setw(4) << std::right << b->frame(i).local_index;
+				std::cout << std::endl;
+				std::cout << sep << "Global Frame Index: ";
+				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+					std::cout << std::setw(4) << std::right << b->frame(i).global_index;
+				std::cout << std::endl;
+			}
+			std::cout << "-------------------------------------------------------------------------------" << std::endl;
+			for (int i = 1; i <= nFrame(); ++i)
+			{
+				std::cout << "Frame" << i << ": " << std::endl;
+				std::cout << sep << "Num of nodes: " << -1 << std::endl;
+				std::cout << sep << "Occurance: ";
+				for (auto e : m_frame(i))
+					std::cout << "(" << e->dependentBlock->index() << ", " << e->local_index << ") ";
+				std::cout << std::endl;
+
+			}
+			std::cout << "===================================== END =====================================" << std::endl;
+		}
+
+		int numbering()
+		{
+			// Indexing of cells
+			size_t cnt = 0;
+			for (auto &blk : m_blk)
+			{
+				const size_t cI = blk->IDIM();
+				const size_t cJ = blk->JDIM();
+				const size_t cK = blk->KDIM();
+
+				for (size_t k = 1; k < cK; ++k)
+					for (size_t j = 1; j < cJ; ++j)
+						for (size_t i = 1; i < cI; ++i)
+							blk->cell(i, j, k).CellSeq() = ++cnt;
 			}
 
-			// Edge counterpart information
+			const size_t totalCellNum = nCell();
+			if (cnt != totalCellNum)
+				throw std::length_error("Inconsistent num of cells detected.");
+
+			// Indexing of faces
+			cnt = 0;
+			for (auto &blk : m_blk)
+			{
+				const size_t cI = blk->IDIM();
+				const size_t cJ = blk->JDIM();
+				const size_t cK = blk->KDIM();
+
+				// TODO
+			}
+			const size_t totalFaceNum = nFace();
+			if (cnt != totalFaceNum)
+				throw std::length_error("Inconsistent num of cells detected.");
+
+			// Indexing of nodes
+			cnt = 0;
+			// TODO
+
+			return 0;
+		}
+
+		int writeToFile(const std::string &path)
+		{
+			// Open target file
+			std::ofstream f_out(path);
+			if (f_out.fail())
+				throw std::runtime_error("Can not open target output file: " + path);
+
+			// Header
+			f_out << "# ======================== Neutral Map File generated by the Grid-Glue software ==============================" << std::endl;
+			f_out << "# ============================================================================================================" << std::endl;
+			f_out << "# Block#    IDIM    JDIM    KDIM" << std::endl;
+			f_out << "# ------------------------------------------------------------------------------------------------------------" << std::endl;
+
+			// Block info
+			const size_t NumOfBlk = nBlock();
+			f_out << std::setw(8) << std::right << NumOfBlk << std::endl;
+			for (size_t i = 0; i < NumOfBlk; i++)
+			{
+				f_out << std::setw(8) << std::right << i + 1;
+				f_out << std::setw(8) << std::right << m_blk[i]->IDIM();
+				f_out << std::setw(8) << std::right << m_blk[i]->JDIM();
+				f_out << std::setw(8) << std::right << m_blk[i]->KDIM();
+				f_out << std::endl;
+			}
+
+			// Interface and boundary info
+			f_out << "# ============================================================================================================" << std::endl;
+			f_out << "# Type           B1    F1       S1    E1       S2    E2       B2    F2       S1    E1       S2    E2      Swap" << std::endl;
+			f_out << "# ------------------------------------------------------------------------------------------------------------" << std::endl;
+			for (auto & e : m_entry)
+			{
+				f_out << std::setw(13) << std::left << BC::idx2str(e->Type());
+				f_out << std::setw(6) << std::right << e->Range1().B();
+				f_out << std::setw(6) << std::right << e->Range1().F();
+				f_out << std::setw(9) << std::right << e->Range1().S1();
+				f_out << std::setw(6) << std::right << e->Range1().E1();
+				f_out << std::setw(9) << std::right << e->Range1().S2();
+				f_out << std::setw(6) << std::right << e->Range1().E2();
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					auto p = dynamic_cast<DoubleSideEntry*>(e);
+					f_out << std::setw(9) << std::right << p->Range2().B();
+					f_out << std::setw(6) << std::right << p->Range2().F();
+					f_out << std::setw(9) << std::right << p->Range2().S1();
+					f_out << std::setw(6) << std::right << p->Range2().E1();
+					f_out << std::setw(9) << std::right << p->Range2().S2();
+					f_out << std::setw(6) << std::right << p->Range2().E2();
+					f_out << std::setw(10) << std::right << (p->Swap() ? "TRUE" : "FALSE");
+				}
+				f_out << std::endl;
+			}
+
+			// Close output file
+			f_out.close();
+
+			// Finalize
+			return 0;
+		}
+
+		size_t nBlock() const
+		{
+			return m_blk.size();
+		}
+
+		void nSurface(size_t &_all, size_t &_inter, size_t &_bdry) const
+		{
+			_all = Block3D::NumOfSurf * nBlock();
+			_inter = 0;
+			for (auto e : m_entry)
+			{
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					_all -= 1;
+					_inter += 1;
+				}
+			}
+			_bdry = _all - _inter;
+		}
+
+		size_t nFrame() const
+		{
+			return m_frame.size();
+		}
+
+		size_t nVertex() const
+		{
+			return m_vertex.size();
+		}
+
+		size_t nCell() const
+		{
+			size_t ret = 0;
+			for (const auto & blk : m_blk)
+				ret += blk->cell_num();
+			return ret;
+		}
+
+		size_t nFace() const
+		{
+			size_t ret = 0;
+			for (const auto &blk : m_blk)
+				ret += blk->face_num();
+
+			// Substract duplicated interface
+			for (const auto &e : m_entry)
+				if (e->Type() == BC::ONE_TO_ONE)
+					ret -= e->Range1().face_num();
+
+			return ret;
+		}
+
+		size_t nNode() const
+		{
+			size_t ret = 0;
+
+			// TODO
+
+			return ret;
+		}
+
+		void add_block(size_t _nI, size_t _nJ, size_t _nK)
+		{
+			auto b = new Block3D(_nI, _nJ, _nK);
+			b->index() = nBlock() + 1;
+			m_blk.push_back(b);
+		}
+
+		void add_block(const Block3D &x)
+		{
+			auto b = new Block3D(x);
+			b->index() = nBlock() + 1;
+			m_blk.push_back(b);
+		}
+
+		void add_entry(const std::string &_bc, size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2)
+		{
+			auto e = new SingleSideEntry(_bc, b, f, s1, e1, s2, e2);
+			m_entry.push_back(e);
+		}
+
+	private:
+		void release_all()
+		{
+			// Release memory used for blocks.
+			for (auto e : m_blk)
+				if (e)
+					delete e;
+
+			// Release memory used for entries.
+			for (auto e : m_entry)
+				if (e)
+					delete e;
+
+			m_blk.clear();
+			m_entry.clear();
+		}
+
+		static bool isWhite(char c)
+		{
+			return c == '\n' || c == ' ' || c == '\t';
+		}
+
+		static bool isBlankLine(const std::string &s)
+		{
+			for (const auto &e : s)
+				if (!isWhite(e))
+					return false;
+			return true;
+		}
+
+		static bool checkStarting(const std::string &s, char c)
+		{
+			for (const auto &e : s)
+			{
+				if (isWhite(e))
+					continue;
+				else
+					return e == c;
+			}
+			return false;
+		}
+
+		void connecting()
+		{
 			for (auto e : m_entry)
 			{
 				if (e->Type() == BC::ONE_TO_ONE)
@@ -966,6 +1276,11 @@ namespace NMF
 					auto F1 = &B1->surf(p->Range1().F());
 					auto F2 = &B2->surf(p->Range2().F());
 
+					// Surface connectivity
+					F1->neighbourSurf = F2;
+					F2->neighbourSurf = F1;
+
+					// Counterpart concerning frames on each surface.
 					// There're 4 possible mapping cases.
 					if (p->Swap())
 					{
@@ -1044,245 +1359,12 @@ namespace NMF
 					}
 				}
 			}
-
-			// Identify block frames
-			const int nfm = coloring_frame();
-			if (nfm < Block3D::NumOfFrame)
-				throw std::runtime_error("Internal error.");
-			m_frame.resize(nfm);
-			for (auto &e : m_frame)
-				e.clear();
-			for (const auto &b : m_blk)
-				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
-				{
-					auto &e = b->frame(i);
-					m_frame(e.global_index).push_back(&e);
-				}
-
-			// Output summary
-			std::cout << "=================================== SUMMARY ===================================" << std::endl;
-			std::cout << "Input file: " << path << std::endl;
-			std::cout << "Total num of blocks: " << nBlk() << std::endl;
-			std::cout << "Total num of frames: " << nFrame() << std::endl;
-			std::cout << "Total num of HEX cells: " << nCell() << std::endl;
-			std::cout << "Total num of QUAD faces: " << nFace() << " (duplication removed)" << std::endl;
-			std::cout << "Total num of nodes: " << nNode() << " (duplication removed)" << std::endl;
-			std::cout << "-------------------------------------------------------------------------------" << std::endl;
-			static const std::string sep("    ");
-			for (auto &b : m_blk)
-			{
-				std::cout << "Block" << b->index() << ":" << std::endl;
-				std::cout << sep << "I=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
-				std::cout << sep << "Num of HEX cells: " << b->cell_num() << std::endl;
-				std::cout << sep << "Num of QUAD faces: " << b->face_num() << std::endl;
-				std::cout << sep << "Num of nodes: " << b->node_num() << std::endl;
-				std::cout << sep << "Local Frame Index:  ";
-				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
-					std::cout << std::setw(4) << std::right << b->frame(i).local_index;
-				std::cout << std::endl;
-				std::cout << sep << "Global Frame Index: ";
-				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
-					std::cout << std::setw(4) << std::right << b->frame(i).global_index;
-				std::cout << std::endl;
-			}
-			std::cout << "-------------------------------------------------------------------------------" << std::endl;
-			for (int i = 1; i <= nFrame(); ++i)
-			{
-				std::cout << "Frame" << i << ": " << std::endl;
-				std::cout << sep << "Num of nodes: " << -1 << std::endl;
-				std::cout << sep << "Occurance: ";
-				for (auto e : m_frame(i))
-					std::cout << "(" << e->dependentBlock->index() << ", " << e->local_index << ") ";
-				std::cout << std::endl;
-
-			}
-			std::cout << "===================================== END =====================================" << std::endl;
-
-			// Finalize
-			return 0;
-		}
-
-		int numbering()
-		{
-			// Indexing of cells
-			size_t cnt = 0;
-			for (auto &blk : m_blk)
-			{
-				const size_t cI = blk->IDIM();
-				const size_t cJ = blk->JDIM();
-				const size_t cK = blk->KDIM();
-
-				for (size_t k = 1; k < cK; ++k)
-					for (size_t j = 1; j < cJ; ++j)
-						for (size_t i = 1; i < cI; ++i)
-							blk->cell(i, j, k).CellSeq() = ++cnt;
-			}
-
-			const size_t totalCellNum = nCell();
-			if (cnt != totalCellNum)
-				throw std::length_error("Inconsistent num of cells detected.");
-
-			// Indexing of faces
-			cnt = 0;
-			for (auto &blk : m_blk)
-			{
-				const size_t cI = blk->IDIM();
-				const size_t cJ = blk->JDIM();
-				const size_t cK = blk->KDIM();
-
-				// TODO
-			}
-			const size_t totalFaceNum = nFace();
-			if (cnt != totalFaceNum)
-				throw std::length_error("Inconsistent num of cells detected.");
-
-			// Indexing of nodes
-			cnt = 0;
-			// TODO
-
-			return 0;
-		}
-
-		int writeToFile(const std::string &path)
-		{
-			// Open target file
-			std::ofstream f_out(path);
-			if (f_out.fail())
-				throw std::runtime_error("Can not open target output file: " + path);
-
-			// Header
-			f_out << "# ======================== Neutral Map File generated by the Grid-Glue software ==============================" << std::endl;
-			f_out << "# ============================================================================================================" << std::endl;
-			f_out << "# Block#    IDIM    JDIM    KDIM" << std::endl;
-			f_out << "# ------------------------------------------------------------------------------------------------------------" << std::endl;
-
-			// Block info
-			const size_t NumOfBlk = nBlk();
-			f_out << std::setw(8) << std::right << NumOfBlk << std::endl;
-			for (size_t i = 0; i < NumOfBlk; i++)
-			{
-				f_out << std::setw(8) << std::right << i + 1;
-				f_out << std::setw(8) << std::right << m_blk[i]->IDIM();
-				f_out << std::setw(8) << std::right << m_blk[i]->JDIM();
-				f_out << std::setw(8) << std::right << m_blk[i]->KDIM();
-				f_out << std::endl;
-			}
-
-			// Interface and boundary info
-			f_out << "# ============================================================================================================" << std::endl;
-			f_out << "# Type           B1    F1       S1    E1       S2    E2       B2    F2       S1    E1       S2    E2      Swap" << std::endl;
-			f_out << "# ------------------------------------------------------------------------------------------------------------" << std::endl;
-			for (auto & e : m_entry)
-			{
-				f_out << std::setw(13) << std::left << BC::idx2str(e->Type());
-				f_out << std::setw(6) << std::right << e->Range1().B();
-				f_out << std::setw(6) << std::right << e->Range1().F();
-				f_out << std::setw(9) << std::right << e->Range1().S1();
-				f_out << std::setw(6) << std::right << e->Range1().E1();
-				f_out << std::setw(9) << std::right << e->Range1().S2();
-				f_out << std::setw(6) << std::right << e->Range1().E2();
-				if (e->Type() == BC::ONE_TO_ONE)
-				{
-					auto p = dynamic_cast<DoubleSideEntry*>(e);
-					f_out << std::setw(9) << std::right << p->Range2().B();
-					f_out << std::setw(6) << std::right << p->Range2().F();
-					f_out << std::setw(9) << std::right << p->Range2().S1();
-					f_out << std::setw(6) << std::right << p->Range2().E1();
-					f_out << std::setw(9) << std::right << p->Range2().S2();
-					f_out << std::setw(6) << std::right << p->Range2().E2();
-					f_out << std::setw(10) << std::right << (p->Swap() ? "TRUE" : "FALSE");
-				}
-				f_out << std::endl;
-			}
-
-			// Close output file
-			f_out.close();
-
-			// Finalize
-			return 0;
-		}
-
-		size_t nBlk() const { return m_blk.size(); }
-
-		size_t nFrame() const { return m_frame.size(); }
-
-		size_t nCell() const
-		{
-			size_t ret = 0;
-			for (const auto & blk : m_blk)
-				ret += blk->cell_num();
-			return ret;
-		}
-
-		size_t nFace() const
-		{
-			size_t ret = 0;
-			for (const auto &blk : m_blk)
-				ret += blk->face_num();
-
-			// Substract duplicated interface
-			for (const auto &e : m_entry)
-				if (e->Type() == BC::ONE_TO_ONE)
-					ret -= e->Range1().face_num();
-
-			return ret;
-		}
-
-		size_t nNode() const
-		{
-			size_t ret = 0;
-
-			// TODO
-
-			return ret;
-		}
-
-	private:
-		void release_all()
-		{
-			// Release memory used for blocks.
-			for (auto e : m_blk)
-				if (e)
-					delete e;
-
-			// Release memory used for entries.
-			for (auto e : m_entry)
-				if (e)
-					delete e;
-
-			m_blk.clear();
-			m_entry.clear();
-		}
-
-		static bool isWhite(char c)
-		{
-			return c == '\n' || c == ' ' || c == '\t';
-		}
-
-		static bool isBlankLine(const std::string &s)
-		{
-			for (const auto &e : s)
-				if (!isWhite(e))
-					return false;
-			return true;
-		}
-
-		static bool checkStarting(const std::string &s, char c)
-		{
-			for (const auto &e : s)
-			{
-				if (isWhite(e))
-					continue;
-				else
-					return e == c;
-			}
-			return false;
 		}
 
 		int coloring_frame()
 		{
 			int global_cnt = 0;
-			for (size_t i = 1; i <= nBlk(); ++i)
+			for (size_t i = 1; i <= nBlock(); ++i)
 			{
 				auto &b = m_blk(i);
 				for (size_t j = 1; j <= Block3D::NumOfFrame; ++j)
@@ -1347,16 +1429,51 @@ namespace NMF
 			int global_cnt = 0;
 			for (auto &b : m_blk)
 			{
+				for (size_t j = 1; j <= Block3D::NumOfVertex; ++j)
+				{
+					auto v = &b->vertex(j);
+					if (v->global_index != 0)
+						continue;
 
+					++global_cnt;
+					std::stack<Block3D::VERTEX*> s;
+					s.push(v);
+
+
+					// DFS
+					while (!s.empty())
+					{
+						auto cv = s.top();
+						s.pop();
+						cv->global_index = global_cnt;
+
+						for (int k = 0; k < cv->dependentSurf.size(); ++k)
+						{
+							auto sf = cv->dependentSurf[k];
+							if (!sf)
+								throw std::runtime_error("Internal error.");
+
+							if (sf->neighbourSurf)
+							{
+								Block3D::VERTEX *t = nullptr;
+								for (auto sfv : sf->includedVertex)
+									if (sfv == cv)
+									{
+										t = sfv;
+										break;
+									}
+								if (!t)
+									throw std::runtime_error("Internal error.");
+
+								if (t->global_index == 0)
+									s.push(t);
+							}
+						}
+					}
+				}
 			}
-
 			return global_cnt;
 		}
-
-	private:
-		Array1D<Block3D*> m_blk;
-		Array1D<ENTRY*> m_entry;
-		Array1D<std::vector<Block3D::FRAME*>> m_frame;
 	};
 }
 

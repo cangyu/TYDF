@@ -5,14 +5,15 @@ void test0()
 {
 	NMF::Mapping3D mapping;
 	mapping.readFromFile("mapping0.nmf");
-	//mapping.numbering();
+	mapping.compute_topology();
+	mapping.summary();
 	mapping.writeToFile("mapping0_blessed.nmf");
 }
 
 void test1()
 {
-	NMF::Mapping3D mapping;
-	mapping.readFromFile("mapping1.nmf");
+	NMF::Mapping3D mapping("mapping1.nmf");
+	mapping.summary();
 	mapping.writeToFile("mapping1_blessed.nmf");
 }
 

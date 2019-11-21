@@ -334,6 +334,7 @@ namespace NMF
 		};
 
 	public:
+	    static const short NumOfVertex = 4;
 		static const short NumOfFrame = 4;
 
 		Block2D() = delete;
@@ -396,27 +397,33 @@ namespace NMF
 	class Mapping3D;
 	class Block3D : public BLOCK
 	{
-		friend class Mapping3D;
-
-	private:
-		struct SURF;
-		struct FRAME
-		{
-			short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
-			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
-			Block3D *dependentBlock = nullptr;
-			std::array<SURF*, 2> dependentSurf{ nullptr, nullptr };
-		};
-		struct SURF
-		{
-			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
-			std::array<FRAME*, 4> includedEdge{ nullptr, nullptr, nullptr, nullptr };
-			std::array<FRAME*, 4> counterpartEdge{ nullptr, nullptr, nullptr, nullptr };
-			Block3D *dependentBlock = nullptr;
-			SURF *neighbourSurf = nullptr;
-		};
-
 	public:
+        struct SURF;
+        struct FRAME
+        {
+            short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
+            int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+            Block3D *dependentBlock = nullptr;
+            std::array<SURF*, 2> dependentSurf{ nullptr, nullptr };
+        };
+        struct SURF
+        {
+            short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
+            std::array<FRAME*, 4> includedEdge{ nullptr, nullptr, nullptr, nullptr };
+            std::array<FRAME*, 4> counterpartEdge{ nullptr, nullptr, nullptr, nullptr };
+            Block3D *dependentBlock = nullptr;
+            SURF *neighbourSurf = nullptr;
+        };
+        struct VERTEX
+        {
+            short local_index;
+            int global_index;
+            Block3D *dependentBlock;
+            std::array<SURF*, 3> dependentSurf;
+            std::array<FRAME*, 3> dependentFrame;
+        };
+
+        static const short NumOfVertex = 8;
 		static const short NumOfFrame = 12;
 		static const short NumOfSurf = 6;
 
@@ -424,6 +431,7 @@ namespace NMF
 		Block3D(int nI, int nJ, int nK) :
 			BLOCK(nI, nJ, nK),
 			m_cell(cell_num()),
+			m_vertex(NumOfVertex),
 			m_frame(NumOfFrame),
 			m_surf(NumOfSurf)
 		{
@@ -529,7 +537,8 @@ namespace NMF
 
 	private:
 		Array1D<HEX_CELL> m_cell;
-		Array1D<FRAME> m_frame;
+        Array1D<VERTEX> m_vertex;
+        Array1D<FRAME> m_frame;
 		Array1D<SURF> m_surf;
 	};
 
@@ -983,20 +992,31 @@ namespace NMF
 			}
 
 			// Identify block frames
-			const int NumOfFrame = coloring_frame();
+			const int nfm = coloring_frame();
+			if(nfm < Block3D::NumOfFrame)
+			    throw std::runtime_error("Internal error.");
+			m_frame.resize(nfm);
+			for(auto &e : m_frame)
+			    e.clear();
+			for(const auto &b : m_blk)
+			    for(int i = 1; i <= Block3D::NumOfFrame; ++i)
+                {
+			        auto &e = b->frame(i);
+			        m_frame(e.global_index).push_back(&e);
+                }
 
 			// Output summary
 			std::cout << "=================================== SUMMARY ===================================" << std::endl;
 			std::cout << "Input file: " << path << std::endl;
-			std::cout << "Total num of blocks: " << NumOfBlk << std::endl;
-			std::cout << "Total num of frames: " << NumOfFrame << std::endl;
+			std::cout << "Total num of blocks: " << nBlk() << std::endl;
+			std::cout << "Total num of frames: " << nFrame() << std::endl;
 			std::cout << "Total num of HEX cells: " << nCell() << std::endl;
 			std::cout << "Total num of QUAD faces: " << nFace() << " (duplication removed)" << std::endl;
 			std::cout << "Total num of nodes: " << nNode() << " (duplication removed)" << std::endl;
 			std::cout << "-------------------------------------------------------------------------------" << std::endl;
-			for (auto &b : m_blk)
+            static const std::string sep("    ");
+            for (auto &b : m_blk)
 			{
-				static const std::string sep("    ");
 				std::cout << "Block" << b->index() << ":" << std::endl;
 				std::cout << sep << "I=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
 				std::cout << sep << "Num of HEX cells: " << b->cell_num() << std::endl;
@@ -1011,7 +1031,19 @@ namespace NMF
 					std::cout << std::setw(4) << std::right << b->frame(i).global_index;;
 				std::cout << std::endl;
 			}
+            std::cout << "-------------------------------------------------------------------------------" << std::endl;
+			for(int i = 1; i <= nFrame(); ++i)
+            {
+			    std::cout << "Frame" << i << ": " << std::endl;
+			    std::cout << sep << "Num of nodes: " << -1 << std::endl;
+			    std::cout << sep << "Occurance: ";
+                for(auto e : m_frame(i))
+                    std::cout << "(" << e->dependentBlock->index() << ", " << e->local_index << ") ";
+                std::cout << std::endl;
+
+            }
 			std::cout << "===================================== END =====================================" << std::endl;
+
 			// Finalize
 			return 0;
 		}
@@ -1117,6 +1149,8 @@ namespace NMF
 		}
 
 		size_t nBlk() const { return m_blk.size(); }
+
+		size_t nFrame() const { return m_frame.size(); }
 
 		size_t nCell() const
 		{
@@ -1254,9 +1288,21 @@ namespace NMF
 			return global_cnt; // The total num of block frames.
 		}
 
+		int coloring_vertex()
+        {
+		    int global_cnt = 0;
+		    for(auto &b : m_blk)
+            {
+
+            }
+
+		    return global_cnt;
+        }
+
 	private:
 		Array1D<Block3D*> m_blk;
 		Array1D<ENTRY*> m_entry;
+		Array1D<std::vector<Block3D::FRAME*>> m_frame;
 	};
 }
 

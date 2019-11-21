@@ -324,27 +324,43 @@ namespace NMF
 
 	class Block2D : public BLOCK
 	{
-	private:
+	public:
+		static const short NumOfVertex = 4;
+		static const short NumOfFrame = 4;
+
 		struct FRAME
 		{
-			short local_index = 0; // Ranges from 1 to 4, set to 0 when uninitialized.
+			short local_index = 0; // Ranges from 1 to 'NumOfFrame', set to 0 when uninitialized.
 			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
 			Block2D *dependentBlock = nullptr;
 			Block2D *neighbourBlock = nullptr;
 		};
+		struct VERTEX
+		{
+			short local_index = 0; // Ranges from 1 to 'NumOfVertex', set to 0 when uninitialized.
+			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			Block2D *dependentBlock = nullptr;
+			std::array<FRAME*, 2> dependentFrame{ nullptr, nullptr };
+		};
+
+	private:
+		Array1D<QUAD_CELL> m_cell;
+		Array1D<FRAME> m_frame;
+		Array1D<VERTEX> m_vertex;
 
 	public:
-	    static const short NumOfVertex = 4;
-		static const short NumOfFrame = 4;
-
 		Block2D() = delete;
 		Block2D(int nI, int nJ) :
 			BLOCK(nI, nJ),
 			m_cell(cell_num()),
+			m_vertex(NumOfVertex),
 			m_frame(NumOfFrame)
 		{
 			for (size_t i = 0; i < m_frame.size(); ++i)
 				m_frame[i].local_index = i + 1;
+
+			for (size_t i = 0; i < m_vertex.size(); ++i)
+				m_vertex[i].local_index = i + 1;
 		}
 		Block2D(const Block2D &rhs) = default;
 		~Block2D() = default;
@@ -368,8 +384,8 @@ namespace NMF
 			return m_cell.at(idx);
 		}
 
-		// Access the frame edges through 1-based index.
-		// The indexing convention follows NMF specification.
+		// Access frame through 1-based index.
+		// The indexing convention follows OpenFOAM specification.
 		FRAME &frame(int n)
 		{
 			if (1 <= n && n <= NumOfFrame)
@@ -389,44 +405,67 @@ namespace NMF
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
 		}
 
-	private:
-		Array1D<QUAD_CELL> m_cell;
-		Array1D<FRAME> m_frame;
+		// Access vertex through 1-based index.
+		// The indexing convention follows OpenFOAM specification.
+		VERTEX &vertex(int n)
+		{
+			if (1 <= n && n <= NumOfVertex)
+				return m_vertex.at(n - 1);
+			else if (-NumOfVertex <= n && n <= -1)
+				return m_vertex.at(NumOfVertex + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
+		}
+		const VERTEX &vertex(int n) const
+		{
+			if (1 <= n && n <= NumOfVertex)
+				return m_vertex.at(n - 1);
+			else if (-NumOfVertex <= n && n <= -1)
+				return m_vertex.at(NumOfVertex + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
+		}
 	};
 
-	class Mapping3D;
 	class Block3D : public BLOCK
 	{
 	public:
-        struct SURF;
-        struct FRAME
-        {
-            short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
-            int global_index = 0; // 1-based global index, set to 0 when uninitialized.
-            Block3D *dependentBlock = nullptr;
-            std::array<SURF*, 2> dependentSurf{ nullptr, nullptr };
-        };
-        struct SURF
-        {
-            short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
-            std::array<FRAME*, 4> includedEdge{ nullptr, nullptr, nullptr, nullptr };
-            std::array<FRAME*, 4> counterpartEdge{ nullptr, nullptr, nullptr, nullptr };
-            Block3D *dependentBlock = nullptr;
-            SURF *neighbourSurf = nullptr;
-        };
-        struct VERTEX
-        {
-            short local_index;
-            int global_index;
-            Block3D *dependentBlock;
-            std::array<SURF*, 3> dependentSurf;
-            std::array<FRAME*, 3> dependentFrame;
-        };
+		struct SURF;
+		struct FRAME
+		{
+			short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
+			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			Block3D *dependentBlock = nullptr;
+			std::array<SURF*, 2> dependentSurf{ nullptr, nullptr };
+		};
+		struct SURF
+		{
+			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
+			std::array<FRAME*, 4> includedFrame{ nullptr, nullptr, nullptr, nullptr };
+			std::array<FRAME*, 4> counterpartFrame{ nullptr, nullptr, nullptr, nullptr };
+			Block3D *dependentBlock = nullptr;
+			SURF *neighbourSurf = nullptr;
+		};
+		struct VERTEX
+		{
+			short local_index = 0; // Ranges from 1 to 8, set to 0 when uninitialized.
+			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			Block3D *dependentBlock = nullptr;
+			std::array<SURF*, 3> dependentSurf = { nullptr, nullptr, nullptr };
+			std::array<FRAME*, 3> dependentFrame = { nullptr, nullptr, nullptr };
+		};
 
-        static const short NumOfVertex = 8;
+		static const short NumOfVertex = 8;
 		static const short NumOfFrame = 12;
 		static const short NumOfSurf = 6;
 
+	private:
+		Array1D<HEX_CELL> m_cell;
+		Array1D<VERTEX> m_vertex;
+		Array1D<FRAME> m_frame;
+		Array1D<SURF> m_surf;
+
+	public:
 		Block3D() = delete;
 		Block3D(int nI, int nJ, int nK) :
 			BLOCK(nI, nJ, nK),
@@ -450,12 +489,12 @@ namespace NMF
 			}
 
 			// Connection between frame edges and surrounding surfaces
-			m_surf[0].includedEdge = { &m_frame[4], &m_frame[11], &m_frame[7], &m_frame[8] };
-			m_surf[1].includedEdge = { &m_frame[5], &m_frame[10], &m_frame[6], &m_frame[9] };
-			m_surf[2].includedEdge = { &m_frame[8], &m_frame[3], &m_frame[9], &m_frame[0] };
-			m_surf[3].includedEdge = { &m_frame[11], &m_frame[2], &m_frame[10], &m_frame[1] };
-			m_surf[4].includedEdge = { &m_frame[0], &m_frame[5], &m_frame[1], &m_frame[4] };
-			m_surf[5].includedEdge = { &m_frame[3], &m_frame[6], &m_frame[2], &m_frame[7] };
+			m_surf[0].includedFrame = { &m_frame[4], &m_frame[11], &m_frame[7], &m_frame[8] };
+			m_surf[1].includedFrame = { &m_frame[5], &m_frame[10], &m_frame[6], &m_frame[9] };
+			m_surf[2].includedFrame = { &m_frame[8], &m_frame[3], &m_frame[9], &m_frame[0] };
+			m_surf[3].includedFrame = { &m_frame[11], &m_frame[2], &m_frame[10], &m_frame[1] };
+			m_surf[4].includedFrame = { &m_frame[0], &m_frame[5], &m_frame[1], &m_frame[4] };
+			m_surf[5].includedFrame = { &m_frame[3], &m_frame[6], &m_frame[2], &m_frame[7] };
 
 			m_frame[0].dependentSurf = { &m_surf[2], &m_surf[4] };
 			m_frame[1].dependentSurf = { &m_surf[4], &m_surf[3] };
@@ -491,6 +530,27 @@ namespace NMF
 			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
 			const size_t idx = i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0);
 			return m_cell.at(idx);
+		}
+
+		// Access vertex through 1-based index.
+		// The indexing convention follows OpenFOAM specification.
+		VERTEX &vertex(int n)
+		{
+			if (1 <= n && n <= NumOfVertex)
+				return m_vertex.at(n - 1);
+			else if (-NumOfVertex <= n && n <= -1)
+				return m_vertex.at(NumOfVertex + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 3D block.");
+		}
+		const VERTEX &vertex(int n) const
+		{
+			if (1 <= n && n <= NumOfVertex)
+				return m_vertex.at(n - 1);
+			else if (-NumOfVertex <= n && n <= -1)
+				return m_vertex.at(NumOfVertex + n);
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 3D block.");
 		}
 
 		// Access the frame edges through 1-based index.
@@ -534,12 +594,6 @@ namespace NMF
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
 		}
-
-	private:
-		Array1D<HEX_CELL> m_cell;
-        Array1D<VERTEX> m_vertex;
-        Array1D<FRAME> m_frame;
-		Array1D<SURF> m_surf;
 	};
 
 	class Mapping2D
@@ -819,32 +873,32 @@ namespace NMF
 			static const std::regex pattern2(R"(\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*)");
 			for (int i = 0; i < NumOfBlk; i++)
 			{
-				int idx = -1, i_max = -1, j_max = -1, k_max = -1;
-
 				std::getline(mfp, s);
 				std::smatch res2;
 				if (std::regex_match(s, res2, pattern2))
 				{
-					idx = std::stoi(res2[1].str());
-					i_max = std::stoi(res2[2].str());
-					j_max = std::stoi(res2[3].str());
-					k_max = std::stoi(res2[4].str());
+					const int idx = std::stoi(res2[1].str());
+					if (idx < 1 || idx > NumOfBlk)
+						throw std::runtime_error("Invalid order of block: " + std::to_string(idx));
+
+					const int i_max = std::stoi(res2[2].str());
+					if (i_max < 1)
+						throw std::runtime_error("Invalid I dimension: " + std::to_string(i_max));
+
+					const int j_max = std::stoi(res2[3].str());
+					if (j_max < 1)
+						throw std::runtime_error("Invalid J dimension: " + std::to_string(j_max));
+
+					const int k_max = std::stoi(res2[4].str());
+					if (k_max < 1)
+						throw std::runtime_error("Invalid K dimension: " + std::to_string(k_max));
+
+					auto &e = m_blk(idx);
+					e = new Block3D(i_max, j_max, k_max);
+					e->index() = idx;
 				}
 				else
 					throw std::runtime_error("Failed to match 4 integers.");
-
-				if (idx < 1 || idx > NumOfBlk)
-					throw std::runtime_error("Invalid order of block: " + std::to_string(idx));
-				if (i_max < 1)
-					throw std::runtime_error("Invalid I dimension: " + std::to_string(i_max));
-				if (j_max < 1)
-					throw std::runtime_error("Invalid J dimension: " + std::to_string(j_max));
-				if (k_max < 1)
-					throw std::runtime_error("Invalid K dimension: " + std::to_string(k_max));
-
-				auto &e = m_blk(idx);
-				e = new Block3D(i_max, j_max, k_max);
-				e->index() = idx;
 			}
 
 			//Skip separators
@@ -915,43 +969,43 @@ namespace NMF
 					// There're 4 possible mapping cases.
 					if (p->Swap())
 					{
-                        // When the primary directions of F1 and F2 are not aligned,
-                        // the primary direction of F1 goes parallel with the secondary
-                        // direction of F2, and the secondary direction of F1 goes
-                        // parallel with the primary direction of F2. However, under
-                        // the right-hand convention, there're 2 further possibilities:
-                        // one is the primary direction of F1 and the secondary direction
-                        // of F2 not only go parallel, but also run in the same direction,
-                        // in this case, the remaining pair MUST runs in different direction;
-                        // the other is the primary direction of F1 and the secondary
-                        // direction of F2 go parallel, but run in different direction,
-                        // in this case, the remaining pair MUST run in same direction.
-                        // The exact case is determined by checking the trend of
-                        // corresponding ranges.
+						// When the primary directions of F1 and F2 are not aligned,
+						// the primary direction of F1 goes parallel with the secondary
+						// direction of F2, and the secondary direction of F1 goes
+						// parallel with the primary direction of F2. However, under
+						// the right-hand convention, there're 2 further possibilities:
+						// one is the primary direction of F1 and the secondary direction
+						// of F2 not only go parallel, but also run in the same direction,
+						// in this case, the remaining pair MUST runs in different direction;
+						// the other is the primary direction of F1 and the secondary
+						// direction of F2 go parallel, but run in different direction,
+						// in this case, the remaining pair MUST run in same direction.
+						// The exact case is determined by checking the trend of
+						// corresponding ranges.
 
 						if (p->Range1().pri_trend() == p->Range2().sec_trend()) // case 1
 						{
-							F1->counterpartEdge[0] = F2->includedEdge[1];
-							F1->counterpartEdge[1] = F2->includedEdge[2];
-							F1->counterpartEdge[2] = F2->includedEdge[3];
-							F1->counterpartEdge[3] = F2->includedEdge[0];
+							F1->counterpartFrame[0] = F2->includedFrame[1];
+							F1->counterpartFrame[1] = F2->includedFrame[2];
+							F1->counterpartFrame[2] = F2->includedFrame[3];
+							F1->counterpartFrame[3] = F2->includedFrame[0];
 
-							F2->counterpartEdge[0] = F1->includedEdge[3];
-							F2->counterpartEdge[1] = F1->includedEdge[0];
-							F2->counterpartEdge[2] = F1->includedEdge[1];
-							F2->counterpartEdge[3] = F1->includedEdge[2];
+							F2->counterpartFrame[0] = F1->includedFrame[3];
+							F2->counterpartFrame[1] = F1->includedFrame[0];
+							F2->counterpartFrame[2] = F1->includedFrame[1];
+							F2->counterpartFrame[3] = F1->includedFrame[2];
 						}
 						else // case 2
 						{
-							F1->counterpartEdge[0] = F2->includedEdge[3];
-							F1->counterpartEdge[1] = F2->includedEdge[0];
-							F1->counterpartEdge[2] = F2->includedEdge[1];
-							F1->counterpartEdge[3] = F2->includedEdge[2];
+							F1->counterpartFrame[0] = F2->includedFrame[3];
+							F1->counterpartFrame[1] = F2->includedFrame[0];
+							F1->counterpartFrame[2] = F2->includedFrame[1];
+							F1->counterpartFrame[3] = F2->includedFrame[2];
 
-							F2->counterpartEdge[0] = F1->includedEdge[1];
-							F2->counterpartEdge[1] = F1->includedEdge[2];
-							F2->counterpartEdge[2] = F1->includedEdge[3];
-							F2->counterpartEdge[3] = F1->includedEdge[0];
+							F2->counterpartFrame[0] = F1->includedFrame[1];
+							F2->counterpartFrame[1] = F1->includedFrame[2];
+							F2->counterpartFrame[2] = F1->includedFrame[3];
+							F2->counterpartFrame[3] = F1->includedFrame[0];
 						}
 					}
 					else
@@ -965,27 +1019,27 @@ namespace NMF
 
 						if (p->Range1().pri_trend() != p->Range2().pri_trend()) // parallel, but opposite.
 						{
-							F1->counterpartEdge[0] = F2->includedEdge[2];
-							F1->counterpartEdge[1] = F2->includedEdge[3];
-							F1->counterpartEdge[2] = F2->includedEdge[0];
-							F1->counterpartEdge[3] = F2->includedEdge[1];
+							F1->counterpartFrame[0] = F2->includedFrame[2];
+							F1->counterpartFrame[1] = F2->includedFrame[3];
+							F1->counterpartFrame[2] = F2->includedFrame[0];
+							F1->counterpartFrame[3] = F2->includedFrame[1];
 
-							F2->counterpartEdge[0] = F1->includedEdge[2];
-							F2->counterpartEdge[1] = F1->includedEdge[3];
-							F2->counterpartEdge[2] = F1->includedEdge[0];
-							F2->counterpartEdge[3] = F1->includedEdge[1];
+							F2->counterpartFrame[0] = F1->includedFrame[2];
+							F2->counterpartFrame[1] = F1->includedFrame[3];
+							F2->counterpartFrame[2] = F1->includedFrame[0];
+							F2->counterpartFrame[3] = F1->includedFrame[1];
 						}
 						else // parallel, and same direction.
 						{
-							F1->counterpartEdge[0] = F2->includedEdge[0];
-							F1->counterpartEdge[1] = F2->includedEdge[1];
-							F1->counterpartEdge[2] = F2->includedEdge[2];
-							F1->counterpartEdge[3] = F2->includedEdge[3];
+							F1->counterpartFrame[0] = F2->includedFrame[0];
+							F1->counterpartFrame[1] = F2->includedFrame[1];
+							F1->counterpartFrame[2] = F2->includedFrame[2];
+							F1->counterpartFrame[3] = F2->includedFrame[3];
 
-							F2->counterpartEdge[0] = F1->includedEdge[0];
-							F2->counterpartEdge[1] = F1->includedEdge[1];
-							F2->counterpartEdge[2] = F1->includedEdge[2];
-							F2->counterpartEdge[3] = F1->includedEdge[3];
+							F2->counterpartFrame[0] = F1->includedFrame[0];
+							F2->counterpartFrame[1] = F1->includedFrame[1];
+							F2->counterpartFrame[2] = F1->includedFrame[2];
+							F2->counterpartFrame[3] = F1->includedFrame[3];
 						}
 					}
 				}
@@ -993,17 +1047,17 @@ namespace NMF
 
 			// Identify block frames
 			const int nfm = coloring_frame();
-			if(nfm < Block3D::NumOfFrame)
-			    throw std::runtime_error("Internal error.");
+			if (nfm < Block3D::NumOfFrame)
+				throw std::runtime_error("Internal error.");
 			m_frame.resize(nfm);
-			for(auto &e : m_frame)
-			    e.clear();
-			for(const auto &b : m_blk)
-			    for(int i = 1; i <= Block3D::NumOfFrame; ++i)
-                {
-			        auto &e = b->frame(i);
-			        m_frame(e.global_index).push_back(&e);
-                }
+			for (auto &e : m_frame)
+				e.clear();
+			for (const auto &b : m_blk)
+				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+				{
+					auto &e = b->frame(i);
+					m_frame(e.global_index).push_back(&e);
+				}
 
 			// Output summary
 			std::cout << "=================================== SUMMARY ===================================" << std::endl;
@@ -1014,8 +1068,8 @@ namespace NMF
 			std::cout << "Total num of QUAD faces: " << nFace() << " (duplication removed)" << std::endl;
 			std::cout << "Total num of nodes: " << nNode() << " (duplication removed)" << std::endl;
 			std::cout << "-------------------------------------------------------------------------------" << std::endl;
-            static const std::string sep("    ");
-            for (auto &b : m_blk)
+			static const std::string sep("    ");
+			for (auto &b : m_blk)
 			{
 				std::cout << "Block" << b->index() << ":" << std::endl;
 				std::cout << sep << "I=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
@@ -1028,20 +1082,20 @@ namespace NMF
 				std::cout << std::endl;
 				std::cout << sep << "Global Frame Index: ";
 				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
-					std::cout << std::setw(4) << std::right << b->frame(i).global_index;;
+					std::cout << std::setw(4) << std::right << b->frame(i).global_index;
 				std::cout << std::endl;
 			}
-            std::cout << "-------------------------------------------------------------------------------" << std::endl;
-			for(int i = 1; i <= nFrame(); ++i)
-            {
-			    std::cout << "Frame" << i << ": " << std::endl;
-			    std::cout << sep << "Num of nodes: " << -1 << std::endl;
-			    std::cout << sep << "Occurance: ";
-                for(auto e : m_frame(i))
-                    std::cout << "(" << e->dependentBlock->index() << ", " << e->local_index << ") ";
-                std::cout << std::endl;
+			std::cout << "-------------------------------------------------------------------------------" << std::endl;
+			for (int i = 1; i <= nFrame(); ++i)
+			{
+				std::cout << "Frame" << i << ": " << std::endl;
+				std::cout << sep << "Num of nodes: " << -1 << std::endl;
+				std::cout << sep << "Occurance: ";
+				for (auto e : m_frame(i))
+					std::cout << "(" << e->dependentBlock->index() << ", " << e->local_index << ") ";
+				std::cout << std::endl;
 
-            }
+			}
 			std::cout << "===================================== END =====================================" << std::endl;
 
 			// Finalize
@@ -1255,10 +1309,10 @@ namespace NMF
 						if (s1->neighbourSurf)
 						{
 							Block3D::FRAME *t = nullptr;
-							for (int i = 0; i < 4; ++i)
-								if (s1->includedEdge[i] == ce)
+							for (int ii = 0; ii < 4; ++ii)
+								if (s1->includedFrame[ii] == ce)
 								{
-									t = s1->counterpartEdge[i];
+									t = s1->counterpartFrame[ii];
 									break;
 								}
 							if (!t)
@@ -1270,10 +1324,10 @@ namespace NMF
 						if (s2->neighbourSurf)
 						{
 							Block3D::FRAME *t = nullptr;
-							for (int i = 0; i < 4; ++i)
-								if (s2->includedEdge[i] == ce)
+							for (int ii = 0; ii < 4; ++ii)
+								if (s2->includedFrame[ii] == ce)
 								{
-									t = s2->counterpartEdge[i];
+									t = s2->counterpartFrame[ii];
 									break;
 								}
 							if (!t)
@@ -1289,15 +1343,15 @@ namespace NMF
 		}
 
 		int coloring_vertex()
-        {
-		    int global_cnt = 0;
-		    for(auto &b : m_blk)
-            {
+		{
+			int global_cnt = 0;
+			for (auto &b : m_blk)
+			{
 
-            }
+			}
 
-		    return global_cnt;
-        }
+			return global_cnt;
+		}
 
 	private:
 		Array1D<Block3D*> m_blk;

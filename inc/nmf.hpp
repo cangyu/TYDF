@@ -321,6 +321,59 @@ namespace NMF
 			else
 				return (IDIM() - 1) * (JDIM() - 1);
 		}
+
+		size_t block_internal_node_num() const
+		{
+			if (is3D())
+			{
+				return (IDIM() - 2) * (JDIM() - 2) * (KDIM() - 2);
+			}
+			else
+			{
+				return (IDIM() - 2) * (JDIM() - 2);
+			}
+		}
+		size_t surface_internal_node_num(int idx) const
+		{
+			size_t ret = 0;
+			if (is3D())
+			{
+				switch (idx)
+				{
+				case 1:
+				case 2:
+					ret = (IDIM() - 2) * (JDIM() - 2);
+					break;
+				case 3:
+				case 4:
+					ret = (JDIM() - 2) * (KDIM() - 2);
+					break;
+				case 5:
+				case 6:
+					ret = (KDIM() - 2) * (IDIM() - 2);
+					break;
+				default:
+					throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 3D block.");
+				}
+			}
+			else
+			{
+				switch (idx)
+				{
+				case 1:
+				case 2:
+					ret = (JDIM() - 2);
+					break;
+				case 3:
+				case 4:
+					ret = (IDIM() - 2);
+					break;
+				default:
+					throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 2D block.");
+				}
+			}
+			return ret;
+		}
 	};
 
 	class Block2D : public BLOCK
@@ -834,7 +887,7 @@ namespace NMF
 			for (size_t i = 0; i < m_blk.size(); ++i)
 				m_blk[i] = new Block3D(*rhs.m_blk[i]);
 
-			// Copy entrys
+			// Copy entries
 			for (size_t i = 0; i < m_entry.size(); ++i)
 			{
 				auto ptr1 = dynamic_cast<SingleSideEntry*>(rhs.m_entry[i]);
@@ -1196,9 +1249,21 @@ namespace NMF
 		size_t nNode() const
 		{
 			size_t ret = 0;
-
-			// TODO
-
+			for (auto b : m_blk)
+			{
+				ret += b->block_internal_node_num();
+				for (int i = 1; i <= Block3D::NumOfSurf; ++i)
+					ret += b->surface_internal_node_num(i);
+			}
+			for (auto e : m_entry)
+			{
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					const auto b = e->Range1().B();
+					const auto f = e->Range1().F();
+					ret -= m_blk(b)->surface_internal_node_num(f);
+				}
+			}
 			return ret;
 		}
 

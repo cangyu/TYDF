@@ -304,46 +304,39 @@ namespace NMF
 			else
 				return (IDIM() - 2) * (JDIM() - 2);
 		}
-		size_t surface_internal_node_num(int idx) const
+		size_t surface_internal_node_num(int s_idx) const
 		{
-			size_t ret = 0;
 			if (is3D())
 			{
-				switch (idx)
+				switch (s_idx)
 				{
 				case 1:
 				case 2:
-					ret = (IDIM() - 2) * (JDIM() - 2);
-					break;
+					return (IDIM() - 2) * (JDIM() - 2);
 				case 3:
 				case 4:
-					ret = (JDIM() - 2) * (KDIM() - 2);
-					break;
+                    return (JDIM() - 2) * (KDIM() - 2);
 				case 5:
 				case 6:
-					ret = (KDIM() - 2) * (IDIM() - 2);
-					break;
+                    return (KDIM() - 2) * (IDIM() - 2);
 				default:
-					throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 3D block.");
+					throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 3D block.");
 				}
 			}
 			else
 			{
-				switch (idx)
+				switch (s_idx)
 				{
 				case 1:
 				case 2:
-					ret = (JDIM() - 2);
-					break;
+                    return (JDIM() - 2);
 				case 3:
 				case 4:
-					ret = (IDIM() - 2);
-					break;
+                    return (IDIM() - 2);
 				default:
-					throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 2D block.");
+					throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 2D block.");
 				}
 			}
-			return ret;
 		}
 	};
 
@@ -1006,12 +999,11 @@ namespace NMF
 			} while (isBlankLine(s) || checkStarting(s, '#'));
 
 			//Read block nums
-			int NumOfBlk = -1;
 			static const std::regex pattern1(R"(\s*(\d+)\s*)");
 			std::smatch res1;
 			if (std::regex_match(s, res1, pattern1))
 			{
-				NumOfBlk = std::stoi(res1[1].str());
+				int NumOfBlk = std::stoi(res1[1].str());
 				if (NumOfBlk > 0)
 				{
 					// NOT release all existing resources until 
@@ -1029,6 +1021,7 @@ namespace NMF
 
 			// Read dimension info of each block
 			static const std::regex pattern2(R"(\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*)");
+			const auto NumOfBlk = nBlock();
 			for (int i = 0; i < NumOfBlk; i++)
 			{
 				std::getline(mfp, s);
@@ -1170,7 +1163,8 @@ namespace NMF
 			for (int i = 1; i <= nFrame(); ++i)
 			{
 				std::cout << "Frame" << i << ": " << std::endl;
-				std::cout << sep << "Num of nodes: " << -1 << std::endl;
+				auto f_rep = m_frame(i)[0];
+				std::cout << sep << "Num of nodes: " << f_rep->dependentBlock->frame_node_num(f_rep->local_index) << std::endl;
 				std::cout << sep << "Occurance: ";
 				for (auto e : m_frame(i))
 					std::cout << "(" << e->dependentBlock->index() << ", " << e->local_index << ") ";

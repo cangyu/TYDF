@@ -267,7 +267,7 @@ namespace NMF
 			else
 				return true;
 		}
-		int dimension() const
+		short dimension() const
 		{
 			return is3D() ? 3 : 2;
 		}
@@ -468,24 +468,7 @@ namespace NMF
 		static const short NumOfSurf = 6;
 
 		struct SURF;
-		struct VERTEX;
-		struct FRAME
-		{
-			short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
-			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
-			Block3D *dependentBlock = nullptr;
-			std::array<SURF*, 2> dependentSurf{ nullptr, nullptr };
-		};
-		struct SURF
-		{
-			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
-			std::array<FRAME*, 4> includedFrame{ nullptr, nullptr, nullptr, nullptr };
-			std::array<FRAME*, 4> counterpartFrame{ nullptr, nullptr, nullptr, nullptr };
-			std::array<VERTEX*, 4> includedVertex{ nullptr, nullptr, nullptr, nullptr };
-			std::array<VERTEX*, 4> counterpartVertex{ nullptr, nullptr, nullptr, nullptr };
-			Block3D *dependentBlock = nullptr;
-			SURF *neighbourSurf = nullptr;
-		};
+		struct FRAME;
 		struct VERTEX
 		{
 			short local_index = 0; // Ranges from 1 to 8, set to 0 when uninitialized.
@@ -493,6 +476,25 @@ namespace NMF
 			Block3D *dependentBlock = nullptr;
 			std::array<SURF*, 3> dependentSurf = { nullptr, nullptr, nullptr };
 			std::array<FRAME*, 3> dependentFrame = { nullptr, nullptr, nullptr };
+		};
+		struct FRAME
+		{
+			short local_index = 0; // Ranges from 1 to 12, set to 0 when uninitialized.
+			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			Block3D *dependentBlock = nullptr;
+			std::array<SURF*, 2> dependentSurf{ nullptr, nullptr };
+			std::array<VERTEX*, 2> includedVertex{ nullptr, nullptr };
+		};
+		struct SURF
+		{
+			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
+			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			Block3D *dependentBlock = nullptr;
+			SURF *neighbourSurf = nullptr;
+			std::array<FRAME*, 4> includedFrame{ nullptr, nullptr, nullptr, nullptr };
+			std::array<FRAME*, 4> counterpartFrame{ nullptr, nullptr, nullptr, nullptr };
+			std::array<VERTEX*, 4> includedVertex{ nullptr, nullptr, nullptr, nullptr };
+			std::array<VERTEX*, 4> counterpartVertex{ nullptr, nullptr, nullptr, nullptr };
 		};
 
 	private:
@@ -510,40 +512,25 @@ namespace NMF
 			m_frame(NumOfFrame),
 			m_surf(NumOfSurf)
 		{
-			for (size_t i = 0; i < m_frame.size(); ++i)
+			for (short i = 0; i < NumOfVertex; ++i)
+			{
+				auto &v = m_vertex[i];
+				v.local_index = i + 1;
+				v.dependentBlock = this;
+			}
+			for (short i = 0; i < NumOfFrame; ++i)
 			{
 				auto &e = m_frame[i];
 				e.local_index = i + 1;
 				e.dependentBlock = this;
 			}
-
-			for (size_t i = 0; i < m_surf.size(); ++i)
+			for (short i = 0; i < NumOfSurf; ++i)
 			{
 				auto &s = m_surf[i];
 				s.local_index = i + 1;
 				s.dependentBlock = this;
 			}
-
-			// Connection between frame edges and surrounding surfaces
-			m_surf[0].includedFrame = { &m_frame[4], &m_frame[11], &m_frame[7], &m_frame[8] };
-			m_surf[1].includedFrame = { &m_frame[5], &m_frame[10], &m_frame[6], &m_frame[9] };
-			m_surf[2].includedFrame = { &m_frame[8], &m_frame[3], &m_frame[9], &m_frame[0] };
-			m_surf[3].includedFrame = { &m_frame[11], &m_frame[2], &m_frame[10], &m_frame[1] };
-			m_surf[4].includedFrame = { &m_frame[0], &m_frame[5], &m_frame[1], &m_frame[4] };
-			m_surf[5].includedFrame = { &m_frame[3], &m_frame[6], &m_frame[2], &m_frame[7] };
-
-			m_frame[0].dependentSurf = { &m_surf[2], &m_surf[4] };
-			m_frame[1].dependentSurf = { &m_surf[4], &m_surf[3] };
-			m_frame[2].dependentSurf = { &m_surf[3], &m_surf[5] };
-			m_frame[3].dependentSurf = { &m_surf[5], &m_surf[2] };
-			m_frame[4].dependentSurf = { &m_surf[0], &m_surf[4] };
-			m_frame[5].dependentSurf = { &m_surf[4], &m_surf[1] };
-			m_frame[6].dependentSurf = { &m_surf[1], &m_surf[5] };
-			m_frame[7].dependentSurf = { &m_surf[5], &m_surf[0] };
-			m_frame[8].dependentSurf = { &m_surf[0], &m_surf[2] };
-			m_frame[9].dependentSurf = { &m_surf[2], &m_surf[1] };
-			m_frame[10].dependentSurf = { &m_surf[1], &m_surf[3] };
-			m_frame[11].dependentSurf = { &m_surf[3], &m_surf[0] };
+			establish_connections();
 		}
 		Block3D(const Block3D &rhs) = default;
 		~Block3D() = default;
@@ -629,6 +616,73 @@ namespace NMF
 				return m_surf.at(NumOfSurf + n);
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
+		}
+
+	private:
+		void establish_connections()
+		{
+			// Connection between frame edges and surrounding surfaces.
+			// The order matters a lot!
+			m_surf[0].includedFrame = { &m_frame[4], &m_frame[11], &m_frame[7], &m_frame[8] };
+			m_surf[1].includedFrame = { &m_frame[5], &m_frame[10], &m_frame[6], &m_frame[9] };
+			m_surf[2].includedFrame = { &m_frame[8], &m_frame[3], &m_frame[9], &m_frame[0] };
+			m_surf[3].includedFrame = { &m_frame[11], &m_frame[2], &m_frame[10], &m_frame[1] };
+			m_surf[4].includedFrame = { &m_frame[0], &m_frame[5], &m_frame[1], &m_frame[4] };
+			m_surf[5].includedFrame = { &m_frame[3], &m_frame[6], &m_frame[2], &m_frame[7] };
+
+			m_frame[0].dependentSurf = { &m_surf[2], &m_surf[4] };
+			m_frame[1].dependentSurf = { &m_surf[4], &m_surf[3] };
+			m_frame[2].dependentSurf = { &m_surf[3], &m_surf[5] };
+			m_frame[3].dependentSurf = { &m_surf[5], &m_surf[2] };
+			m_frame[4].dependentSurf = { &m_surf[0], &m_surf[4] };
+			m_frame[5].dependentSurf = { &m_surf[4], &m_surf[1] };
+			m_frame[6].dependentSurf = { &m_surf[1], &m_surf[5] };
+			m_frame[7].dependentSurf = { &m_surf[5], &m_surf[0] };
+			m_frame[8].dependentSurf = { &m_surf[0], &m_surf[2] };
+			m_frame[9].dependentSurf = { &m_surf[2], &m_surf[1] };
+			m_frame[10].dependentSurf = { &m_surf[1], &m_surf[3] };
+			m_frame[11].dependentSurf = { &m_surf[3], &m_surf[0] };
+
+			// Connection between surrounding surfaces and block vertexes.
+			// The order matters a lot!
+			m_surf[0].includedVertex = { &m_vertex[0], &m_vertex[3], &m_vertex[7], &m_vertex[4] };
+			m_surf[1].includedVertex = { &m_vertex[1], &m_vertex[2], &m_vertex[6], &m_vertex[5] };
+			m_surf[2].includedVertex = { &m_vertex[0], &m_vertex[4], &m_vertex[5], &m_vertex[1] };
+			m_surf[3].includedVertex = { &m_vertex[3], &m_vertex[7], &m_vertex[6], &m_vertex[2] };
+			m_surf[4].includedVertex = { &m_vertex[0], &m_vertex[1], &m_vertex[2], &m_vertex[3] };
+			m_surf[5].includedVertex = { &m_vertex[4], &m_vertex[5], &m_vertex[6], &m_vertex[7] };
+
+			m_vertex[0].dependentSurf = { &m_surf[4], &m_surf[0], &m_surf[2] };
+			m_vertex[1].dependentSurf = { &m_surf[4], &m_surf[2], &m_surf[1] };
+			m_vertex[2].dependentSurf = { &m_surf[4], &m_surf[1], &m_surf[3] };
+			m_vertex[3].dependentSurf = { &m_surf[4], &m_surf[3], &m_surf[0] };
+			m_vertex[4].dependentSurf = { &m_surf[5], &m_surf[0], &m_surf[2] };
+			m_vertex[5].dependentSurf = { &m_surf[5], &m_surf[2], &m_surf[1] };
+			m_vertex[6].dependentSurf = { &m_surf[5], &m_surf[1], &m_surf[3] };
+			m_vertex[7].dependentSurf = { &m_surf[5], &m_surf[3], &m_surf[0] };
+
+			// Connection between frame edges and block vertexes.
+			m_frame[0].includedVertex = { &m_vertex[0], &m_vertex[1] };
+			m_frame[1].includedVertex = { &m_vertex[3], &m_vertex[2] };
+			m_frame[2].includedVertex = { &m_vertex[7], &m_vertex[6] };
+			m_frame[3].includedVertex = { &m_vertex[4], &m_vertex[5] };
+			m_frame[4].includedVertex = { &m_vertex[0], &m_vertex[3] };
+			m_frame[5].includedVertex = { &m_vertex[1], &m_vertex[2] };
+			m_frame[6].includedVertex = { &m_vertex[5], &m_vertex[6] };
+			m_frame[7].includedVertex = { &m_vertex[4], &m_vertex[7] };
+			m_frame[8].includedVertex = { &m_vertex[0], &m_vertex[4] };
+			m_frame[9].includedVertex = { &m_vertex[1], &m_vertex[5] };
+			m_frame[10].includedVertex = { &m_vertex[2], &m_vertex[6] };
+			m_frame[11].includedVertex = { &m_vertex[3], &m_vertex[7] };
+
+			m_vertex[0].dependentFrame = { &m_frame[8], &m_frame[4], &m_frame[0] };
+			m_vertex[1].dependentFrame = { &m_frame[9], &m_frame[0], &m_frame[5] };
+			m_vertex[2].dependentFrame = { &m_frame[10], &m_frame[5], &m_frame[1] };
+			m_vertex[3].dependentFrame = { &m_frame[11], &m_frame[1], &m_frame[4] };
+			m_vertex[4].dependentFrame = { &m_frame[8], &m_frame[7], &m_frame[3] };
+			m_vertex[5].dependentFrame = { &m_frame[9], &m_frame[3], &m_frame[6] };
+			m_vertex[6].dependentFrame = { &m_frame[10], &m_frame[6], &m_frame[2] };
+			m_vertex[7].dependentFrame = { &m_frame[11], &m_frame[2], &m_frame[7] };
 		}
 	};
 
@@ -850,8 +904,9 @@ namespace NMF
 	private:
 		Array1D<Block3D*> m_blk;
 		Array1D<ENTRY*> m_entry;
-		Array1D<std::vector<Block3D::VERTEX*>> m_vertex;
-		Array1D<std::vector<Block3D::FRAME*>> m_frame;
+		Array1D<Array1D<Block3D::VERTEX*>> m_vertex;
+		Array1D<Array1D<Block3D::FRAME*>> m_frame;
+		Array1D<Array1D<Block3D::SURF*>> m_surf;
 
 	public:
 		Mapping3D() = default;
@@ -1002,33 +1057,31 @@ namespace NMF
 
 			const int nfm = coloring_frame();
 			if (nfm < Block3D::NumOfFrame)
-				throw std::runtime_error("Internal error.");
+				throw std::runtime_error("Internal error occured when counting frames.");
 
 			m_frame.resize(nfm);
 			for (auto &e : m_frame)
 				e.clear();
-			for (const auto &b : m_blk)
+			for (auto b : m_blk)
 				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
 				{
 					auto &e = b->frame(i);
 					m_frame(e.global_index).push_back(&e);
 				}
 
-			/*
 			const int nvt = coloring_vertex();
 			if (nvt < Block3D::NumOfVertex)
-				throw std::runtime_error("Internal error.");
+				throw std::runtime_error("Internal error occured when counting vertexes.");
 
 			m_vertex.resize(nvt);
 			for (auto &e : m_vertex)
 				e.clear();
-			for(const auto &b : m_blk)
-				for(int i = 1; i <= Block3D::NumOfVertex; ++i)
+			for (auto b : m_blk)
+				for (int i = 1; i <= Block3D::NumOfVertex; ++i)
 				{
 					auto &v = b->vertex(i);
 					m_vertex(v.global_index).push_back(&v);
 				}
-			*/
 		}
 
 		void summary(std::ostream &out = std::cout)
@@ -1355,6 +1408,16 @@ namespace NMF
 							F2->counterpartFrame[1] = F1->includedFrame[0];
 							F2->counterpartFrame[2] = F1->includedFrame[1];
 							F2->counterpartFrame[3] = F1->includedFrame[2];
+
+							F1->counterpartVertex[0] = F2->includedVertex[1];
+							F1->counterpartVertex[1] = F2->includedVertex[2];
+							F1->counterpartVertex[2] = F2->includedVertex[3];
+							F1->counterpartVertex[3] = F2->includedVertex[0];
+
+							F2->counterpartVertex[0] = F1->includedVertex[3];
+							F2->counterpartVertex[1] = F1->includedVertex[0];
+							F2->counterpartVertex[2] = F1->includedVertex[1];
+							F2->counterpartVertex[3] = F1->includedVertex[2];
 						}
 						else // case 2
 						{
@@ -1367,6 +1430,16 @@ namespace NMF
 							F2->counterpartFrame[1] = F1->includedFrame[2];
 							F2->counterpartFrame[2] = F1->includedFrame[3];
 							F2->counterpartFrame[3] = F1->includedFrame[0];
+
+							F1->counterpartVertex[0] = F2->includedVertex[3];
+							F1->counterpartVertex[1] = F2->includedVertex[0];
+							F1->counterpartVertex[2] = F2->includedVertex[1];
+							F1->counterpartVertex[3] = F2->includedVertex[2];
+
+							F2->counterpartVertex[0] = F1->includedVertex[1];
+							F2->counterpartVertex[1] = F1->includedVertex[2];
+							F2->counterpartVertex[2] = F1->includedVertex[3];
+							F2->counterpartVertex[3] = F1->includedVertex[0];
 						}
 					}
 					else
@@ -1389,6 +1462,16 @@ namespace NMF
 							F2->counterpartFrame[1] = F1->includedFrame[3];
 							F2->counterpartFrame[2] = F1->includedFrame[0];
 							F2->counterpartFrame[3] = F1->includedFrame[1];
+
+							F1->counterpartVertex[0] = F2->includedVertex[2];
+							F1->counterpartVertex[1] = F2->includedVertex[3];
+							F1->counterpartVertex[2] = F2->includedVertex[0];
+							F1->counterpartVertex[3] = F2->includedVertex[1];
+
+							F2->counterpartVertex[0] = F1->includedVertex[2];
+							F2->counterpartVertex[1] = F1->includedVertex[3];
+							F2->counterpartVertex[2] = F1->includedVertex[0];
+							F2->counterpartVertex[3] = F1->includedVertex[1];
 						}
 						else // parallel, and same direction.
 						{
@@ -1401,6 +1484,16 @@ namespace NMF
 							F2->counterpartFrame[1] = F1->includedFrame[1];
 							F2->counterpartFrame[2] = F1->includedFrame[2];
 							F2->counterpartFrame[3] = F1->includedFrame[3];
+
+							F1->counterpartVertex[0] = F2->includedVertex[0];
+							F1->counterpartVertex[1] = F2->includedVertex[1];
+							F1->counterpartVertex[2] = F2->includedVertex[2];
+							F1->counterpartVertex[3] = F2->includedVertex[3];
+
+							F2->counterpartVertex[0] = F1->includedVertex[0];
+							F2->counterpartVertex[1] = F1->includedVertex[1];
+							F2->counterpartVertex[2] = F1->includedVertex[2];
+							F2->counterpartVertex[3] = F1->includedVertex[3];
 						}
 					}
 				}
@@ -1473,7 +1566,7 @@ namespace NMF
 		int coloring_vertex()
 		{
 			int global_cnt = 0;
-			for (auto &b : m_blk)
+			for (auto b : m_blk)
 			{
 				for (size_t j = 1; j <= Block3D::NumOfVertex; ++j)
 				{
@@ -1485,7 +1578,6 @@ namespace NMF
 					std::stack<Block3D::VERTEX*> s;
 					s.push(v);
 
-
 					// DFS
 					while (!s.empty())
 					{
@@ -1493,23 +1585,22 @@ namespace NMF
 						s.pop();
 						cv->global_index = global_cnt;
 
-						for (int k = 0; k < cv->dependentSurf.size(); ++k)
+						for (auto sf : cv->dependentSurf)
 						{
-							auto sf = cv->dependentSurf[k];
 							if (!sf)
-								throw std::runtime_error("Internal error.");
+								throw std::runtime_error("Dependent surface of a vertex should NOT be empty.");
 
 							if (sf->neighbourSurf)
 							{
 								Block3D::VERTEX *t = nullptr;
-								for (auto sfv : sf->includedVertex)
-									if (sfv == cv)
+								for (int ii = 0; ii < 4; ++ii)
+									if (sf->includedVertex[ii] == cv)
 									{
-										t = sfv;
+										t = sf->counterpartVertex[ii];
 										break;
 									}
 								if (!t)
-									throw std::runtime_error("Internal error.");
+									throw std::runtime_error("Counterpart vertex should exist.");
 
 								if (t->global_index == 0)
 									s.push(t);

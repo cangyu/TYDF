@@ -3,18 +3,16 @@
 
 void test0()
 {
-	NMF::Mapping3D mapping;
-	mapping.readFromFile("mapping0.nmf");
-	mapping.compute_topology();
+	NMF::Mapping3D mapping("0/map.nmf");
 	mapping.summary();
-	mapping.writeToFile("mapping0_blessed.nmf");
+	mapping.writeToFile("0/map_blessed.nmf");
 }
 
 void test1()
 {
-	NMF::Mapping3D mapping("mapping1.nmf");
+	NMF::Mapping3D mapping("1/map.nmf");
 	mapping.summary();
-	mapping.writeToFile("mapping1_blessed.nmf");
+	mapping.writeToFile("1/map_blessed.nmf");
 }
 
 int main(int argc, char *argv[])

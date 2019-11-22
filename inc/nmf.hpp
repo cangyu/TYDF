@@ -619,6 +619,38 @@ namespace NMF
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
 		}
 
+		size_t frame_node_num(int idx) const
+		{
+			switch (idx - 1)
+			{
+			case 4:
+			case 5:
+			case 6:
+			case 7:
+				return IDIM();
+			case 8:
+			case 9:
+			case 10:
+			case 11:
+				return JDIM();
+			case 0:
+			case 1:
+			case 2:
+			case 3:
+				return KDIM();
+			default:
+				throw std::invalid_argument("Invalid frame index.");
+			}
+		}
+		size_t frame_internal_node_num(int idx) const
+		{
+			const auto n = frame_node_num(idx);
+			if (n >= 2)
+				return n - 2;
+			else
+				throw std::runtime_error("Internal error: too less nodes not detected when constructing.");
+		}
+
 	private:
 		void establish_connections()
 		{
@@ -1283,7 +1315,7 @@ namespace NMF
 
 		size_t nNode() const
 		{
-			size_t ret = 0;
+			size_t ret = nVertex();
 			for (auto b : m_blk)
 			{
 				ret += b->block_internal_node_num();
@@ -1298,6 +1330,13 @@ namespace NMF
 					const auto f = e->Range1().F();
 					ret -= m_blk(b)->surface_internal_node_num(f);
 				}
+			}
+			for (const auto &f : m_frame)
+			{
+				auto ff = f[0];
+				int b = ff->dependentBlock->index();
+				int f = ff->local_index;
+				ret += m_blk(b)->frame_internal_node_num(f);
 			}
 			return ret;
 		}

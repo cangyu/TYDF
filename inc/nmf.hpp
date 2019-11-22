@@ -651,6 +651,16 @@ namespace NMF
 				throw std::runtime_error("Internal error: too less nodes not detected when constructing.");
 		}
 
+		size_t shell_face_num() const
+		{
+			size_t ret = 0;
+			ret += (IDIM() - 1) * (JDIM() - 1);
+			ret += (JDIM() - 1) * (KDIM() - 1);
+			ret += (KDIM() - 1) * (IDIM() - 1);
+			ret *= 2;
+			return ret;
+		}
+
 	private:
 		void establish_connections()
 		{
@@ -1123,11 +1133,13 @@ namespace NMF
 			std::cout << "Total num of blocks: " << nBlock() << std::endl;
 			size_t nSa = 0, nSi = 0, nSb = 0;
 			nSurface(nSa, nSi, nSb);
-			std::cout << "Total num of surfaces: " << nSa << ", among which " << nSi << " are internal, " << nSb << " located at boundary" << std::endl;
+			std::cout << "Total num of surfaces: " << nSa << ", among which " << nSi << " are internal, " << nSb << " at boundary" << std::endl;
 			std::cout << "Total num of frames: " << nFrame() << std::endl;
 			std::cout << "Total num of vertexs: " << nVertex() << std::endl;
 			std::cout << "Total num of HEX cells: " << nCell() << std::endl;
-			std::cout << "Total num of QUAD faces: " << nFace() << " (duplication removed)" << std::endl;
+			size_t nFa = 0, nFi = 0, nFb = 0;
+			nFace(nFa, nFi, nFb);
+			std::cout << "Total num of QUAD faces: " << nFa << ", among which " << nFi << " are internal, " << nFb << " at boundary" << std::endl;
 			std::cout << "Total num of nodes: " << nNode() << " (duplication removed)" << std::endl;
 			std::cout << "-------------------------------------------------------------------------------" << std::endl;
 			static const std::string sep("    ");
@@ -1191,7 +1203,8 @@ namespace NMF
 
 				// TODO
 			}
-			const size_t totalFaceNum = nFace();
+			size_t totalFaceNum = 0, innerFaceNum = 0, bdryFaceNum = 0;
+			nFace(totalFaceNum, innerFaceNum, bdryFaceNum);
 			if (cnt != totalFaceNum)
 				throw std::length_error("Inconsistent num of cells detected.");
 
@@ -1299,18 +1312,30 @@ namespace NMF
 			return ret;
 		}
 
-		size_t nFace() const
+		void nFace(size_t &_all, size_t &_inner, size_t &_bdry) const
 		{
-			size_t ret = 0;
-			for (const auto &blk : m_blk)
-				ret += blk->face_num();
+			// Counting all faces.
+			_all = 0;
+			for (auto b : m_blk)
+				_all += b->face_num();
 
-			// Substract duplicated interface
+			// Boundary
+			_bdry = 0;
+			for (auto b : m_blk)
+				_bdry += b->shell_face_num();
+
+			// Faces at internal interfaces.
+			size_t ii = 0;
 			for (const auto &e : m_entry)
 				if (e->Type() == BC::ONE_TO_ONE)
-					ret -= e->Range1().face_num();
+					ii += e->Range1().face_num();
 
-			return ret;
+			// Substract duplicated
+			_all -= ii;
+			_bdry -= ii * 2;
+
+			// Inner
+			_inner = _all - _bdry;
 		}
 
 		size_t nNode() const

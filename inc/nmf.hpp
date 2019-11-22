@@ -224,34 +224,7 @@ namespace NMF
 		~HEX_CELL() = default;
 	};
 
-	class DIM
-	{
-	protected:
-		bool m_is3D;
-		int m_dim;
-
-	public:
-		DIM() = delete;
-		DIM(int dim) :
-			m_dim(dim)
-		{
-			if (dim == 2)
-				m_is3D = false;
-			else if (dim == 3)
-				m_is3D = true;
-			else
-				throw std::invalid_argument("Invalid dimension: " + std::to_string(dim));
-		}
-		DIM(bool is3d) : m_is3D(is3d), m_dim(is3d ? 3 : 2) {}
-		DIM(const DIM &rhs) = default;
-		virtual ~DIM() = default;
-
-		bool is3D() const { return m_is3D; }
-
-		int dimension() const { return m_dim; }
-	};
-
-	class BLOCK : public DIM
+	class BLOCK
 	{
 	protected:
 		size_t idx; // 1-based global index
@@ -260,7 +233,6 @@ namespace NMF
 	public:
 		BLOCK() = delete;
 		BLOCK(int nI, int nJ) :
-			DIM(false),
 			idx(0),
 			m_nI(nI),
 			m_nJ(nJ),
@@ -270,7 +242,6 @@ namespace NMF
 				throw std::invalid_argument("Invalid dimension.");
 		}
 		BLOCK(int nI, int nJ, int nK) :
-			DIM(true),
 			idx(0),
 			m_nI(nI),
 			m_nJ(nJ),
@@ -288,6 +259,18 @@ namespace NMF
 		size_t IDIM() const { return m_nI; }
 		size_t JDIM() const { return m_nJ; }
 		size_t KDIM() const { return m_nK; }
+
+		bool is3D() const
+		{
+			if (m_nK == 1)
+				return false;
+			else
+				return true;
+		}
+		int dimension() const
+		{
+			return is3D() ? 3 : 2;
+		}
 
 		// Here the terms 'node', 'face' and 'cell' are 
 		// consistent with that in ANSYS Fluent convention.
@@ -325,13 +308,9 @@ namespace NMF
 		size_t block_internal_node_num() const
 		{
 			if (is3D())
-			{
 				return (IDIM() - 2) * (JDIM() - 2) * (KDIM() - 2);
-			}
 			else
-			{
 				return (IDIM() - 2) * (JDIM() - 2);
-			}
 		}
 		size_t surface_internal_node_num(int idx) const
 		{
@@ -484,6 +463,10 @@ namespace NMF
 	class Block3D : public BLOCK
 	{
 	public:
+		static const short NumOfVertex = 8;
+		static const short NumOfFrame = 12;
+		static const short NumOfSurf = 6;
+
 		struct SURF;
 		struct VERTEX;
 		struct FRAME
@@ -511,10 +494,6 @@ namespace NMF
 			std::array<SURF*, 3> dependentSurf = { nullptr, nullptr, nullptr };
 			std::array<FRAME*, 3> dependentFrame = { nullptr, nullptr, nullptr };
 		};
-
-		static const short NumOfVertex = 8;
-		static const short NumOfFrame = 12;
-		static const short NumOfSurf = 6;
 
 	private:
 		Array1D<HEX_CELL> m_cell;
@@ -657,6 +636,8 @@ namespace NMF
 	{
 	public:
 		Mapping2D() = default;
+		Mapping2D(const Mapping2D &rhs) = default;
+		~Mapping2D() = default;
 	};
 
 	class Mapping3D

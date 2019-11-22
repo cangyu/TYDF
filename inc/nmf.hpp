@@ -286,9 +286,9 @@ namespace NMF
 			size_t ret = 0;
 			if (is3D())
 			{
-				ret += (IDIM() - 1) * JDIM() * KDIM();
-				ret += IDIM() * (JDIM() - 1) * KDIM();
-				ret += IDIM() * JDIM() * (KDIM() - 1);
+				ret += (IDIM() - 1) * (JDIM() - 1) * KDIM();
+				ret += IDIM() * (JDIM() - 1) * (KDIM() - 1);
+				ret += (IDIM() - 1) *JDIM() * (KDIM() - 1);
 			}
 			else
 			{

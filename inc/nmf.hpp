@@ -32,25 +32,17 @@ namespace NMF
 		~Array1D() = default;
 
 		// 1-based indexing
-		T &operator()(long long i)
+		T &operator()(size_t i)
 		{
-			const long long N = this->size();
-
-			if (1 <= i && i <= N)
+			if (1 <= i && i <= this->size())
 				return this->at(i - 1);
-			else if (-N <= i && i <= -1)
-				return this->at(N + i);
 			else
 				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");
 		}
-		const T &operator()(long long i) const
+		const T &operator()(size_t i) const
 		{
-			const long long N = this->size();
-
-			if (1 <= i && i <= N)
+			if (1 <= i && i <= this->size())
 				return this->at(i - 1);
-			else if (-N <= i && i <= -1)
-				return this->at(N + i);
 			else
 				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");
 		}
@@ -389,10 +381,10 @@ namespace NMF
 			m_vertex(NumOfVertex),
 			m_frame(NumOfFrame)
 		{
-			for (size_t i = 0; i < m_frame.size(); ++i)
+			for (short i = 0; i < NumOfFrame; ++i)
 				m_frame[i].local_index = i + 1;
 
-			for (size_t i = 0; i < m_vertex.size(); ++i)
+			for (short i = 0; i < NumOfVertex; ++i)
 				m_vertex[i].local_index = i + 1;
 		}
 		Block2D(const Block2D &rhs) = default;
@@ -619,7 +611,7 @@ namespace NMF
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
 		}
 
-		size_t frame_node_num(int idx) const
+		size_t frame_node_num(short idx) const
 		{
 			switch (idx - 1)
 			{
@@ -642,7 +634,7 @@ namespace NMF
 				throw std::invalid_argument("Invalid frame index.");
 			}
 		}
-		size_t frame_internal_node_num(int idx) const
+		size_t frame_internal_node_num(short idx) const
 		{
 			const auto n = frame_node_num(idx);
 			if (n >= 2)
@@ -651,13 +643,28 @@ namespace NMF
 				throw std::runtime_error("Internal error: too less nodes not detected when constructing.");
 		}
 
+		size_t surface_face_num(short idx) const
+		{
+			switch (idx - 1)
+			{
+			case 0:
+			case 1:
+				return (IDIM() - 1) * (JDIM() - 1);
+			case 2:
+			case 3:
+				return (JDIM() - 1) * (KDIM() - 1);
+			case 4:
+			case 5:
+				return (KDIM() - 1) * (IDIM() - 1);
+			default:
+				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 3D block.");
+			}
+		}
 		size_t shell_face_num() const
 		{
 			size_t ret = 0;
-			ret += (IDIM() - 1) * (JDIM() - 1);
-			ret += (JDIM() - 1) * (KDIM() - 1);
-			ret += (KDIM() - 1) * (IDIM() - 1);
-			ret *= 2;
+			for (short i = 1; i <= NumOfSurf; ++i)
+				ret += surface_face_num(i);
 			return ret;
 		}
 
@@ -1359,8 +1366,8 @@ namespace NMF
 			for (const auto &f : m_frame)
 			{
 				auto ff = f[0];
-				int b = ff->dependentBlock->index();
-				int f = ff->local_index;
+				auto b = ff->dependentBlock->index();
+				auto f = ff->local_index;
 				ret += m_blk(b)->frame_internal_node_num(f);
 			}
 			return ret;
@@ -1381,7 +1388,7 @@ namespace NMF
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based index.");
 		}
 
-		void add_block(size_t _nI, size_t _nJ, size_t _nK)
+		void add_block(int _nI, int _nJ, int _nK)
 		{
 			auto b = new Block3D(_nI, _nJ, _nK);
 			b->index() = nBlock() + 1;
@@ -1594,7 +1601,7 @@ namespace NMF
 			int global_cnt = 0;
 			for (auto b : m_blk)
 			{
-				for (size_t j = 1; j <= Block3D::NumOfFrame; ++j)
+				for (short j = 1; j <= Block3D::NumOfFrame; ++j)
 				{
 					auto e = &b->frame(j);
 					if (e->global_index != 0)
@@ -1643,7 +1650,7 @@ namespace NMF
 			int global_cnt = 0;
 			for (auto b : m_blk)
 			{
-				for (size_t j = 1; j <= Block3D::NumOfVertex; ++j)
+				for (short j = 1; j <= Block3D::NumOfVertex; ++j)
 				{
 					auto v = &b->vertex(j);
 					if (v->global_index != 0)

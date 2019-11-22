@@ -1137,17 +1137,17 @@ namespace NMF
 		void summary(std::ostream &out = std::cout)
 		{
 			std::cout << "=================================== SUMMARY ===================================" << std::endl;
-			std::cout << "Total num of blocks: " << nBlock() << std::endl;
+			std::cout << "Num of blocks: " << nBlock() << std::endl;
 			size_t nSa = 0, nSi = 0, nSb = 0;
 			nSurface(nSa, nSi, nSb);
-			std::cout << "Total num of surfaces: " << nSa << ", among which " << nSi << " are internal, " << nSb << " at boundary" << std::endl;
-			std::cout << "Total num of frames: " << nFrame() << std::endl;
-			std::cout << "Total num of vertexs: " << nVertex() << std::endl;
-			std::cout << "Total num of HEX cells: " << nCell() << std::endl;
+			std::cout << "Num of surfaces: " << nSa << ", among which " << nSi << " are internal, " << nSb << " at boundary" << std::endl;
+			std::cout << "Num of frames: " << nFrame() << std::endl;
+			std::cout << "Num of vertexs: " << nVertex() << std::endl;
+			std::cout << "Num of HEX cells: " << nCell() << std::endl;
 			size_t nFa = 0, nFi = 0, nFb = 0;
 			nFace(nFa, nFi, nFb);
-			std::cout << "Total num of QUAD faces: " << nFa << ", among which " << nFi << " are internal, " << nFb << " at boundary" << std::endl;
-			std::cout << "Total num of nodes: " << nNode() << " (duplication removed)" << std::endl;
+			std::cout << "Num of QUAD faces: " << nFa << ", among which " << nFi << " are internal, " << nFb << " at boundary" << std::endl;
+			std::cout << "Num of nodes: " << nNode() << " (duplication removed)" << std::endl;
 			std::cout << "-------------------------------------------------------------------------------" << std::endl;
 			static const std::string sep("    ");
 			for (auto &b : m_blk)
@@ -1363,9 +1363,9 @@ namespace NMF
 					ret -= m_blk(b)->surface_internal_node_num(f);
 				}
 			}
-			for (const auto &f : m_frame)
+			for (const auto &rec : m_frame)
 			{
-				auto ff = f[0];
+				auto ff = rec[0];
 				auto b = ff->dependentBlock->index();
 				auto f = ff->local_index;
 				ret += m_blk(b)->frame_internal_node_num(f);

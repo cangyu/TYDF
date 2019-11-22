@@ -489,6 +489,7 @@ namespace NMF
 		{
 			short local_index = 0; // Ranges from 1 to 6, set to 0 when uninitialized.
 			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			std::string name = "";
 			Block3D *dependentBlock = nullptr;
 			SURF *neighbourSurf = nullptr;
 			std::array<FRAME*, 4> includedFrame{ nullptr, nullptr, nullptr, nullptr };
@@ -1301,13 +1302,27 @@ namespace NMF
 			return ret;
 		}
 
+		Block3D &block(int n)
+		{
+			if (1 <= n && n <= nBlock())
+				return *m_blk[n - 1];
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based index.");
+		}
+		const Block3D &block(int n) const
+		{
+			if (1 <= n && n <= nBlock())
+				return *m_blk[n - 1];
+			else
+				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based index.");
+		}
+
 		void add_block(size_t _nI, size_t _nJ, size_t _nK)
 		{
 			auto b = new Block3D(_nI, _nJ, _nK);
 			b->index() = nBlock() + 1;
 			m_blk.push_back(b);
 		}
-
 		void add_block(const Block3D &x)
 		{
 			auto b = new Block3D(x);
@@ -1318,6 +1333,16 @@ namespace NMF
 		void add_entry(const std::string &_bc, size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2)
 		{
 			auto e = new SingleSideEntry(_bc, b, f, s1, e1, s2, e2);
+			m_entry.push_back(e);
+		}
+		void add_entry(const SingleSideEntry &x)
+		{
+			auto e = new SingleSideEntry(x);
+			m_entry.push_back(e);
+		}
+		void add_entry(const DoubleSideEntry &x)
+		{
+			auto e = new DoubleSideEntry(x);
 			m_entry.push_back(e);
 		}
 
@@ -1503,9 +1528,8 @@ namespace NMF
 		int coloring_frame()
 		{
 			int global_cnt = 0;
-			for (size_t i = 1; i <= nBlock(); ++i)
+			for (auto b : m_blk)
 			{
-				auto &b = m_blk(i);
 				for (size_t j = 1; j <= Block3D::NumOfFrame; ++j)
 				{
 					auto e = &b->frame(j);
@@ -1523,39 +1547,26 @@ namespace NMF
 						q.pop();
 						ce->global_index = global_cnt;
 
-						auto s1 = ce->dependentSurf[0], s2 = ce->dependentSurf[1];
-						if (!s1 || !s2)
-							throw std::runtime_error("Internal error.");
-
-						if (s1->neighbourSurf)
+						for (auto sf : ce->dependentSurf)
 						{
-							Block3D::FRAME *t = nullptr;
-							for (int ii = 0; ii < 4; ++ii)
-								if (s1->includedFrame[ii] == ce)
-								{
-									t = s1->counterpartFrame[ii];
-									break;
-								}
-							if (!t)
-								throw std::runtime_error("Internal error.");
+							if (!sf)
+								throw std::runtime_error("Dependent surface of a frame should NOT be empty.");
 
-							if (t->global_index == 0)
-								q.push(t);
-						}
-						if (s2->neighbourSurf)
-						{
-							Block3D::FRAME *t = nullptr;
-							for (int ii = 0; ii < 4; ++ii)
-								if (s2->includedFrame[ii] == ce)
-								{
-									t = s2->counterpartFrame[ii];
-									break;
-								}
-							if (!t)
-								throw std::runtime_error("Internal error.");
+							if (sf->neighbourSurf)
+							{
+								Block3D::FRAME *t = nullptr;
+								for (int ii = 0; ii < 4; ++ii)
+									if (sf->includedFrame[ii] == ce)
+									{
+										t = sf->counterpartFrame[ii];
+										break;
+									}
+								if (!t)
+									throw std::runtime_error("Internal error.");
 
-							if (t->global_index == 0)
-								q.push(t);
+								if (t->global_index == 0)
+									q.push(t);
+							}
 						}
 					}
 				}

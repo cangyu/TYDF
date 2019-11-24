@@ -1176,36 +1176,47 @@ namespace NMF
 
 		int numbering()
 		{
-			// Indexing of cells
+            const auto totalCellNum = nCell();
+            size_t totalFaceNum = 0, innerFaceNum = 0, bdryFaceNum = 0;
+            nFace(totalFaceNum, innerFaceNum, bdryFaceNum);
+
+            /* Index of cells */
 			size_t cnt = 0;
-			for (auto &blk : m_blk)
-			{
-				const size_t cI = blk->IDIM();
-				const size_t cJ = blk->JDIM();
-				const size_t cK = blk->KDIM();
+			for (auto b : m_blk)
+				for (size_t k = 1; k < b->KDIM(); ++k)
+					for (size_t j = 1; j < b->JDIM(); ++j)
+						for (size_t i = 1; i < b->IDIM(); ++i)
+							b->cell(i, j, k).CellSeq() = ++cnt;
 
-				for (size_t k = 1; k < cK; ++k)
-					for (size_t j = 1; j < cJ; ++j)
-						for (size_t i = 1; i < cI; ++i)
-							blk->cell(i, j, k).CellSeq() = ++cnt;
-			}
-
-			const size_t totalCellNum = nCell();
 			if (cnt != totalCellNum)
-				throw std::length_error("Inconsistent num of cells detected.");
+				throw std::length_error("Inconsistent num of cells.");
 
-			// Indexing of faces
+			/* Index of faces */
 			cnt = 0;
-			for (auto &blk : m_blk)
+			for (auto b : m_blk)
 			{
-				const size_t cI = blk->IDIM();
-				const size_t cJ = blk->JDIM();
-				const size_t cK = blk->KDIM();
+                for (size_t k = 1; k < b->KDIM(); ++k)
+                    for (size_t j = 1; j < b->JDIM(); ++j)
+                        for (size_t i = 1; i < b->IDIM(); ++i)
+                        {
+                            b->cell(i, j, k).FaceSeq(1) = ++cnt;
 
-				// TODO
+                        }
+
+                for(short i = 1; i <= Block3D::NumOfSurf; ++i)
+                {
+                    auto &sf = b->surf(i);
+                    if(sf.neighbourSurf)
+                    {
+
+                    }
+                    else
+                    {
+
+                    }
+                }
 			}
-			size_t totalFaceNum = 0, innerFaceNum = 0, bdryFaceNum = 0;
-			nFace(totalFaceNum, innerFaceNum, bdryFaceNum);
+
 			if (cnt != totalFaceNum)
 				throw std::length_error("Inconsistent num of cells detected.");
 
@@ -1279,7 +1290,6 @@ namespace NMF
 		{
 			return m_blk.size();
 		}
-
 		void nSurface(size_t &_all, size_t &_inter, size_t &_bdry) const
 		{
 			_all = Block3D::NumOfSurf * nBlock();
@@ -1294,12 +1304,10 @@ namespace NMF
 			}
 			_bdry = _all - _inter;
 		}
-
 		size_t nFrame() const
 		{
 			return m_frame.size();
 		}
-
 		size_t nVertex() const
 		{
 			return m_vertex.size();
@@ -1312,7 +1320,6 @@ namespace NMF
 				ret += blk->cell_num();
 			return ret;
 		}
-
 		void nFace(size_t &_all, size_t &_inner, size_t &_bdry) const
 		{
 			// Counting all faces.
@@ -1338,7 +1345,6 @@ namespace NMF
 			// Inner
 			_inner = _all - _bdry;
 		}
-
 		size_t nNode() const
 		{
 			size_t ret = nVertex();

@@ -18,7 +18,7 @@ void TwoBlocks()
 }
 
 typedef void(*pTestFunction)(void);
-const std::vector<pTestFunction> func = {
+const std::vector<pTestFunction> func{
 	LangleyExample,
 	TwoBlocks
 };
@@ -26,6 +26,7 @@ const std::vector<pTestFunction> func = {
 int main(int argc, char *argv[])
 {
 	int cnt = 0;
+	std::cout << "Testing cases for the Neutral Map File(NMF) utilities.";
 	for (auto f : func)
 	{
 		std::cout << "\nCase " << ++cnt << " ..." << std::endl;

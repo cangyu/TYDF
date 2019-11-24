@@ -178,91 +178,105 @@ namespace NMF
 	class CELL
 	{
 	protected:
-		size_t m_cell; // 1-based sequence
-		Array1D<size_t> m_node; // 1-based sequence
-		Array1D<size_t> m_face; // 1-based sequence
+		size_t m_cell; // 1-based cell index.
 
 	public:
-		CELL() = delete;
-		CELL(bool is3D) : m_cell(0), m_node((is3D ? 8 : 4), 0), m_face((is3D ? 6 : 4), 0) {}
-		CELL(const CELL &rhs) : m_cell(rhs.m_cell), m_node(rhs.m_node), m_face(rhs.m_face) {}
+		CELL(size_t idx = 0) : m_cell(idx) {}
+		CELL(const CELL &rhs) = default;
 		virtual ~CELL() = default;
 
 		size_t CellSeq() const { return m_cell; }
 		size_t &CellSeq() { return m_cell; }
 
 		// 1-based indexing of node
-		size_t NodeSeq(int n) const { return m_node.at(n - 1); }
-		size_t &NodeSeq(int n) { return m_node.at(n - 1); }
+		virtual size_t NodeSeq(size_t n) const = 0;
+		virtual size_t &NodeSeq(size_t n) = 0;
 
 		// 1-based indexing of face
-		size_t FaceSeq(int n) const { return m_face.at(n - 1); }
-		size_t &FaceSeq(int n) { return m_face.at(n - 1); }
+		virtual size_t FaceSeq(size_t n) const = 0;
+		virtual size_t &FaceSeq(size_t n) = 0;
 	};
 
 	class QUAD_CELL : public CELL
 	{
+	private:
+		std::array<size_t, 4> m_node; // 1-based node sequence.
+		std::array<size_t, 4> m_face; // 1-based face sequence.
+
 	public:
-		QUAD_CELL() : CELL(false) {}
+		QUAD_CELL(size_t idx = 0) : CELL(idx), m_node{ 0, 0, 0, 0 }, m_face{ 0, 0, 0, 0 } {}
 		QUAD_CELL(const QUAD_CELL &rhs) = default;
 		~QUAD_CELL() = default;
+
+		// 1-based indexing of node
+		size_t NodeSeq(size_t n) const { return m_node.at(n - 1); }
+		size_t &NodeSeq(size_t n) { return m_node.at(n - 1); }
+
+		// 1-based indexing of face
+		size_t FaceSeq(size_t n) const { return m_face.at(n - 1); }
+		size_t &FaceSeq(size_t n) { return m_face.at(n - 1); }
 	};
 
 	class HEX_CELL : public CELL
 	{
+	private:
+		std::array<size_t, 8> m_node; // 1-based node sequence.
+		std::array<size_t, 6> m_face; // 1-based face sequence.
+
 	public:
-		HEX_CELL() : CELL(true) {}
+		HEX_CELL(size_t idx = 0) : CELL(idx), m_node{ 0, 0, 0, 0, 0, 0, 0, 0 }, m_face{ 0, 0, 0, 0, 0, 0 } {}
 		HEX_CELL(const HEX_CELL &rhs) = default;
 		~HEX_CELL() = default;
+
+		// 1-based indexing of node
+		size_t NodeSeq(size_t n) const { return m_node.at(n - 1); }
+		size_t &NodeSeq(size_t n) { return m_node.at(n - 1); }
+
+		// 1-based indexing of face
+		size_t FaceSeq(size_t n) const { return m_face.at(n - 1); }
+		size_t &FaceSeq(size_t n) { return m_face.at(n - 1); }
 	};
 
 	class BLOCK
 	{
 	protected:
-		size_t idx; // 1-based global index
-		size_t m_nI, m_nJ, m_nK; // Dimensions
+		size_t m_idx; // 1-based global index
+		std::string m_name;
+		std::array<size_t, 3> m_dim; // Dimensions
 
 	public:
 		BLOCK() = delete;
-		BLOCK(int nI, int nJ) :
-			idx(0),
-			m_nI(nI),
-			m_nJ(nJ),
-			m_nK(1)
+		BLOCK(size_t nI, size_t nJ) :
+			m_idx(0),
+			m_name(""),
+			m_dim{ nI, nJ, 1 }
 		{
 			if (nI < 2 || nJ < 2)
 				throw std::invalid_argument("Invalid dimension.");
 		}
-		BLOCK(int nI, int nJ, int nK) :
-			idx(0),
-			m_nI(nI),
-			m_nJ(nJ),
-			m_nK(nK)
+		BLOCK(size_t nI, size_t nJ, size_t nK) :
+			m_idx(0),
+			m_name(""),
+			m_dim{ nI, nJ, nK }
 		{
 			if (nI < 2 || nJ < 2 || nK < 2)
 				throw std::invalid_argument("Invalid dimension.");
 		}
-		BLOCK(const BLOCK &rhs) = default;
+		BLOCK(const BLOCK &rhs) : m_idx(rhs.index()), m_name(rhs.name()), m_dim{ rhs.IDIM(), rhs.JDIM(), rhs.KDIM() } {}
 		virtual ~BLOCK() = default;
 
-		size_t index() const { return idx; }
-		size_t &index() { return idx; }
+		size_t index() const { return m_idx; }
+		size_t &index() { return m_idx; }
 
-		size_t IDIM() const { return m_nI; }
-		size_t JDIM() const { return m_nJ; }
-		size_t KDIM() const { return m_nK; }
+		const std::string &name() const { return m_name; }
+		std::string &name() { return m_name; }
 
-		bool is3D() const
-		{
-			if (m_nK == 1)
-				return false;
-			else
-				return true;
-		}
-		short dimension() const
-		{
-			return is3D() ? 3 : 2;
-		}
+		size_t IDIM() const { return m_dim[0]; }
+		size_t JDIM() const { return m_dim[1]; }
+		size_t KDIM() const { return m_dim[2]; }
+
+		bool is3D() const { return (KDIM() != 1); }
+		short dimension() const { return is3D() ? 3 : 2; }
 
 		// Here the terms 'node', 'face' and 'cell' are 
 		// consistent with that in ANSYS Fluent convention.
@@ -315,10 +329,10 @@ namespace NMF
 					return (IDIM() - 2) * (JDIM() - 2);
 				case 3:
 				case 4:
-                    return (JDIM() - 2) * (KDIM() - 2);
+					return (JDIM() - 2) * (KDIM() - 2);
 				case 5:
 				case 6:
-                    return (KDIM() - 2) * (IDIM() - 2);
+					return (KDIM() - 2) * (IDIM() - 2);
 				default:
 					throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 3D block.");
 				}
@@ -329,10 +343,10 @@ namespace NMF
 				{
 				case 1:
 				case 2:
-                    return (JDIM() - 2);
+					return (JDIM() - 2);
 				case 3:
 				case 4:
-                    return (IDIM() - 2);
+					return (IDIM() - 2);
 				default:
 					throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 2D block.");
 				}
@@ -350,6 +364,7 @@ namespace NMF
 		{
 			short local_index = 0; // Ranges from 1 to 'NumOfFrame', set to 0 when uninitialized.
 			int global_index = 0; // 1-based global index, set to 0 when uninitialized.
+			std::string name = "";
 			Block2D *dependentBlock = nullptr;
 			Block2D *neighbourBlock = nullptr;
 		};
@@ -362,7 +377,7 @@ namespace NMF
 		};
 
 	private:
-		Array1D<QUAD_CELL> m_cell;
+		Array1D<QUAD_CELL*> m_cell;
 		Array1D<FRAME> m_frame;
 		Array1D<VERTEX> m_vertex;
 
@@ -370,7 +385,7 @@ namespace NMF
 		Block2D() = delete;
 		Block2D(int nI, int nJ) :
 			BLOCK(nI, nJ),
-			m_cell(cell_num()),
+			m_cell(cell_num(), nullptr),
 			m_vertex(NumOfVertex),
 			m_frame(NumOfFrame)
 		{
@@ -380,8 +395,42 @@ namespace NMF
 			for (short i = 0; i < NumOfVertex; ++i)
 				m_vertex[i].local_index = i + 1;
 		}
-		Block2D(const Block2D &rhs) = default;
-		~Block2D() = default;
+		Block2D(const Block2D &rhs) :
+			BLOCK(rhs.IDIM(), rhs.JDIM()),
+			m_cell(rhs.m_cell.size(), nullptr),
+			m_frame(rhs.m_frame),
+			m_vertex(rhs.m_vertex)
+		{
+			for (size_t i = 0; i < m_cell.size(); ++i)
+			{
+				auto p = rhs.m_cell[i];
+				if (p)
+					m_cell[i] = new QUAD_CELL(*p);
+			}
+		}
+		~Block2D()
+		{
+			release_cell_storage();
+		}
+
+		void release_cell_storage()
+		{
+			for (auto &c : m_cell)
+				if (c != nullptr)
+				{
+					delete c;
+					c = nullptr;
+				}
+		}
+		void allocate_cell_storage()
+		{
+			for (auto &c : m_cell)
+			{
+				c = new QUAD_CELL();
+				if (!c)
+					throw std::bad_alloc();
+			}
+		}
 
 		// Access internal cell through 1-based index.
 		// Indexing convention:
@@ -392,19 +441,19 @@ namespace NMF
 		QUAD_CELL &cell(size_t i, size_t j)
 		{
 			const size_t i0 = i - 1, j0 = j - 1; // Convert 1-based index to 0-based
-			const size_t idx = i0 + (m_nI - 1) * j0;
-			return m_cell.at(idx);
+			const size_t idx = i0 + (IDIM() - 1) * j0;
+			return *m_cell.at(idx);
 		}
 		const QUAD_CELL &cell(size_t i, size_t j) const
 		{
 			const size_t i0 = i - 1, j0 = j - 1; // Convert 1-based index to 0-based
-			const size_t idx = i0 + (m_nI - 1) * j0;
-			return m_cell.at(idx);
+			const size_t idx = i0 + (IDIM() - 1) * j0;
+			return *m_cell.at(idx);
 		}
 
 		// Access frame through 1-based index.
 		// The indexing convention follows OpenFOAM specification.
-		FRAME &frame(int n)
+		FRAME &frame(short n)
 		{
 			if (1 <= n && n <= NumOfFrame)
 				return m_frame.at(n - 1);
@@ -413,7 +462,7 @@ namespace NMF
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
 		}
-		const FRAME &frame(int n) const
+		const FRAME &frame(short n) const
 		{
 			if (1 <= n && n <= NumOfFrame)
 				return m_frame.at(n - 1);
@@ -425,7 +474,7 @@ namespace NMF
 
 		// Access vertex through 1-based index.
 		// The indexing convention follows OpenFOAM specification.
-		VERTEX &vertex(int n)
+		VERTEX &vertex(short n)
 		{
 			if (1 <= n && n <= NumOfVertex)
 				return m_vertex.at(n - 1);
@@ -434,7 +483,7 @@ namespace NMF
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
 		}
-		const VERTEX &vertex(int n) const
+		const VERTEX &vertex(short n) const
 		{
 			if (1 <= n && n <= NumOfVertex)
 				return m_vertex.at(n - 1);
@@ -484,7 +533,7 @@ namespace NMF
 		};
 
 	private:
-		Array1D<HEX_CELL> m_cell;
+		Array1D<HEX_CELL*> m_cell;
 		Array1D<VERTEX> m_vertex;
 		Array1D<FRAME> m_frame;
 		Array1D<SURF> m_surf;
@@ -493,7 +542,7 @@ namespace NMF
 		Block3D() = delete;
 		Block3D(int nI, int nJ, int nK) :
 			BLOCK(nI, nJ, nK),
-			m_cell(cell_num()),
+			m_cell(cell_num(), nullptr),
 			m_vertex(NumOfVertex),
 			m_frame(NumOfFrame),
 			m_surf(NumOfSurf)
@@ -518,8 +567,43 @@ namespace NMF
 			}
 			establish_connections();
 		}
-		Block3D(const Block3D &rhs) = default;
-		~Block3D() = default;
+		Block3D(const Block3D &rhs) :
+			BLOCK(rhs.IDIM(), rhs.JDIM(), rhs.KDIM()),
+			m_cell(cell_num(), nullptr),
+			m_vertex(rhs.m_vertex),
+			m_frame(rhs.m_frame),
+			m_surf(rhs.m_surf)
+		{
+			for (size_t i = 0; i < m_cell.size(); ++i)
+			{
+				auto p = rhs.m_cell[i];
+				if (p)
+					m_cell[i] = new HEX_CELL(*p);
+			}
+		}
+		~Block3D()
+		{
+			release_cell_storage();
+		}
+
+		void release_cell_storage()
+		{
+			for (auto &c : m_cell)
+				if (c != nullptr)
+				{
+					delete c;
+					c = nullptr;
+				}
+		}
+		void allocate_cell_storage()
+		{
+			for (auto &c : m_cell)
+			{
+				c = new HEX_CELL();
+				if (!c)
+					throw std::bad_alloc();
+			}
+		}
 
 		// Access internal cell through 1-based index.
 		// Indexing convention:
@@ -531,19 +615,19 @@ namespace NMF
 		HEX_CELL &cell(size_t i, size_t j, size_t k)
 		{
 			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
-			const size_t idx = i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0);
-			return m_cell.at(idx);
+			const size_t idx = i0 + (IDIM() - 1) * (j0 + (JDIM() - 1) * k0);
+			return *m_cell.at(idx);
 		}
 		const HEX_CELL &cell(size_t i, size_t j, size_t k) const
 		{
 			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
-			const size_t idx = i0 + (m_nI - 1) * (j0 + (m_nJ - 1) * k0);
-			return m_cell.at(idx);
+			const size_t idx = i0 + (IDIM() - 1) * (j0 + (JDIM() - 1) * k0);
+			return *m_cell.at(idx);
 		}
 
 		// Access vertex through 1-based index.
 		// The indexing convention follows OpenFOAM specification.
-		VERTEX &vertex(int n)
+		VERTEX &vertex(short n)
 		{
 			if (1 <= n && n <= NumOfVertex)
 				return m_vertex.at(n - 1);
@@ -552,7 +636,7 @@ namespace NMF
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 3D block.");
 		}
-		const VERTEX &vertex(int n) const
+		const VERTEX &vertex(short n) const
 		{
 			if (1 <= n && n <= NumOfVertex)
 				return m_vertex.at(n - 1);
@@ -564,7 +648,7 @@ namespace NMF
 
 		// Access the frame edges through 1-based index.
 		// The indexing convention follows OpenFOAM specification.
-		FRAME &frame(int n)
+		FRAME &frame(short n)
 		{
 			if (1 <= n && n <= NumOfFrame)
 				return m_frame.at(n - 1);
@@ -573,7 +657,7 @@ namespace NMF
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 3D block.");
 		}
-		const FRAME &frame(int n) const
+		const FRAME &frame(short n) const
 		{
 			if (1 <= n && n <= NumOfFrame)
 				return m_frame.at(n - 1);
@@ -585,7 +669,7 @@ namespace NMF
 
 		// Access surrounding surface through 1-based index.
 		// The index follows NMF convection.
-		SURF &surf(int n)
+		SURF &surf(short n)
 		{
 			if (1 <= n && n <= NumOfSurf)
 				return m_surf.at(n - 1);
@@ -594,7 +678,7 @@ namespace NMF
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
 		}
-		const SURF &surf(int n) const
+		const SURF &surf(short n) const
 		{
 			if (1 <= n && n <= NumOfSurf)
 				return m_surf.at(n - 1);
@@ -747,7 +831,7 @@ namespace NMF
 			{
 			private:
 				size_t m_blk; // Block index, 1-based.
-				size_t m_face; // Face index, ranges from 1 to 6.
+				short m_face; // Face index, ranges from 1 to 6.
 				size_t m_s1; // Primary direction starting index, 1-based.
 				size_t m_e1; // Primary direction ending index, 1-based.
 				size_t m_s2; // Secondary direction starting index, 1-based.
@@ -755,17 +839,7 @@ namespace NMF
 
 			public:
 				RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
-				RANGE(size_t *src) :
-					m_blk(src[0]),
-					m_face(src[1]),
-					m_s1(src[2]),
-					m_e1(src[3]),
-					m_s2(src[4]),
-					m_e2(src[5])
-				{
-					check_param();
-				}
-				RANGE(size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2) :
+				RANGE(size_t b, short f, size_t s1, size_t e1, size_t s2, size_t e2) :
 					m_blk(b),
 					m_face(f),
 					m_s1(s1),
@@ -781,8 +855,8 @@ namespace NMF
 				size_t B() const { return m_blk; }
 				size_t &B() { return m_blk; }
 
-				size_t F() const { return m_face; }
-				size_t &F() { return m_face; }
+				short F() const { return m_face; }
+				short &F() { return m_face; }
 
 				size_t S1() const { return m_s1; }
 				size_t &S1() { return m_s1; }
@@ -855,7 +929,7 @@ namespace NMF
 				{
 					if (B() == 0)
 						throw std::invalid_argument("Invalid block index, must be positive.");
-					if (F() == 0)
+					if (F() <= 0)
 						throw std::invalid_argument("Invalid face index, must be positive.");
 					if (S1() == E1())
 						throw std::invalid_argument("Starting index and ending index in primary direction must differ,");
@@ -869,17 +943,9 @@ namespace NMF
 			RANGE m_rg1;
 
 		public:
-			ENTRY() : m_bc(-1) {}
+			ENTRY() : m_bc(-1), m_rg1() {}
 			ENTRY(const std::string &t, size_t B, size_t F, size_t S1, size_t E1, size_t S2, size_t E2) :
 				m_rg1(B, F, S1, E1, S2, E2)
-			{
-				if (BC::isValidBCStr(t))
-					m_bc = BC::str2idx(t);
-				else
-					throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
-			}
-			ENTRY(const std::string &t, size_t *s) :
-				m_rg1(s)
 			{
 				if (BC::isValidBCStr(t))
 					m_bc = BC::str2idx(t);
@@ -895,18 +961,17 @@ namespace NMF
 			RANGE &Range1() { return m_rg1; }
 			const RANGE &Range1() const { return m_rg1; }
 
-			virtual int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const = 0;
+			virtual int contains(size_t bs, short fs, size_t lpri, size_t lsec) const = 0;
 		};
 		class SingleSideEntry : public ENTRY
 		{
 		public:
 			SingleSideEntry() = default;
-			SingleSideEntry(const std::string &t, size_t B, size_t F, size_t S1, size_t E1, size_t S2, size_t E2) : ENTRY(t, B, F, S1, E1, S2, E2) {}
-			SingleSideEntry(const std::string &t, size_t *s) : ENTRY(t, s) {}
+			SingleSideEntry(const std::string &t, size_t B, short F, size_t S1, size_t E1, size_t S2, size_t E2) : ENTRY(t, B, F, S1, E1, S2, E2) {}
 			SingleSideEntry(const SingleSideEntry &rhs) = default;
 			~SingleSideEntry() = default;
 
-			int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const
+			int contains(size_t bs, short fs, size_t lpri, size_t lsec) const
 			{
 				const auto &rg = this->Range1();
 				return (rg.B() == bs && rg.F() == fs && rg.constains(lpri, lsec)) ? 1 : 0;
@@ -919,8 +984,29 @@ namespace NMF
 			bool m_swap;
 
 		public:
-			DoubleSideEntry() : m_swap(false) {}
-			DoubleSideEntry(const std::string &t, size_t *s1, size_t *s2, bool f) : ENTRY(t, s1), m_rg2(s2), m_swap(f) {}
+			DoubleSideEntry() : m_rg2(), m_swap(false) {}
+			DoubleSideEntry(const std::string &t, size_t B1, short F1, size_t S11, size_t E11, size_t S12, size_t E12, size_t B2, short F2, size_t S21, size_t E21, size_t S22, size_t E22, bool f) :
+				ENTRY(t, B1, F1, S11, E11, S12, E12),
+				m_rg2(B2, F2, S21, E21, S22, E22),
+				m_swap(f)
+			{
+				// Check consistency.
+				bool ok = false;
+				if (Swap())
+				{
+					const bool cond1 = Range1().pri_node_num() == Range2().sec_node_num();
+					const bool cond2 = Range1().sec_node_num() == Range2().pri_node_num();
+					ok = cond1 && cond2;
+				}
+				else
+				{
+					const bool cond1 = Range1().pri_node_num() == Range2().pri_node_num();
+					const bool cond2 = Range1().sec_node_num() == Range2().sec_node_num();
+					ok = cond1 && cond2;
+				}
+				if (!ok)
+					throw std::invalid_argument("Inconsistent dims bwtween 2 surfaces.");
+			}
 			DoubleSideEntry(const DoubleSideEntry &rhs) = default;
 			~DoubleSideEntry() = default;
 
@@ -930,7 +1016,7 @@ namespace NMF
 			bool Swap() const { return m_swap; }
 			bool &Swap() { return m_swap; }
 
-			int contains(size_t bs, size_t fs, size_t lpri, size_t lsec) const
+			int contains(size_t bs, short fs, size_t lpri, size_t lsec) const
 			{
 				const auto &rg1 = this->Range1();
 				const auto &rg2 = this->Range2();
@@ -977,6 +1063,8 @@ namespace NMF
 				else
 					m_entry[i] = new SingleSideEntry(*ptr1);
 			}
+
+			// TODO
 		}
 		~Mapping3D()
 		{
@@ -1064,26 +1152,24 @@ namespace NMF
 				ss << s;
 				std::string bc_str;
 				ss >> bc_str;
-				size_t connectivity[2][6] = { 0 };
 				if (BC::str2idx(bc_str) == BC::ONE_TO_ONE)
 				{
-					for (int i = 0; i < 2; i++)
-						for (int j = 0; j < 6; j++)
-							ss >> connectivity[i][j];
-
+					size_t cB[2];
+					short cF[2];
+					size_t cS1[2], cE1[2], cS2[2], cE2[2];
 					std::string swp;
+					for (int i = 0; i < 2; i++)
+						ss >> cB[i] >> cF[i] >> cS1[i] >> cE1[i] >> cS2[i] >> cE2[i];
 					ss >> swp;
-
-					auto ptr = new DoubleSideEntry(bc_str, connectivity[0], connectivity[1], swp == "TRUE");
-					m_entry.push_back(ptr);
+					add_entry(bc_str, cB[0], cF[0], cS1[0], cE1[0], cS2[0], cE2[0], cB[1], cF[1], cS1[1], cE1[1], cS2[1], cE2[1], swp == "TRUE");
 				}
 				else
 				{
-					for (int i = 0; i < 6; i++)
-						ss >> connectivity[0][i];
-
-					auto ptr = new SingleSideEntry(bc_str, connectivity[0]);
-					m_entry.push_back(ptr);
+					size_t cB;
+					short cF;
+					size_t cS1, cE1, cS2, cE2;
+					ss >> cB >> cF >> cS1 >> cE1 >> cS2 >> cE2;
+					add_entry(bc_str, cB, cF, cS1, cE1, cS2, cE2);
 				}
 			} while (std::getline(mfp, s));
 
@@ -1176,11 +1262,11 @@ namespace NMF
 
 		int numbering()
 		{
-            const auto totalCellNum = nCell();
-            size_t totalFaceNum = 0, innerFaceNum = 0, bdryFaceNum = 0;
-            nFace(totalFaceNum, innerFaceNum, bdryFaceNum);
+			const auto totalCellNum = nCell();
+			size_t totalFaceNum = 0, innerFaceNum = 0, bdryFaceNum = 0;
+			nFace(totalFaceNum, innerFaceNum, bdryFaceNum);
 
-            /* Index of cells */
+			/* Index of cells */
 			size_t cnt = 0;
 			for (auto b : m_blk)
 				for (size_t k = 1; k < b->KDIM(); ++k)
@@ -1195,26 +1281,26 @@ namespace NMF
 			cnt = 0;
 			for (auto b : m_blk)
 			{
-                for (size_t k = 1; k < b->KDIM(); ++k)
-                    for (size_t j = 1; j < b->JDIM(); ++j)
-                        for (size_t i = 1; i < b->IDIM(); ++i)
-                        {
-                            b->cell(i, j, k).FaceSeq(1) = ++cnt;
+				for (size_t k = 1; k < b->KDIM(); ++k)
+					for (size_t j = 1; j < b->JDIM(); ++j)
+						for (size_t i = 1; i < b->IDIM(); ++i)
+						{
+							b->cell(i, j, k).FaceSeq(1) = ++cnt;
 
-                        }
+						}
 
-                for(short i = 1; i <= Block3D::NumOfSurf; ++i)
-                {
-                    auto &sf = b->surf(i);
-                    if(sf.neighbourSurf)
-                    {
+				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
+				{
+					auto &sf = b->surf(i);
+					if (sf.neighbourSurf)
+					{
 
-                    }
-                    else
-                    {
+					}
+					else
+					{
 
-                    }
-                }
+					}
+				}
 			}
 
 			if (cnt != totalFaceNum)
@@ -1232,7 +1318,7 @@ namespace NMF
 			// Open target file
 			std::ofstream f_out(path);
 			if (f_out.fail())
-				throw std::runtime_error("Can not open target output file: " + path);
+				throw std::runtime_error("Can not open target output file: \"" + path + "\".");
 
 			// Header
 			f_out << "# ======================== Neutral Map File generated by the Grid-Glue software ==============================" << std::endl;
@@ -1401,7 +1487,7 @@ namespace NMF
 			m_blk.push_back(b);
 		}
 
-		void add_entry(const std::string &_bc, size_t b, size_t f, size_t s1, size_t e1, size_t s2, size_t e2)
+		void add_entry(const std::string &_bc, size_t b, short f, size_t s1, size_t e1, size_t s2, size_t e2)
 		{
 			auto e = new SingleSideEntry(_bc, b, f, s1, e1, s2, e2);
 			m_entry.push_back(e);
@@ -1409,6 +1495,11 @@ namespace NMF
 		void add_entry(const SingleSideEntry &x)
 		{
 			auto e = new SingleSideEntry(x);
+			m_entry.push_back(e);
+		}
+		void add_entry(const std::string &_bc, size_t b1, short f1, size_t s11, size_t e11, size_t s12, size_t e12, size_t b2, short f2, size_t s21, size_t e21, size_t s22, size_t e22, bool swp)
+		{
+			auto e = new DoubleSideEntry(_bc, b1, f1, s11, e11, s12, e12, b2, f2, s21, e21, s22, e22, swp);
 			m_entry.push_back(e);
 		}
 		void add_entry(const DoubleSideEntry &x)

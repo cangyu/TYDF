@@ -720,6 +720,23 @@ namespace NMF
 				throw std::runtime_error("Internal error: too less nodes not detected when constructing.");
 		}
 
+		size_t surface_node_num(short idx) const
+		{
+			switch (idx - 1)
+			{
+			case 0:
+			case 1:
+				return IDIM() * JDIM();
+			case 2:
+			case 3:
+				return JDIM() * KDIM();
+			case 4:
+			case 5:
+				return KDIM() * IDIM();
+			default:
+				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 3D block.");
+			}
+		}
 		size_t surface_face_num(short idx) const
 		{
 			switch (idx - 1)
@@ -944,7 +961,7 @@ namespace NMF
 
 		public:
 			ENTRY() : m_bc(-1), m_rg1() {}
-			ENTRY(const std::string &t, size_t B, size_t F, size_t S1, size_t E1, size_t S2, size_t E2) :
+			ENTRY(const std::string &t, size_t B, short F, size_t S1, size_t E1, size_t S2, size_t E2) :
 				m_rg1(B, F, S1, E1, S2, E2)
 			{
 				if (BC::isValidBCStr(t))
@@ -1184,15 +1201,27 @@ namespace NMF
 		{
 			connecting();
 
+			const int nsf = coloring_surface();
+			if (nsf < Block3D::NumOfSurf)
+				throw std::runtime_error("Internal error occured when counting surfaces.");
+			m_surf.resize(nsf);
+			for (auto &e : m_surf)
+				e.clear();
+			for (auto b : m_blk)
+				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
+				{
+					auto &s = b->surf(i);
+					m_surf(s.global_index).push_back(&s);
+				}
+
 			const int nfm = coloring_frame();
 			if (nfm < Block3D::NumOfFrame)
 				throw std::runtime_error("Internal error occured when counting frames.");
-
 			m_frame.resize(nfm);
 			for (auto &e : m_frame)
 				e.clear();
 			for (auto b : m_blk)
-				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+				for (short i = 1; i <= Block3D::NumOfFrame; ++i)
 				{
 					auto &e = b->frame(i);
 					m_frame(e.global_index).push_back(&e);
@@ -1201,12 +1230,11 @@ namespace NMF
 			const int nvt = coloring_vertex();
 			if (nvt < Block3D::NumOfVertex)
 				throw std::runtime_error("Internal error occured when counting vertexes.");
-
 			m_vertex.resize(nvt);
 			for (auto &e : m_vertex)
 				e.clear();
 			for (auto b : m_blk)
-				for (int i = 1; i <= Block3D::NumOfVertex; ++i)
+				for (short i = 1; i <= Block3D::NumOfVertex; ++i)
 				{
 					auto &v = b->vertex(i);
 					m_vertex(v.global_index).push_back(&v);
@@ -1215,49 +1243,84 @@ namespace NMF
 
 		void summary(std::ostream &out = std::cout)
 		{
-			std::cout << "=================================== SUMMARY ===================================" << std::endl;
-			std::cout << "Num of blocks: " << nBlock() << std::endl;
+			out << "======================================== SUMMARY =======================================" << std::endl;
+			out << "Num of blocks: " << nBlock() << std::endl;
 			size_t nSa = 0, nSi = 0, nSb = 0;
 			nSurface(nSa, nSi, nSb);
-			std::cout << "Num of surfaces: " << nSa << ", among which " << nSi << " are internal, " << nSb << " at boundary" << std::endl;
-			std::cout << "Num of frames: " << nFrame() << std::endl;
-			std::cout << "Num of vertexs: " << nVertex() << std::endl;
-			std::cout << "Num of HEX cells: " << nCell() << std::endl;
+			out << "Num of surfaces: " << nSa << ", among which " << nSi << " are internal, " << nSb << " at boundary" << std::endl;
+			out << "Num of frames: " << nFrame() << std::endl;
+			out << "Num of vertexs: " << nVertex() << std::endl;
+			out << "Num of HEX cells: " << nCell() << std::endl;
 			size_t nFa = 0, nFi = 0, nFb = 0;
 			nFace(nFa, nFi, nFb);
-			std::cout << "Num of QUAD faces: " << nFa << ", among which " << nFi << " are internal, " << nFb << " at boundary" << std::endl;
-			std::cout << "Num of nodes: " << nNode() << " (duplication removed)" << std::endl;
-			std::cout << "-------------------------------------------------------------------------------" << std::endl;
-			static const std::string sep("    ");
-			for (auto &b : m_blk)
+			out << "Num of QUAD faces: " << nFa << ", among which " << nFi << " are internal, " << nFb << " at boundary" << std::endl;
+			out << "Num of nodes: " << nNode() << " (duplication removed)" << std::endl;
+			out << "------------------------------------------Blocks----------------------------------------";
+			for (auto b : m_blk)
 			{
-				std::cout << "Block" << b->index() << ":" << std::endl;
-				std::cout << sep << "I=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
-				std::cout << sep << "Num of HEX cells: " << b->cell_num() << std::endl;
-				std::cout << sep << "Num of QUAD faces: " << b->face_num() << std::endl;
-				std::cout << sep << "Num of nodes: " << b->node_num() << std::endl;
-				std::cout << sep << "Local Frame Index:  ";
+				out << "\nIndex: " << b->index() << std::endl;
+				out << "I=" << b->IDIM() << ", J=" << b->JDIM() << ", K=" << b->KDIM() << std::endl;
+				out << "Num of HEX cells: " << b->cell_num() << std::endl;
+				out << "Num of QUAD faces: " << b->face_num() << std::endl;
+				out << "Num of nodes: " << b->node_num() << std::endl;
+				out << "Local Vertex Index: ";
+				for (int i = 1; i <= Block3D::NumOfVertex; ++i)
+					out << std::setw(5) << std::right << b->vertex(i).local_index;
+				out << std::endl;
+				out << "Global Vertex Index:";
+				for (int i = 1; i <= Block3D::NumOfVertex; ++i)
+					out << std::setw(5) << std::right << b->vertex(i).global_index;
+				out << std::endl;
+				out << "Local Frame Index: ";
 				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
-					std::cout << std::setw(4) << std::right << b->frame(i).local_index;
-				std::cout << std::endl;
-				std::cout << sep << "Global Frame Index: ";
+					out << std::setw(5) << std::right << b->frame(i).local_index;
+				out << std::endl;
+				out << "Global Frame Index:";
 				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
-					std::cout << std::setw(4) << std::right << b->frame(i).global_index;
-				std::cout << std::endl;
+					out << std::setw(5) << std::right << b->frame(i).global_index;
+				out << std::endl;
+				out << "Local Surface Index: ";
+				for (int i = 1; i <= Block3D::NumOfSurf; ++i)
+					out << std::setw(5) << std::right << b->surf(i).local_index;
+				out << std::endl;
+				out << "Global Surface Index:";
+				for (int i = 1; i <= Block3D::NumOfSurf; ++i)
+					out << std::setw(5) << std::right << b->surf(i).global_index;
+				out << std::endl;
 			}
-			std::cout << "-------------------------------------------------------------------------------" << std::endl;
+			out << "-----------------------------------------Surfaces---------------------------------------";
+			for (int i = 1; i <= nSa; ++i)
+			{
+				out << "\nGlobal Index: " << i << std::endl;
+				auto sf_rep = m_surf(i)[0];
+				out << "Num of faces: " << sf_rep->dependentBlock->surface_face_num(sf_rep->local_index) << std::endl;
+				out << "Num of nodes: " << sf_rep->dependentBlock->surface_node_num(sf_rep->local_index) << std::endl;
+				out << "Occurance:";
+				for (auto e : m_surf(i))
+					out << " (" << e->dependentBlock->index() << ", " << e->local_index << ")";
+				out << std::endl;
+			}
+			out << "------------------------------------------Frames----------------------------------------";
 			for (int i = 1; i <= nFrame(); ++i)
 			{
-				std::cout << "Frame" << i << ": " << std::endl;
+				out << "\nGlobal Index: " << i << std::endl;
 				auto f_rep = m_frame(i)[0];
-				std::cout << sep << "Num of nodes: " << f_rep->dependentBlock->frame_node_num(f_rep->local_index) << std::endl;
-				std::cout << sep << "Occurance: ";
+				out << "Num of nodes: " << f_rep->dependentBlock->frame_node_num(f_rep->local_index) << std::endl;
+				out << "Occurance:";
 				for (auto e : m_frame(i))
-					std::cout << "(" << e->dependentBlock->index() << ", " << e->local_index << ") ";
-				std::cout << std::endl;
-
+					out << " (" << e->dependentBlock->index() << ", " << e->local_index << ")";
+				out << std::endl;
 			}
-			std::cout << "===================================== END =====================================" << std::endl;
+			out << "-----------------------------------------Vertexes---------------------------------------";
+			for (int i = 1; i <= nVertex(); ++i)
+			{
+				out << "\nGlobal Index: " << i << std::endl;
+				out << "Occurance:";
+				for (auto e : m_vertex(i))
+					out << " (" << e->dependentBlock->index() << ", " << e->local_index << ")";
+				out << std::endl;
+			}
+			out << "========================================== END =========================================" << std::endl;
 		}
 
 		int numbering()
@@ -1321,7 +1384,7 @@ namespace NMF
 				throw std::runtime_error("Can not open target output file: \"" + path + "\".");
 
 			// Header
-			f_out << "# ======================== Neutral Map File generated by the Grid-Glue software ==============================" << std::endl;
+			f_out << "# ============================= Neutral Map File generated by the Grid-Glue software =========================" << std::endl;
 			f_out << "# ============================================================================================================" << std::endl;
 			f_out << "# Block#    IDIM    JDIM    KDIM" << std::endl;
 			f_out << "# ------------------------------------------------------------------------------------------------------------" << std::endl;
@@ -1685,6 +1748,25 @@ namespace NMF
 					}
 				}
 			}
+		}
+
+		int coloring_surface()
+		{
+			int global_cnt = 0;
+			for (auto b : m_blk)
+			{
+				for (short j = 1; j <= Block3D::NumOfSurf; ++j)
+				{
+					auto s = &b->surf(j);
+					if (s->global_index != 0)
+						continue;
+
+					s->global_index = ++global_cnt;
+					if (s->neighbourSurf)
+						s->neighbourSurf->global_index = s->global_index;
+				}
+			}
+			return global_cnt;
 		}
 
 		int coloring_frame()

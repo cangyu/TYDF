@@ -1,19 +1,24 @@
 #include <iostream>
 #include <vector>
+#include <fstream>
 #include "nmf.hpp"
 
 void LangleyExample()
 {
 	// 4 blocks in 2x2 form.
 	NMF::Mapping3D mapping("0/map.nmf");
-	mapping.summary();
+	std::ofstream fout("0/report.txt");
+	mapping.summary(fout);
+	fout.close();
 	mapping.writeToFile("0/map_blessed.nmf");
 }
 
 void TwoBlocks()
 {
 	NMF::Mapping3D mapping("1/map.nmf");
-	mapping.summary();
+	std::ofstream fout("1/report.txt");
+	mapping.summary(fout);
+	fout.close();
 	mapping.writeToFile("1/map_blessed.nmf");
 }
 
@@ -26,21 +31,20 @@ const std::vector<pTestFunction> func{
 int main(int argc, char *argv[])
 {
 	int cnt = 0;
-	std::cout << "Testing cases for the Neutral Map File(NMF) utilities.";
+	int failure = 0;
+	std::cout << "Testing cases for the Neutral Map File(NMF) utilities." << std::endl;
 	for (auto f : func)
 	{
-		std::cout << "\nCase " << ++cnt << " ..." << std::endl;
+		std::cout << "Case " << ++cnt << " ... " << std::endl;
 		try {
 			f();
 		}
 		catch (std::exception &e)
 		{
 			std::cout << e.what() << std::endl;
-		}
-		catch (...)
-		{
-			throw std::runtime_error("Unexpected.");
+			++failure;
 		}
 	}
+	std::cout << "Done with " << failure << " failed." << std::endl;
 	return 0;
 }

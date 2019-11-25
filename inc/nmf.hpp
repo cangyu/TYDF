@@ -1088,7 +1088,7 @@ namespace NMF
 			release_all();
 		}
 
-		int readFromFile(const std::string &path)
+		void readFromFile(const std::string &path)
 		{
 			std::string s;
 			std::stringstream ss;
@@ -1192,9 +1192,6 @@ namespace NMF
 
 			// Close input file
 			mfp.close();
-
-			// Finalize
-			return 0;
 		}
 
 		void compute_topology()
@@ -1323,60 +1320,22 @@ namespace NMF
 			out << "========================================== END =========================================" << std::endl;
 		}
 
-		int numbering()
+		void numbering()
 		{
-			const auto totalCellNum = nCell();
-			size_t totalFaceNum = 0, innerFaceNum = 0, bdryFaceNum = 0;
-			nFace(totalFaceNum, innerFaceNum, bdryFaceNum);
+			for (auto b : m_blk)
+				b->allocate_cell_storage();
 
 			/* Index of cells */
-			size_t cnt = 0;
-			for (auto b : m_blk)
-				for (size_t k = 1; k < b->KDIM(); ++k)
-					for (size_t j = 1; j < b->JDIM(); ++j)
-						for (size_t i = 1; i < b->IDIM(); ++i)
-							b->cell(i, j, k).CellSeq() = ++cnt;
-
-			if (cnt != totalCellNum)
-				throw std::length_error("Inconsistent num of cells.");
+			numbering_cell();
 
 			/* Index of faces */
-			cnt = 0;
-			for (auto b : m_blk)
-			{
-				for (size_t k = 1; k < b->KDIM(); ++k)
-					for (size_t j = 1; j < b->JDIM(); ++j)
-						for (size_t i = 1; i < b->IDIM(); ++i)
-						{
-							b->cell(i, j, k).FaceSeq(1) = ++cnt;
+			numbering_face();
 
-						}
-
-				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
-				{
-					auto &sf = b->surf(i);
-					if (sf.neighbourSurf)
-					{
-
-					}
-					else
-					{
-
-					}
-				}
-			}
-
-			if (cnt != totalFaceNum)
-				throw std::length_error("Inconsistent num of cells detected.");
-
-			// Indexing of nodes
-			cnt = 0;
-			// TODO
-
-			return 0;
+			/* Index of nodes */
+			numbering_node();
 		}
 
-		int writeToFile(const std::string &path)
+		void writeToFile(const std::string &path)
 		{
 			// Open target file
 			std::ofstream f_out(path);
@@ -1430,15 +1389,13 @@ namespace NMF
 
 			// Close output file
 			f_out.close();
-
-			// Finalize
-			return 0;
 		}
 
 		size_t nBlock() const
 		{
 			return m_blk.size();
 		}
+
 		void nSurface(size_t &_all, size_t &_inter, size_t &_bdry) const
 		{
 			_all = Block3D::NumOfSurf * nBlock();
@@ -1453,10 +1410,12 @@ namespace NMF
 			}
 			_bdry = _all - _inter;
 		}
+
 		size_t nFrame() const
 		{
 			return m_frame.size();
 		}
+
 		size_t nVertex() const
 		{
 			return m_vertex.size();
@@ -1469,6 +1428,7 @@ namespace NMF
 				ret += blk->cell_num();
 			return ret;
 		}
+
 		void nFace(size_t &_all, size_t &_inner, size_t &_bdry) const
 		{
 			// Counting all faces.
@@ -1494,6 +1454,7 @@ namespace NMF
 			// Inner
 			_inner = _all - _bdry;
 		}
+
 		size_t nNode() const
 		{
 			size_t ret = nVertex();
@@ -1865,6 +1826,80 @@ namespace NMF
 				}
 			}
 			return global_cnt;
+		}
+
+		void numbering_cell()
+		{
+			const auto totalCellNum = nCell();
+
+			size_t cnt = 0;
+			for (auto b : m_blk)
+				for (size_t k = 1; k < b->KDIM(); ++k)
+					for (size_t j = 1; j < b->JDIM(); ++j)
+						for (size_t i = 1; i < b->IDIM(); ++i)
+							b->cell(i, j, k).CellSeq() = ++cnt;
+
+			if (cnt != totalCellNum)
+				throw std::length_error("Inconsistent num of cells.");
+		}
+
+		void numbering_face()
+		{
+			size_t totalFaceNum = 0, innerFaceNum = 0, bdryFaceNum = 0;
+			nFace(totalFaceNum, innerFaceNum, bdryFaceNum);
+
+			size_t cnt = 0;
+			for (auto b : m_blk)
+			{
+				for (size_t k = 1; k < b->KDIM(); ++k)
+					for (size_t j = 1; j < b->JDIM(); ++j)
+						for (size_t i = 1; i < b->IDIM(); ++i)
+						{
+							b->cell(i, j, k).FaceSeq(1) = ++cnt;
+
+						}
+
+				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
+				{
+					auto &sf = b->surf(i);
+					if (sf.neighbourSurf)
+					{
+
+					}
+					else
+					{
+
+					}
+				}
+			}
+
+			if (cnt != totalFaceNum)
+				throw std::length_error("Inconsistent num of cells detected.");
+		}
+
+		void numbering_node()
+		{
+			const auto totalNodeNum = nNode();
+
+			size_t cnt = 0;
+
+			// Vertex
+			for (const auto &e : m_vertex)
+			{
+				++cnt;
+				for (auto r : e)
+				{
+					const short idx = r->local_index;
+
+				}
+			}
+
+			// Frame
+
+			// Internal Surface
+
+			// Interior
+
 		}
 	};
 }

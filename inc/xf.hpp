@@ -139,9 +139,6 @@ namespace XF
 		Array1D(const Array1D &obj) = default;
 		~Array1D() = default;
 
-		// Operators
-		Array1D &operator=(Array1D obj) = delete; // Avoid explicit assignment for both correctness and efficiency.
-
 		// 1-based indexing
 		T &operator()(int i)
 		{

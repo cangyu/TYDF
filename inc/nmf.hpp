@@ -1911,26 +1911,19 @@ namespace NMF
 				for (size_t k = 1; k <= b->KDIM() - 2; ++k)
 					for (size_t j = 1; j <= b->JDIM() - 1; ++j)
 						for (size_t i = 1; i <= b->IDIM() - 1; ++i)
-						{
-							b->cell(i, j, k).FaceSeq(2) = ++cnt;
-							b->cell(i, j, k + 1).FaceSeq(1) = ++cnt;
-						}
-				// J - direction
-				for (size_t j = 1; j <= b->JDIM() - 2; ++j)
-					for (size_t i = 1; i <= b->IDIM() - 1; ++i)
-						for (size_t k = 1; k <= b->KDIM() - 1; ++k)
-						{
-							b->cell(i, j, k).FaceSeq(6) = ++cnt;
-							b->cell(i, j + 1, k).FaceSeq(5) = ++cnt;
-						}
+							b->cell(i, j, k + 1).FaceSeq(1) = b->cell(i, j, k).FaceSeq(2) = ++cnt;
+
 				// I - direction
 				for (size_t i = 1; i <= b->IDIM() - 2; ++i)
 					for (size_t k = 1; k <= b->KDIM() - 1; ++k)
 						for (size_t j = 1; j <= b->JDIM() - 1; ++j)
-						{
-							b->cell(i, j, k).FaceSeq(4) = ++cnt;
-							b->cell(i + 1, j, k).FaceSeq(3) = ++cnt;
-						}
+							b->cell(i + 1, j, k).FaceSeq(3) = b->cell(i, j, k).FaceSeq(4) = ++cnt;
+
+				// J - direction
+				for (size_t j = 1; j <= b->JDIM() - 2; ++j)
+					for (size_t i = 1; i <= b->IDIM() - 1; ++i)
+						for (size_t k = 1; k <= b->KDIM() - 1; ++k)
+							b->cell(i, j + 1, k).FaceSeq(5) = b->cell(i, j, k).FaceSeq(6) = ++cnt;
 
 				/* External faces */
 				// Single-Sided
@@ -1979,44 +1972,45 @@ namespace NMF
 							throw std::invalid_argument("Internal error: Wrong local index of block surface.");
 					}
 				}
-				// Double-Sided
-				for (auto e : m_entry)
+			}
+
+			// Double-Sided
+			for (auto e : m_entry)
+			{
+				if (e->Type() == BC::ONE_TO_ONE)
 				{
-					if (e->Type() == BC::ONE_TO_ONE)
-					{
-						auto p = static_cast<DoubleSideEntry*>(e);
-						const auto &rg1 = p->Range1();
-						const auto &rg2 = p->Range2();
-						auto b1 = &block(rg1.B());
-						const auto f1 = rg1.F();
-						auto b2 = &block(rg2.B());
-						const auto f2 = rg2.F();
+					auto p = static_cast<DoubleSideEntry*>(e);
+					const auto &rg1 = p->Range1();
+					const auto &rg2 = p->Range2();
+					auto b1 = &block(rg1.B());
+					const auto f1 = rg1.F();
+					auto b2 = &block(rg2.B());
+					const auto f2 = rg2.F();
 
-						std::vector<size_t> b1_dim1, b1_dim2, b2_dim1, b2_dim2;
-						distribute_index(rg1.S1(), rg1.E1(), b1_dim1);
-						distribute_index(rg1.S2(), rg1.E2(), b1_dim2);
-						distribute_index(rg2.S1(), rg2.E1(), b2_dim1);
-						distribute_index(rg2.S2(), rg2.E2(), b2_dim2);
-						if (p->Swap())
-							std::swap(b2_dim1, b2_dim2);
+					std::vector<size_t> b1_dim1, b1_dim2, b2_dim1, b2_dim2;
+					distribute_index(rg1.S1(), rg1.E1(), b1_dim1);
+					distribute_index(rg1.S2(), rg1.E2(), b1_dim2);
+					distribute_index(rg2.S1(), rg2.E1(), b2_dim1);
+					distribute_index(rg2.S2(), rg2.E2(), b2_dim2);
+					if (p->Swap())
+						std::swap(b2_dim1, b2_dim2);
 
-						if (b1_dim1.size() != b2_dim1.size())
-							throw std::runtime_error("Inconsistent num of nodes in primary direction.");
-						if (b1_dim2.size() != b2_dim2.size())
-							throw std::runtime_error("Inconsistent num of nodes in secondary direction.");
+					if (b1_dim1.size() != b2_dim1.size())
+						throw std::runtime_error("Inconsistent num of nodes in primary direction.");
+					if (b1_dim2.size() != b2_dim2.size())
+						throw std::runtime_error("Inconsistent num of nodes in secondary direction.");
 
-						const auto n1 = rg1.pri_node_num();
-						const auto n2 = rg1.sec_node_num();
-						for (size_t l1 = 1; l1 <= n1 - 1; ++l1)
-							for (size_t l2 = 1; l2 <= n2 - 1; ++l2)
-							{
-								const auto b1i1 = b1_dim1[l1 - 1];
-								const auto b1i2 = b1_dim2[l2 - 1];
-								const auto b2i1 = b2_dim1[l1 - 1];
-								const auto b2i2 = b2_dim2[l2 - 1];
-								b1->surface_face_index(f1, b1i1, b1i2) = b2->surface_face_index(f2, b2i1, b2i2) = ++cnt;
-							}
-					}
+					const auto n1 = rg1.pri_node_num();
+					const auto n2 = rg1.sec_node_num();
+					for (size_t l1 = 1; l1 <= n1 - 1; ++l1)
+						for (size_t l2 = 1; l2 <= n2 - 1; ++l2)
+						{
+							const auto b1i1 = b1_dim1[l1 - 1];
+							const auto b1i2 = b1_dim2[l2 - 1];
+							const auto b2i1 = b2_dim1[l1 - 1];
+							const auto b2i2 = b2_dim2[l2 - 1];
+							b1->surface_face_index(f1, b1i1, b1i2) = b2->surface_face_index(f2, b2i1, b2i2) = ++cnt;
+						}
 				}
 			}
 

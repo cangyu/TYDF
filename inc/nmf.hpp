@@ -927,13 +927,27 @@ namespace NMF
 				// Nodes in primary direction.
 				size_t pri_node_num() const
 				{
-					return m_e1 - m_s1 + 1;
+					size_t ret = 1;
+
+					if (pri_trend())
+						ret += (E1() - S1());
+					else
+						ret += (S1() - E1());
+
+					return ret;
 				}
 
 				// Nodes in secondary direction.
 				size_t sec_node_num() const
 				{
-					return m_e2 - m_s2 + 1;
+					size_t ret = 1;
+
+					if (sec_trend())
+						ret += (E2() - S2());
+					else
+						ret += (S2() - E2());
+
+					return ret;
 				}
 
 				// True - Asscending;
@@ -1616,6 +1630,7 @@ namespace NMF
 				const size_t n = s - e + 1;
 				dst.resize(n);
 				size_t val = s;
+
 				for (size_t i = 0; i < n; ++i)
 					dst[i] = val--;
 			}
@@ -1987,30 +2002,43 @@ namespace NMF
 					auto b2 = &block(rg2.B());
 					const auto f2 = rg2.F();
 
-					std::vector<size_t> b1_dim1, b1_dim2, b2_dim1, b2_dim2;
-					distribute_index(rg1.S1(), rg1.E1(), b1_dim1);
-					distribute_index(rg1.S2(), rg1.E2(), b1_dim2);
-					distribute_index(rg2.S1(), rg2.E1(), b2_dim1);
-					distribute_index(rg2.S2(), rg2.E2(), b2_dim2);
+					std::vector<size_t> b1_dim_pri, b1_dim_sec, b2_dim_pri, b2_dim_sec;
+					distribute_index(rg1.S1(), rg1.E1(), b1_dim_pri);
+					distribute_index(rg1.S2(), rg1.E2(), b1_dim_sec);
+					distribute_index(rg2.S1(), rg2.E1(), b2_dim_pri);
+					distribute_index(rg2.S2(), rg2.E2(), b2_dim_sec);
 					if (p->Swap())
-						std::swap(b2_dim1, b2_dim2);
+						std::swap(b2_dim_pri, b2_dim_sec);
 
-					if (b1_dim1.size() != b2_dim1.size())
-						throw std::runtime_error("Inconsistent num of nodes in primary direction.");
-					if (b1_dim2.size() != b2_dim2.size())
-						throw std::runtime_error("Inconsistent num of nodes in secondary direction.");
+					if (b1_dim_pri.size() != b2_dim_pri.size() || b1_dim_sec.size() != b2_dim_sec.size())
+						throw std::runtime_error("Inconsistent num of nodes.");
 
 					const auto n1 = rg1.pri_node_num();
 					const auto n2 = rg1.sec_node_num();
-					for (size_t l1 = 1; l1 <= n1 - 1; ++l1)
-						for (size_t l2 = 1; l2 <= n2 - 1; ++l2)
-						{
-							const auto b1i1 = b1_dim1[l1 - 1];
-							const auto b1i2 = b1_dim2[l2 - 1];
-							const auto b2i1 = b2_dim1[l1 - 1];
-							const auto b2i2 = b2_dim2[l2 - 1];
-							b1->surface_face_index(f1, b1i1, b1i2) = b2->surface_face_index(f2, b2i1, b2i2) = ++cnt;
-						}
+					if (p->Swap())
+					{
+						for (size_t l1 = 1; l1 <= n1 - 1; ++l1)
+							for (size_t l2 = 1; l2 <= n2 - 1; ++l2)
+							{
+								const auto b1i1 = b1_dim_pri[l1 - 1];
+								const auto b1i2 = b1_dim_sec[l2 - 1];
+								const auto b2i1 = b2_dim_pri[l1 - 1];
+								const auto b2i2 = b2_dim_sec[l2 - 1];
+								b1->surface_face_index(f1, b1i1, b1i2) = b2->surface_face_index(f2, b2i2, b2i1) = ++cnt;
+							}
+					}
+					else
+					{
+						for (size_t l1 = 1; l1 <= n1 - 1; ++l1)
+							for (size_t l2 = 1; l2 <= n2 - 1; ++l2)
+							{
+								const auto b1i1 = b1_dim_pri[l1 - 1];
+								const auto b1i2 = b1_dim_sec[l2 - 1];
+								const auto b2i1 = b2_dim_pri[l1 - 1];
+								const auto b2i2 = b2_dim_sec[l2 - 1];
+								b1->surface_face_index(f1, b1i1, b1i2) = b2->surface_face_index(f2, b2i1, b2i2) = ++cnt;
+							}
+					}
 				}
 			}
 
@@ -2031,7 +2059,6 @@ namespace NMF
 				for (auto r : e)
 				{
 					const short idx = r->local_index;
-
 				}
 			}
 

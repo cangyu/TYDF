@@ -1518,14 +1518,14 @@ namespace NMF
 			return ret;
 		}
 
-		Block3D &block(int n)
+		Block3D &block(size_t n)
 		{
 			if (1 <= n && n <= nBlock())
 				return *m_blk[n - 1];
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based index.");
 		}
-		const Block3D &block(int n) const
+		const Block3D &block(size_t n) const
 		{
 			if (1 <= n && n <= nBlock())
 				return *m_blk[n - 1];

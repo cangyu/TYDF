@@ -762,6 +762,35 @@ namespace NMF
 			return ret;
 		}
 
+		size_t &surface_face_index(short f, size_t pri, size_t sec)
+		{
+			HEX_CELL *p = nullptr;
+			switch (f)
+			{
+			case 1:
+				p = &cell(pri, sec, 1);
+				break;
+			case 2:
+				p = &cell(pri, sec, KDIM() - 1);
+				break;
+			case 3:
+				p = &cell(1, pri, sec);
+				break;
+			case 4:
+				p = &cell(IDIM() - 1, pri, sec);
+				break;
+			case 5:
+				p = &cell(sec, 1, pri);
+				break;
+			case 6:
+				p = &cell(sec, JDIM() - 1, pri);
+				break;
+			default:
+				throw std::invalid_argument("Invalid face index.");
+			}
+			return p->FaceSeq(f);
+		}
+
 	private:
 		void establish_connections()
 		{
@@ -1260,29 +1289,35 @@ namespace NMF
 				out << "Num of HEX cells: " << b->cell_num() << std::endl;
 				out << "Num of QUAD faces: " << b->face_num() << std::endl;
 				out << "Num of nodes: " << b->node_num() << std::endl;
-				out << "Local Vertex Index: ";
+
+				out << std::setiosflags(std::ios::left) << std::setw(24) << "Local Vertex Index:" << std::resetiosflags(std::ios::left);
 				for (int i = 1; i <= Block3D::NumOfVertex; ++i)
-					out << std::setw(5) << std::right << b->vertex(i).local_index;
+					out << std::setw(5) << b->vertex(i).local_index;
 				out << std::endl;
-				out << "Global Vertex Index:";
+
+				out << std::setiosflags(std::ios::left) << std::setw(24) << "Global Vertex Index:" << std::resetiosflags(std::ios::left);
 				for (int i = 1; i <= Block3D::NumOfVertex; ++i)
-					out << std::setw(5) << std::right << b->vertex(i).global_index;
+					out << std::setw(5) << b->vertex(i).global_index;
 				out << std::endl;
-				out << "Local Frame Index: ";
+
+				out << std::setiosflags(std::ios::left) << std::setw(24) << "Local Frame Index:" << std::resetiosflags(std::ios::left);
 				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
-					out << std::setw(5) << std::right << b->frame(i).local_index;
+					out << std::setw(5) << b->frame(i).local_index;
 				out << std::endl;
-				out << "Global Frame Index:";
+
+				out << std::setiosflags(std::ios::left) << std::setw(24) << "Global Frame Index:" << std::resetiosflags(std::ios::left);
 				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
-					out << std::setw(5) << std::right << b->frame(i).global_index;
+					out << std::setw(5) << b->frame(i).global_index;
 				out << std::endl;
-				out << "Local Surface Index: ";
+
+				out << std::setiosflags(std::ios::left) << std::setw(24) << "Local Surface Index:" << std::resetiosflags(std::ios::left);
 				for (int i = 1; i <= Block3D::NumOfSurf; ++i)
-					out << std::setw(5) << std::right << b->surf(i).local_index;
+					out << std::setw(5) << b->surf(i).local_index;
 				out << std::endl;
-				out << "Global Surface Index:";
+
+				out << std::setiosflags(std::ios::left) << std::setw(24) << "Global Surface Index:" << std::resetiosflags(std::ios::left);
 				for (int i = 1; i <= Block3D::NumOfSurf; ++i)
-					out << std::setw(5) << std::right << b->surf(i).global_index;
+					out << std::setw(5) << b->surf(i).global_index;
 				out << std::endl;
 			}
 			out << "-----------------------------------------Surfaces---------------------------------------";
@@ -1375,7 +1410,7 @@ namespace NMF
 				f_out << std::setw(6) << std::right << e->Range1().E2();
 				if (e->Type() == BC::ONE_TO_ONE)
 				{
-					auto p = dynamic_cast<DoubleSideEntry*>(e);
+					auto p = static_cast<DoubleSideEntry*>(e);
 					f_out << std::setw(9) << std::right << p->Range2().B();
 					f_out << std::setw(6) << std::right << p->Range2().F();
 					f_out << std::setw(9) << std::right << p->Range2().S1();
@@ -1572,6 +1607,26 @@ namespace NMF
 					return e == c;
 			}
 			return false;
+		}
+
+		static void distribute_index(size_t s, size_t e, std::vector<size_t> &dst)
+		{
+			if (s > e)
+			{
+				const size_t n = s - e + 1;
+				dst.resize(n);
+				size_t val = s;
+				for (size_t i = 0; i < n; ++i)
+					dst[i] = val--;
+			}
+			else
+			{
+				const size_t n = e - s + 1;
+				dst.resize(n);
+				size_t val = s;
+				for (size_t i = 0; i < n; ++i)
+					dst[i] = val++;
+			}
 		}
 
 		void connecting()
@@ -1851,30 +1906,122 @@ namespace NMF
 			size_t cnt = 0;
 			for (auto b : m_blk)
 			{
-				for (size_t k = 1; k < b->KDIM(); ++k)
-					for (size_t j = 1; j < b->JDIM(); ++j)
-						for (size_t i = 1; i < b->IDIM(); ++i)
+				/* Internal faces */
+				// K - direction
+				for (size_t k = 1; k <= b->KDIM() - 2; ++k)
+					for (size_t j = 1; j <= b->JDIM() - 1; ++j)
+						for (size_t i = 1; i <= b->IDIM() - 1; ++i)
 						{
-							b->cell(i, j, k).FaceSeq(1) = ++cnt;
-
+							b->cell(i, j, k).FaceSeq(2) = ++cnt;
+							b->cell(i, j, k + 1).FaceSeq(1) = ++cnt;
+						}
+				// J - direction
+				for (size_t j = 1; j <= b->JDIM() - 2; ++j)
+					for (size_t i = 1; i <= b->IDIM() - 1; ++i)
+						for (size_t k = 1; k <= b->KDIM() - 1; ++k)
+						{
+							b->cell(i, j, k).FaceSeq(6) = ++cnt;
+							b->cell(i, j + 1, k).FaceSeq(5) = ++cnt;
+						}
+				// I - direction
+				for (size_t i = 1; i <= b->IDIM() - 2; ++i)
+					for (size_t k = 1; k <= b->KDIM() - 1; ++k)
+						for (size_t j = 1; j <= b->JDIM() - 1; ++j)
+						{
+							b->cell(i, j, k).FaceSeq(4) = ++cnt;
+							b->cell(i + 1, j, k).FaceSeq(3) = ++cnt;
 						}
 
+				/* External faces */
+				// Single-Sided
 				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
 				{
 					auto &sf = b->surf(i);
-					if (sf.neighbourSurf)
+					if (!sf.neighbourSurf)
 					{
-
+						if (sf.local_index == 1)
+						{
+							for (size_t j = 1; j <= b->JDIM() - 1; ++j)
+								for (size_t i = 1; i <= b->IDIM() - 1; ++i)
+									b->cell(i, j, 1).FaceSeq(1) = ++cnt;
+						}
+						else if (sf.local_index == 2)
+						{
+							for (size_t j = 1; j <= b->JDIM() - 1; ++j)
+								for (size_t i = 1; i <= b->IDIM() - 1; ++i)
+									b->cell(i, j, b->KDIM() - 1).FaceSeq(2) = ++cnt;
+						}
+						else if (sf.local_index == 3)
+						{
+							for (size_t k = 1; k <= b->KDIM() - 1; ++k)
+								for (size_t j = 1; j <= b->JDIM() - 1; ++j)
+									b->cell(1, j, k).FaceSeq(3) = ++cnt;
+						}
+						else if (sf.local_index == 4)
+						{
+							for (size_t k = 1; k <= b->KDIM() - 1; ++k)
+								for (size_t j = 1; j <= b->JDIM() - 1; ++j)
+									b->cell(b->IDIM() - 1, j, k).FaceSeq(4) = ++cnt;
+						}
+						else if (sf.local_index == 5)
+						{
+							for (size_t i = 1; i <= b->IDIM() - 1; ++i)
+								for (size_t k = 1; k <= b->KDIM() - 1; ++k)
+									b->cell(i, 1, k).FaceSeq(5) = ++cnt;
+						}
+						else if (sf.local_index == 6)
+						{
+							for (size_t i = 1; i <= b->IDIM() - 1; ++i)
+								for (size_t k = 1; k <= b->KDIM() - 1; ++k)
+									b->cell(i, b->JDIM() - 1, k).FaceSeq(6) = ++cnt;
+						}
+						else
+							throw std::invalid_argument("Internal error: Wrong local index of block surface.");
 					}
-					else
+				}
+				// Double-Sided
+				for (auto e : m_entry)
+				{
+					if (e->Type() == BC::ONE_TO_ONE)
 					{
+						auto p = static_cast<DoubleSideEntry*>(e);
+						const auto &rg1 = p->Range1();
+						const auto &rg2 = p->Range2();
+						auto b1 = &block(rg1.B());
+						const auto f1 = rg1.F();
+						auto b2 = &block(rg2.B());
+						const auto f2 = rg2.F();
 
+						std::vector<size_t> b1_dim1, b1_dim2, b2_dim1, b2_dim2;
+						distribute_index(rg1.S1(), rg1.E1(), b1_dim1);
+						distribute_index(rg1.S2(), rg1.E2(), b1_dim2);
+						distribute_index(rg2.S1(), rg2.E1(), b2_dim1);
+						distribute_index(rg2.S2(), rg2.E2(), b2_dim2);
+						if (p->Swap())
+							std::swap(b2_dim1, b2_dim2);
+
+						if (b1_dim1.size() != b2_dim1.size())
+							throw std::runtime_error("Inconsistent num of nodes in primary direction.");
+						if (b1_dim2.size() != b2_dim2.size())
+							throw std::runtime_error("Inconsistent num of nodes in secondary direction.");
+
+						const auto n1 = rg1.pri_node_num();
+						const auto n2 = rg1.sec_node_num();
+						for (size_t l1 = 1; l1 <= n1 - 1; ++l1)
+							for (size_t l2 = 1; l2 <= n2 - 1; ++l2)
+							{
+								const auto b1i1 = b1_dim1[l1 - 1];
+								const auto b1i2 = b1_dim2[l2 - 1];
+								const auto b2i1 = b2_dim1[l1 - 1];
+								const auto b2i2 = b2_dim2[l2 - 1];
+								b1->surface_face_index(f1, b1i1, b1i2) = b2->surface_face_index(f2, b2i1, b2i2) = ++cnt;
+							}
 					}
 				}
 			}
 
 			if (cnt != totalFaceNum)
-				throw std::length_error("Inconsistent num of cells detected.");
+				throw std::length_error("Inconsistent num of faces detected.");
 		}
 
 		void numbering_node()
@@ -1900,6 +2047,8 @@ namespace NMF
 
 			// Interior
 
+			if (cnt != totalNodeNum)
+				throw std::length_error("Inconsistent num of nodes detected.");
 		}
 	};
 }

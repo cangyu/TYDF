@@ -1200,38 +1200,43 @@ namespace NMF
 					throw std::runtime_error("Failed to match 4 integers.");
 			}
 
-			//Skip separators
-			do {
-				std::getline(mfp, s);
-			} while (isBlankLine(s) || checkStarting(s, '#'));
+			// Skip separators
+			while (std::getline(mfp, s))
+			{
+				if (!isBlankLine(s) && !checkStarting(s, '#'))
+					break;
+			}
 
-			//Read connections
-			do {
-				BC::str_formalize(s);
-				ss.clear();
-				ss << s;
-				std::string bc_str;
-				ss >> bc_str;
-				if (BC::str2idx(bc_str) == BC::ONE_TO_ONE)
-				{
-					size_t cB[2];
-					short cF[2];
-					size_t cS1[2], cE1[2], cS2[2], cE2[2];
-					std::string swp;
-					for (int i = 0; i < 2; i++)
-						ss >> cB[i] >> cF[i] >> cS1[i] >> cE1[i] >> cS2[i] >> cE2[i];
-					ss >> swp;
-					add_entry(bc_str, cB[0], cF[0], cS1[0], cE1[0], cS2[0], cE2[0], cB[1], cF[1], cS1[1], cE1[1], cS2[1], cE2[1], swp == "TRUE");
-				}
-				else
-				{
-					size_t cB;
-					short cF;
-					size_t cS1, cE1, cS2, cE2;
-					ss >> cB >> cF >> cS1 >> cE1 >> cS2 >> cE2;
-					add_entry(bc_str, cB, cF, cS1, cE1, cS2, cE2);
-				}
-			} while (std::getline(mfp, s));
+			// Read connections
+			if (!mfp.eof())
+			{
+				do {
+					BC::str_formalize(s);
+					ss.clear();
+					ss << s;
+					std::string bc_str;
+					ss >> bc_str;
+					if (BC::str2idx(bc_str) == BC::ONE_TO_ONE)
+					{
+						size_t cB[2];
+						short cF[2];
+						size_t cS1[2], cE1[2], cS2[2], cE2[2];
+						std::string swp;
+						for (int i = 0; i < 2; i++)
+							ss >> cB[i] >> cF[i] >> cS1[i] >> cE1[i] >> cS2[i] >> cE2[i];
+						ss >> swp;
+						add_entry(bc_str, cB[0], cF[0], cS1[0], cE1[0], cS2[0], cE2[0], cB[1], cF[1], cS1[1], cE1[1], cS2[1], cE2[1], swp == "TRUE");
+					}
+					else
+					{
+						size_t cB;
+						short cF;
+						size_t cS1, cE1, cS2, cE2;
+						ss >> cB >> cF >> cS1 >> cE1 >> cS2 >> cE2;
+						add_entry(bc_str, cB, cF, cS1, cE1, cS2, cE2);
+					}
+				} while (std::getline(mfp, s));
+			}
 
 			// Close input file
 			mfp.close();

@@ -790,6 +790,40 @@ namespace NMF
 			}
 			return p->FaceSeq(f);
 		}
+		size_t &vertex_node_index(short v)
+		{
+			HEX_CELL *p = nullptr;
+			switch (v)
+			{
+			case 1:
+				p = &cell(1, 1, 1);
+				break;
+			case 2:
+				p = &cell(1, 1, KDIM() - 1);
+				break;
+			case 3:
+				p = &cell(IDIM() - 1, 1, KDIM() - 1);
+				break;
+			case 4:
+				p = &cell(IDIM() - 1, 1, 1);
+				break;
+			case 5:
+				p = &cell(1, JDIM() - 1, 1);
+				break;
+			case 6:
+				p = &cell(1, JDIM() - 1, KDIM() - 1);
+				break;
+			case 7:
+				p = &cell(IDIM() - 1, JDIM() - 1, KDIM() - 1);
+				break;
+			case 8:
+				p = &cell(IDIM() - 1, JDIM() - 1, 1);
+				break;
+			default:
+				throw std::invalid_argument("Invalid vertex index for a 3D block.");
+			}
+			return p->NodeSeq(v);
+		}
 
 	private:
 		void establish_connections()
@@ -2057,21 +2091,36 @@ namespace NMF
 
 			size_t cnt = 0;
 
+			// Block interior
+			for (auto b : m_blk)
+			{
+				for (size_t k = 2; k <= b->KDIM() - 1; ++k)
+					for (size_t j = 2; j <= b->JDIM() - 1; ++j)
+						for (size_t i = 2; i <= b->IDIM() - 1; ++i)
+						{
+							++cnt;
+							b->cell(i - 1, j - 1, k - 1).NodeSeq(7) = cnt;
+							b->cell(i, j - 1, k - 1).NodeSeq(6) = cnt;
+							b->cell(i - 1, j, k - 1).NodeSeq(3) = cnt;
+							b->cell(i, j, k - 1).NodeSeq(2) = cnt;
+							b->cell(i - 1, j - 1, k).NodeSeq(8) = cnt;
+							b->cell(i, j - 1, k).NodeSeq(5) = cnt;
+							b->cell(i - 1, j, k).NodeSeq(4) = cnt;
+							b->cell(i, j, k).NodeSeq(1) = cnt;
+						}
+			}
+
 			// Vertex
 			for (const auto &e : m_vertex)
 			{
 				++cnt;
 				for (auto r : e)
-				{
-					const short idx = r->local_index;
-				}
+					r->dependentBlock->vertex_node_index(r->local_index) = cnt;
 			}
 
 			// Frame
 
-			// Internal Surface
-
-			// Interior
+			// Surface interior
 
 			if (cnt != totalNodeNum)
 				throw std::length_error("Inconsistent num of nodes detected.");

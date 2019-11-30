@@ -711,6 +711,7 @@ namespace NMF
 				throw std::invalid_argument("Invalid frame index.");
 			}
 		}
+
 		size_t frame_internal_node_num(short idx) const
 		{
 			const auto n = frame_node_num(idx);
@@ -737,6 +738,7 @@ namespace NMF
 				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 3D block.");
 			}
 		}
+
 		size_t surface_face_num(short idx) const
 		{
 			switch (idx - 1)
@@ -754,6 +756,7 @@ namespace NMF
 				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 3D block.");
 			}
 		}
+
 		size_t shell_face_num() const
 		{
 			size_t ret = 0;
@@ -790,6 +793,7 @@ namespace NMF
 			}
 			return p->FaceSeq(f);
 		}
+
 		size_t &vertex_node_index(short v)
 		{
 			HEX_CELL *p = nullptr;
@@ -823,6 +827,108 @@ namespace NMF
 				throw std::invalid_argument("Invalid vertex index for a 3D block.");
 			}
 			return p->NodeSeq(v);
+		}
+
+		void interior_node_occurance(size_t i, size_t j, size_t k, std::vector<size_t*> &oc)
+		{
+			oc[0] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
+			oc[1] = &cell(i, j - 1, k - 1).NodeSeq(6);
+			oc[2] = &cell(i - 1, j, k - 1).NodeSeq(3);
+			oc[3] = &cell(i, j, k - 1).NodeSeq(2);
+			oc[4] = &cell(i - 1, j - 1, k).NodeSeq(8);
+			oc[5] = &cell(i, j - 1, k).NodeSeq(5);
+			oc[6] = &cell(i - 1, j, k).NodeSeq(4);
+			oc[7] = &cell(i, j, k).NodeSeq(1);
+		}
+
+		void surface_node_coordinate(short f, size_t pri_seq, size_t sec_seq, size_t &i, size_t &j, size_t &k)
+		{
+			switch (f)
+			{
+			case 1:
+				k = 1;
+				i = pri_seq;
+				j = sec_seq;
+				break;
+			case 2:
+				k = KDIM();
+				i = pri_seq;
+				j = sec_seq;
+				break;
+			case 3:
+				i = 1;
+				j = pri_seq;
+				k = sec_seq;
+				break;
+			case 4:
+				i = IDIM();
+				j = pri_seq;
+				k = sec_seq;
+				break;
+			case 5:
+				j = 1;
+				k = pri_seq;
+				i = sec_seq;
+				break;
+			case 6:
+				j = JDIM();
+				k = pri_seq;
+				i = sec_seq;
+				break;
+			default:
+				throw std::invalid_argument("Invalid  face index.");
+			}
+		}
+
+		void surface_internal_node_occurance(short f, size_t pri, size_t sec, std::vector<size_t*> &oc)
+		{
+			size_t i = 0, j = 0, k = 0;
+			surface_node_coordinate(f, pri, sec, i, j, k);
+			switch (f)
+			{
+			case 1:
+				oc[0] = &cell(i, j, k).NodeSeq(1);
+				oc[1] = &cell(i - 1, j, k).NodeSeq(4);
+				oc[2] = &cell(i, j - 1, k).NodeSeq(5);
+				oc[3] = &cell(i - 1, j - 1, k).NodeSeq(8);
+				break;
+			case 2:
+				oc[0] = &cell(i, j, k - 1).NodeSeq(2);
+				oc[1] = &cell(i - 1, j, k - 1).NodeSeq(3);
+				oc[2] = &cell(i, j - 1, k - 1).NodeSeq(6);
+				oc[3] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
+				break;
+			case 3:
+				oc[0] = &cell(i, j, k).NodeSeq(1);
+				oc[1] = &cell(i, j - 1, k).NodeSeq(5);
+				oc[2] = &cell(i, j, k - 1).NodeSeq(2);
+				oc[3] = &cell(i, j - 1, k - 1).NodeSeq(6);
+				break;
+			case 4:
+				oc[0] = &cell(i - 1, j, k).NodeSeq(4);
+				oc[1] = &cell(i - 1, j - 1, k).NodeSeq(8);
+				oc[2] = &cell(i - 1, j, k - 1).NodeSeq(3);
+				oc[3] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
+				break;
+			case 5:
+				oc[0] = &cell(i, j, k).NodeSeq(1);
+				oc[1] = &cell(i - 1, j, k).NodeSeq(4);
+				oc[2] = &cell(i, j, k - 1).NodeSeq(2);
+				oc[3] = &cell(i - 1, j, k - 1).NodeSeq(3);
+				break;
+			case 6:
+				oc[0] = &cell(i, j - 1, k).NodeSeq(5);
+				oc[1] = &cell(i - 1, j - 1, k).NodeSeq(8);
+				oc[2] = &cell(i, j - 1, k - 1).NodeSeq(6);
+				oc[3] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
+				break;
+			default:
+				oc[0] = nullptr;
+				oc[1] = nullptr;
+				oc[2] = nullptr;
+				oc[3] = nullptr;
+				break;
+			}
 		}
 
 	private:
@@ -2094,19 +2200,15 @@ namespace NMF
 			// Block interior
 			for (auto b : m_blk)
 			{
+				std::vector<size_t*> boc(8, nullptr);
 				for (size_t k = 2; k <= b->KDIM() - 1; ++k)
 					for (size_t j = 2; j <= b->JDIM() - 1; ++j)
 						for (size_t i = 2; i <= b->IDIM() - 1; ++i)
 						{
 							++cnt;
-							b->cell(i - 1, j - 1, k - 1).NodeSeq(7) = cnt;
-							b->cell(i, j - 1, k - 1).NodeSeq(6) = cnt;
-							b->cell(i - 1, j, k - 1).NodeSeq(3) = cnt;
-							b->cell(i, j, k - 1).NodeSeq(2) = cnt;
-							b->cell(i - 1, j - 1, k).NodeSeq(8) = cnt;
-							b->cell(i, j - 1, k).NodeSeq(5) = cnt;
-							b->cell(i - 1, j, k).NodeSeq(4) = cnt;
-							b->cell(i, j, k).NodeSeq(1) = cnt;
+							b->interior_node_occurance(i, j, k, boc);
+							for (auto r : boc)
+								*r = cnt;
 						}
 			}
 
@@ -2118,9 +2220,127 @@ namespace NMF
 					r->dependentBlock->vertex_node_index(r->local_index) = cnt;
 			}
 
-			// Frame
+			// Interior of double-sided surface
+			for (auto e : m_entry)
+			{
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					auto p = static_cast<DoubleSideEntry*>(e);
+					const auto &rg1 = p->Range1();
+					const auto &rg2 = p->Range2();
+					auto b1 = &block(rg1.B());
+					auto b2 = &block(rg2.B());
+					const auto f1 = rg1.F();
+					const auto f2 = rg2.F();
+					const auto n1 = rg1.pri_node_num();
+					const auto n2 = rg1.sec_node_num();
 
-			// Surface interior
+					std::vector<size_t> b1_dim_pri, b1_dim_sec, b2_dim_pri, b2_dim_sec;
+					distribute_index(rg1.S1(), rg1.E1(), b1_dim_pri);
+					distribute_index(rg1.S2(), rg1.E2(), b1_dim_sec);
+					distribute_index(rg2.S1(), rg2.E1(), b2_dim_pri);
+					distribute_index(rg2.S2(), rg2.E2(), b2_dim_sec);
+					if (p->Swap())
+						std::swap(b2_dim_pri, b2_dim_sec);
+
+					if (b1_dim_pri.size() != b2_dim_pri.size() || b1_dim_sec.size() != b2_dim_sec.size())
+						throw std::runtime_error("Inconsistent num of nodes.");
+
+					std::vector<size_t*> sioc(4, nullptr);
+					if (p->Swap())
+					{
+						for (size_t l1 = 2; l1 <= n1 - 1; ++l1)
+							for (size_t l2 = 2; l2 <= n2 - 1; ++l2)
+							{
+								++cnt;
+
+								const auto b1i1 = b1_dim_pri[l1 - 1];
+								const auto b1i2 = b1_dim_sec[l2 - 1];
+								const auto b2i1 = b2_dim_pri[l1 - 1];
+								const auto b2i2 = b2_dim_sec[l2 - 1];
+
+								b1->surface_internal_node_occurance(f1, b1i1, b1i2, sioc);
+								for (auto r : sioc)
+									*r = cnt;
+
+								b2->surface_internal_node_occurance(f2, b2i2, b2i1, sioc);
+								for (auto r : sioc)
+									*r = cnt;
+							}
+					}
+					else
+					{
+						for (size_t l1 = 2; l1 <= n1 - 1; ++l1)
+							for (size_t l2 = 2; l2 <= n2 - 1; ++l2)
+							{
+								++cnt;
+
+								const auto b1i1 = b1_dim_pri[l1 - 1];
+								const auto b1i2 = b1_dim_sec[l2 - 1];
+								const auto b2i1 = b2_dim_pri[l1 - 1];
+								const auto b2i2 = b2_dim_sec[l2 - 1];
+
+								b1->surface_internal_node_occurance(f1, b1i1, b1i2, sioc);
+								for (auto r : sioc)
+									*r = cnt;
+
+								b2->surface_internal_node_occurance(f2, b2i1, b2i2, sioc);
+								for (auto r : sioc)
+									*r = cnt;
+							}
+					}
+				}
+			}
+
+			// Interior of single-sided surface
+			for (auto b : m_blk)
+			{
+				std::vector<size_t*> sioc(4, nullptr);
+				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
+				{
+					auto &f = b->surf(i);
+					if (!f.neighbourSurf)
+					{
+						size_t pri_end = 0, sec_end = 0;
+						switch (i)
+						{
+						case 1:
+						case 2:
+							pri_end = b->IDIM() - 1;
+							sec_end = b->JDIM() - 1;
+							break;
+						case 3:
+						case 4:
+							pri_end = b->JDIM() - 1;
+							sec_end = b->KDIM() - 1;
+							break;
+						case 5:
+						case 6:
+							pri_end = b->KDIM() - 1;
+							sec_end = b->IDIM() - 1;
+							break;
+						default:
+							break;
+						}
+						for (size_t sec = 2; sec <= sec_end; ++sec)
+							for (size_t pri = 2; pri <= pri_end; ++pri)
+							{
+								++cnt;
+								b->surface_internal_node_occurance(i, pri, sec, sioc);
+								for (auto r : sioc)
+									*r = cnt;
+							}
+					}
+				}
+			}
+
+			// Frame
+			for (const auto &e : m_frame)
+			{
+				for (auto r : e)
+				{
+				}
+			}
 
 			if (cnt != totalNodeNum)
 				throw std::length_error("Inconsistent num of nodes detected.");

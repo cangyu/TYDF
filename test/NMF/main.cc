@@ -3,32 +3,11 @@
 #include <vector>
 #include "nmf.hpp"
 
-// 4 blocks in 2x2 form.
-void case1()
+const std::vector<std::string> test
 {
-	const std::string dir("./Langley GeoLab/");
-	NMF::Mapping3D mapping(dir + "map.nmf");
-	std::ofstream fout(dir + "report.txt");
-	mapping.summary(fout);
-	fout.close();
-	mapping.writeToFile(dir + "map_blessed.nmf");
-}
-
-// Simple 2 blocks connected through 1 face.
-void case2()
-{
-	const std::string dir("./Sky1/");
-	NMF::Mapping3D mapping(dir + "map.nmf");
-	std::ofstream fout(dir + "report.txt");
-	mapping.summary(fout);
-	fout.close();
-	mapping.writeToFile(dir + "map_blessed.nmf");
-}
-
-typedef void(*pTestFunction)(void);
-const std::vector<pTestFunction> func{
-	case1,
-	case2
+	"Cavity", // Single block.
+	"Sky1", // 2 blocks connected through 1 surface.
+	"Langley GeoLab", // 4 blocks in 2x2 form.
 };
 
 int main(int argc, char *argv[])
@@ -36,11 +15,18 @@ int main(int argc, char *argv[])
 	int cnt = 0;
 	int failure = 0;
 	std::cout << "Testing cases for the Neutral Map File utilities." << std::endl;
-	for (auto f : func)
+	for (const auto &dir_name : test)
 	{
 		std::cout << "Case " << ++cnt << " ... " << std::endl;
-		try {
-			f();
+		try
+		{
+			const std::string dir_path("./" + dir_name + "/");
+			NMF::Mapping3D mapping(dir_path + "map.nmf");
+			std::ofstream fout(dir_path + "report.txt");
+			mapping.summary(fout);
+			fout.close();
+			mapping.numbering();
+			mapping.writeToFile(dir_path + "map_blessed.nmf");
 		}
 		catch (std::exception &e)
 		{

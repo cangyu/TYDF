@@ -1190,22 +1190,8 @@ namespace NMF
 				m_rg2(B2, F2, S21, E21, S22, E22),
 				m_swap(f)
 			{
-				// Check consistency.
-				bool ok = false;
-				if (Swap())
-				{
-					const bool cond1 = Range1().pri_node_num() == Range2().sec_node_num();
-					const bool cond2 = Range1().sec_node_num() == Range2().pri_node_num();
-					ok = cond1 && cond2;
-				}
-				else
-				{
-					const bool cond1 = Range1().pri_node_num() == Range2().pri_node_num();
-					const bool cond2 = Range1().sec_node_num() == Range2().sec_node_num();
-					ok = cond1 && cond2;
-				}
-				if (!ok)
-					throw std::invalid_argument("Inconsistent dims bwtween 2 surfaces.");
+				if (!check_dim_consistency())
+					throw std::invalid_argument("Inconsistent dimensions bwtween 2 surfaces.");
 			}
 			DoubleSideEntry(const DoubleSideEntry &rhs) = default;
 			~DoubleSideEntry() = default;
@@ -1227,6 +1213,23 @@ namespace NMF
 					return 2;
 				else
 					return 0;
+			}
+
+		private:
+			bool check_dim_consistency()
+			{
+				if (Swap())
+				{
+					const bool cond1 = Range1().pri_node_num() == Range2().sec_node_num();
+					const bool cond2 = Range1().sec_node_num() == Range2().pri_node_num();
+					return cond1 && cond2;
+				}
+				else
+				{
+					const bool cond1 = Range1().pri_node_num() == Range2().pri_node_num();
+					const bool cond2 = Range1().sec_node_num() == Range2().sec_node_num();
+					return cond1 && cond2;
+				}
 			}
 		};
 
@@ -1310,7 +1313,7 @@ namespace NMF
 			// Read dimension info of each block
 			static const std::regex pattern2(R"(\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*)");
 			const auto NumOfBlk = nBlock();
-			for (int i = 0; i < NumOfBlk; i++)
+			for (size_t i = 0; i < NumOfBlk; i++)
 			{
 				std::getline(mfp, s);
 				std::smatch res2;
@@ -2087,9 +2090,9 @@ namespace NMF
 
 				/* External faces */
 				// Single-Sided
-				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
+				for (short f = 1; f <= Block3D::NumOfSurf; ++f)
 				{
-					auto &sf = b->surf(i);
+					auto &sf = b->surf(f);
 					if (!sf.neighbourSurf)
 					{
 						if (sf.local_index == 1)

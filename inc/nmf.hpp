@@ -528,6 +528,7 @@ namespace NMF
 			SURF *neighbourSurf = nullptr;
 			std::array<FRAME*, 4> includedFrame{ nullptr, nullptr, nullptr, nullptr };
 			std::array<FRAME*, 4> counterpartFrame{ nullptr, nullptr, nullptr, nullptr };
+			std::array<bool, 4> counterpartFrameIsOpposite{ false, false, false, false};
 			std::array<VERTEX*, 4> includedVertex{ nullptr, nullptr, nullptr, nullptr };
 			std::array<VERTEX*, 4> counterpartVertex{ nullptr, nullptr, nullptr, nullptr };
 		};
@@ -605,13 +606,13 @@ namespace NMF
 			}
 		}
 
-		// Access internal cell through 1-based index.
-		// Indexing convention:
-		//      "i" ranges from 1 to IDIM()-1;
-		//      "j" ranges from 1 to JDIM()-1;
-		//      "k" ranges from 1 to KDIM()-1;
-		// When the IJK-axis follows the right-hand convention, (i, j, k) represents
-		// the left-most, bottom-most and back-most node of the selected cell.
+		/// Access internal cell through 1-based index.
+		/// Indexing convention:
+		///      "i" ranges from 1 to IDIM()-1;
+		///      "j" ranges from 1 to JDIM()-1;
+		///      "k" ranges from 1 to KDIM()-1;
+		/// When the IJK-axis follows the right-hand convention, (i, j, k) represents
+		/// the left-most, bottom-most and back-most node of the selected cell.
 		HEX_CELL &cell(size_t i, size_t j, size_t k)
 		{
 			const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; // Convert 1-based index to 0-based
@@ -625,8 +626,8 @@ namespace NMF
 			return *m_cell.at(idx);
 		}
 
-		// Access vertex through 1-based index.
-		// The indexing convention follows OpenFOAM specification.
+		/// Access vertex through 1-based index.
+		/// The indexing convention follows OpenFOAM specification.
 		VERTEX &vertex(short n)
 		{
 			if (1 <= n && n <= NumOfVertex)
@@ -646,8 +647,8 @@ namespace NMF
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 3D block.");
 		}
 
-		// Access the frame edges through 1-based index.
-		// The indexing convention follows OpenFOAM specification.
+		/// Access the frame edges through 1-based index.
+		/// The indexing convention follows OpenFOAM specification.
 		FRAME &frame(short n)
 		{
 			if (1 <= n && n <= NumOfFrame)
@@ -930,6 +931,63 @@ namespace NMF
 				break;
 			}
 		}
+
+		void frame_internal_node_occurace(short f, size_t idx, std::vector<size_t*> &oc)
+        {
+            switch(f)
+            {
+            case 1:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 2:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 3:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 4:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 5:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 6:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 7:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 8:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 9:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 10:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 11:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            case 12:
+                oc[0] = &cell(1, 1, idx).NodeSeq(1);
+                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
+                break;
+            default:
+                throw std::invalid_argument("\"" + std::to_string(f) + "\" is not a valid frame index of a 3D block.");
+            }
+        }
 
 	private:
 		void establish_connections()
@@ -1279,17 +1337,17 @@ namespace NMF
 			std::string s;
 			std::stringstream ss;
 
-			//Open file
+			// Open file
 			std::ifstream mfp(path);
 			if (mfp.fail())
 				throw std::runtime_error("Can not open target input file: \"" + path + "\".");
 
-			//Skip header
+			// Skip header
 			do {
 				std::getline(mfp, s);
 			} while (isBlankLine(s) || checkStarting(s, '#'));
 
-			//Read block nums
+			// Read block nums
 			static const std::regex pattern1(R"(\s*(\d+)\s*)");
 			std::smatch res1;
 			if (std::regex_match(s, res1, pattern1))
@@ -2340,8 +2398,22 @@ namespace NMF
 			// Frame
 			for (const auto &e : m_frame)
 			{
-				for (auto r : e)
+                std::vector<size_t*> fnoc(2, nullptr);
+
+                // Process the first frame in this group
+			    auto r = e[0];
+			    auto b = r->dependentBlock;
+                const auto itn = b->frame_internal_node_num(r->local_index);
+                for(size_t lidx = 0; lidx < itn; ++lidx)
+                {
+                    b->frame_internal_node_occurace(r->local_index, lidx+2, fnoc);
+                    *fnoc[0] = *fnoc[1] = ++cnt;
+                }
+
+                // Process remaining frames
+				for (size_t i = 1; i < e.size(); ++i)
 				{
+				    // TODO
 				}
 			}
 

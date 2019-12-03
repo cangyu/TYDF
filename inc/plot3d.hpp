@@ -222,7 +222,14 @@ namespace PLOT3D
 
 	public:
 		GRID() : DIM(3), m_nBLK(0) {}
-
+		GRID(const std::string &fn) :
+			DIM(3),
+			m_nBLK(0)
+		{
+			int err = readFromFile(fn);
+			if (err)
+				throw std::runtime_error("Failed to read input grid.");
+		}
 		~GRID()
 		{
 			for (size_t i = 0; i < m_blk.size(); ++i)

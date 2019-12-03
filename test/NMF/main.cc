@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "nmf.hpp"
+#include "../../inc/nmf.hpp"
 
 const std::vector<std::string> test
 {

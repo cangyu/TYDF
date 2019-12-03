@@ -19,61 +19,12 @@
 #include <exception>
 #include <stdexcept>
 #include <regex>
+#include "common.hpp"
 
 namespace NMF
 {
-	class wrong_index : public std::exception
-	{
-	protected:
-		std::string m_msg;
-
-	public:
-		wrong_index(long long idx) : std::exception(), m_msg("\"" + std::to_string(idx) + "\" ") {}
-		virtual ~wrong_index() = default;
-
-		char const* what() const
-		{
-			return m_msg.c_str();
-		}
-	};
-
-	template<typename T>
-	class Array1D : public std::vector<T>
-	{
-	protected:
-		class not_1_based : public wrong_index
-		{
-		public:
-			not_1_based(size_t x) :
-				wrong_index(x)
-			{
-				m_msg += "is not a valid 1-based index.";
-			}
-		};
-
-	public:
-		Array1D() : std::vector<T>() {}
-		Array1D(size_t n) : std::vector<T>(n) {}
-		Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
-		Array1D(const Array1D &rhs) = default;
-		~Array1D() = default;
-
-		// 1-based indexing
-		T &operator()(size_t i)
-		{
-			if (1 <= i && i <= this->size())
-				return this->at(i - 1);
-			else
-				throw not_1_based(i);
-		}
-		const T &operator()(size_t i) const
-		{
-			if (1 <= i && i <= this->size())
-				return this->at(i - 1);
-			else
-				throw not_1_based(i);
-		}
-	};
+	using COMMON::wrong_index;
+	using COMMON::Array1D;
 
 	class BC
 	{
@@ -1139,12 +1090,7 @@ namespace NMF
 			public:
 				RANGE() : m_blk(0), m_face(0), m_s1(0), m_e1(0), m_s2(0), m_e2(0) {}
 				RANGE(size_t b, short f, size_t s1, size_t e1, size_t s2, size_t e2) :
-					m_blk(b),
-					m_face(f),
-					m_s1(s1),
-					m_e1(e1),
-					m_s2(s2),
-					m_e2(e2)
+					m_blk(b), m_face(f), m_s1(s1), m_e1(e1), m_s2(s2), m_e2(e2)
 				{
 					check_param();
 				}
@@ -2468,6 +2414,9 @@ namespace NMF
 				// Process remaining frames
 				for (size_t i = 1; i < e.size(); ++i)
 				{
+					r = e[i];
+					b = r->dependentBlock;
+
 					// TODO
 				}
 			}

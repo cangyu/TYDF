@@ -16,14 +16,41 @@
 #include <queue>
 #include <stack>
 #include <utility>
+#include <exception>
 #include <stdexcept>
 #include <regex>
 
 namespace NMF
 {
+	class wrong_index : public std::exception
+	{
+	protected:
+		std::string m_msg;
+
+	public:
+		wrong_index(long long idx) : std::exception(), m_msg("\"" + std::to_string(idx) + "\" ") {}
+		virtual ~wrong_index() = default;
+
+		char const* what() const
+		{
+			return m_msg.c_str();
+		}
+	};
+
 	template<typename T>
 	class Array1D : public std::vector<T>
 	{
+	protected:
+		class not_1_based : public wrong_index
+		{
+		public:
+			not_1_based(size_t x) :
+				wrong_index(x)
+			{
+				m_msg += "is not a valid 1-based index.";
+			}
+		};
+
 	public:
 		Array1D() : std::vector<T>() {}
 		Array1D(size_t n) : std::vector<T>(n) {}
@@ -37,14 +64,14 @@ namespace NMF
 			if (1 <= i && i <= this->size())
 				return this->at(i - 1);
 			else
-				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");
+				throw not_1_based(i);
 		}
 		const T &operator()(size_t i) const
 		{
 			if (1 <= i && i <= this->size())
 				return this->at(i - 1);
 			else
-				throw std::invalid_argument("\"" + std::to_string(i) + "\" is not a valid 1-based index.");
+				throw not_1_based(i);
 		}
 	};
 
@@ -287,6 +314,7 @@ namespace NMF
 			else
 				return IDIM() * JDIM();
 		}
+
 		size_t face_num() const
 		{
 			size_t ret = 0;
@@ -303,6 +331,7 @@ namespace NMF
 			}
 			return ret;
 		}
+
 		size_t cell_num() const
 		{
 			if (is3D())
@@ -318,40 +347,8 @@ namespace NMF
 			else
 				return (IDIM() - 2) * (JDIM() - 2);
 		}
-		size_t surface_internal_node_num(int s_idx) const
-		{
-			if (is3D())
-			{
-				switch (s_idx)
-				{
-				case 1:
-				case 2:
-					return (IDIM() - 2) * (JDIM() - 2);
-				case 3:
-				case 4:
-					return (JDIM() - 2) * (KDIM() - 2);
-				case 5:
-				case 6:
-					return (KDIM() - 2) * (IDIM() - 2);
-				default:
-					throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 3D block.");
-				}
-			}
-			else
-			{
-				switch (s_idx)
-				{
-				case 1:
-				case 2:
-					return (JDIM() - 2);
-				case 3:
-				case 4:
-					return (IDIM() - 2);
-				default:
-					throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 2D block.");
-				}
-			}
-		}
+
+		virtual size_t surface_internal_node_num(short s_idx) const = 0;
 	};
 
 	class Block2D : public BLOCK
@@ -492,6 +489,21 @@ namespace NMF
 			else
 				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
 		}
+
+		size_t surface_internal_node_num(short s_idx) const
+		{
+			switch (s_idx)
+			{
+			case 1:
+			case 2:
+				return (JDIM() - 2);
+			case 3:
+			case 4:
+				return (IDIM() - 2);
+			default:
+				throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 2D block.");
+			}
+		}
 	};
 
 	class Block3D : public BLOCK
@@ -528,9 +540,38 @@ namespace NMF
 			SURF *neighbourSurf = nullptr;
 			std::array<FRAME*, 4> includedFrame{ nullptr, nullptr, nullptr, nullptr };
 			std::array<FRAME*, 4> counterpartFrame{ nullptr, nullptr, nullptr, nullptr };
-			std::array<bool, 4> counterpartFrameIsOpposite{ false, false, false, false};
+			std::array<bool, 4> counterpartFrameIsOpposite{ false, false, false, false };
 			std::array<VERTEX*, 4> includedVertex{ nullptr, nullptr, nullptr, nullptr };
 			std::array<VERTEX*, 4> counterpartVertex{ nullptr, nullptr, nullptr, nullptr };
+		};
+
+	protected:
+		class not_a_surface : public wrong_index
+		{
+		public:
+			not_a_surface(short x) :
+				wrong_index(x)
+			{
+				m_msg += "is not a valid surface index of a 3D block.";
+			}
+		};
+		class not_a_frame : public wrong_index
+		{
+		public:
+			not_a_frame(short x) :
+				wrong_index(x)
+			{
+				m_msg += "is not a valid frame index of a 3D block.";
+			}
+		};
+		class not_a_vertex : public wrong_index
+		{
+		public:
+			not_a_vertex(short x) :
+				wrong_index(x)
+			{
+				m_msg += "is not a valid vertex index of a 3D block.";
+			}
 		};
 
 	private:
@@ -635,7 +676,7 @@ namespace NMF
 			else if (-NumOfVertex <= n && n <= -1)
 				return m_vertex.at(NumOfVertex + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 3D block.");
+				throw not_a_vertex(n);
 		}
 		const VERTEX &vertex(short n) const
 		{
@@ -644,7 +685,7 @@ namespace NMF
 			else if (-NumOfVertex <= n && n <= -1)
 				return m_vertex.at(NumOfVertex + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 3D block.");
+				throw not_a_vertex(n);
 		}
 
 		/// Access the frame edges through 1-based index.
@@ -656,7 +697,7 @@ namespace NMF
 			else if (-NumOfFrame <= n && n <= -1)
 				return m_frame.at(NumOfFrame + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 3D block.");
+				throw not_a_frame(n);
 		}
 		const FRAME &frame(short n) const
 		{
@@ -665,11 +706,11 @@ namespace NMF
 			else if (-NumOfFrame <= n && n <= -1)
 				return m_frame.at(NumOfFrame + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 3D block.");
+				throw not_a_frame(n);
 		}
 
-		// Access surrounding surface through 1-based index.
-		// The index follows NMF convection.
+		/// Access surrounding surface through 1-based index.
+		/// The index follows NMF convection.
 		SURF &surf(short n)
 		{
 			if (1 <= n && n <= NumOfSurf)
@@ -677,7 +718,7 @@ namespace NMF
 			else if (-NumOfSurf <= n && n <= -1)
 				return m_surf.at(NumOfSurf + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
+				throw not_a_surface(n);
 		}
 		const SURF &surf(short n) const
 		{
@@ -686,7 +727,25 @@ namespace NMF
 			else if (-NumOfSurf <= n && n <= -1)
 				return m_surf.at(NumOfSurf + n);
 			else
-				throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid 1-based surface index for a block.");
+				throw not_a_surface(n);
+		}
+
+		size_t surface_internal_node_num(short s) const
+		{
+			switch (s)
+			{
+			case 1:
+			case 2:
+				return (IDIM() - 2) * (JDIM() - 2);
+			case 3:
+			case 4:
+				return (JDIM() - 2) * (KDIM() - 2);
+			case 5:
+			case 6:
+				return (KDIM() - 2) * (IDIM() - 2);
+			default:
+				throw not_a_surface(s);
+			}
 		}
 
 		size_t frame_node_num(short idx) const
@@ -709,7 +768,7 @@ namespace NMF
 			case 3:
 				return KDIM();
 			default:
-				throw std::invalid_argument("Invalid frame index.");
+				throw not_a_frame(idx);
 			}
 		}
 
@@ -736,7 +795,7 @@ namespace NMF
 			case 5:
 				return KDIM() * IDIM();
 			default:
-				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 3D block.");
+				throw not_a_surface(idx);
 			}
 		}
 
@@ -754,7 +813,7 @@ namespace NMF
 			case 5:
 				return (KDIM() - 1) * (IDIM() - 1);
 			default:
-				throw std::invalid_argument("\"" + std::to_string(idx) + "\" is not a valid surface index of a 3D block.");
+				throw not_a_surface(idx);
 			}
 		}
 
@@ -790,7 +849,7 @@ namespace NMF
 				p = &cell(sec, JDIM() - 1, pri);
 				break;
 			default:
-				throw std::invalid_argument("Invalid face index.");
+				throw not_a_surface(f);
 			}
 			return p->FaceSeq(f);
 		}
@@ -825,7 +884,7 @@ namespace NMF
 				p = &cell(IDIM() - 1, JDIM() - 1, 1);
 				break;
 			default:
-				throw std::invalid_argument("Invalid vertex index for a 3D block.");
+				throw not_a_vertex(v);
 			}
 			return p->NodeSeq(v);
 		}
@@ -877,7 +936,7 @@ namespace NMF
 				i = sec_seq;
 				break;
 			default:
-				throw std::invalid_argument("Invalid  face index.");
+				throw not_a_surface(f);
 			}
 		}
 
@@ -924,70 +983,66 @@ namespace NMF
 				oc[3] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
 				break;
 			default:
-				oc[0] = nullptr;
-				oc[1] = nullptr;
-				oc[2] = nullptr;
-				oc[3] = nullptr;
-				break;
+				throw not_a_surface(f);
 			}
 		}
 
 		void frame_internal_node_occurace(short f, size_t idx, std::vector<size_t*> &oc)
-        {
-            switch(f)
-            {
-            case 1:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 2:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 3:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 4:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 5:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 6:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 7:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 8:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 9:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 10:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 11:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            case 12:
-                oc[0] = &cell(1, 1, idx).NodeSeq(1);
-                oc[1] = &cell(1, 1, idx-1).NodeSeq(7);
-                break;
-            default:
-                throw std::invalid_argument("\"" + std::to_string(f) + "\" is not a valid frame index of a 3D block.");
-            }
-        }
+		{
+			switch (f - 1)
+			{
+			case 0:
+				oc[0] = &cell(1, 1, idx).NodeSeq(1);
+				oc[1] = &cell(1, 1, idx - 1).NodeSeq(2);
+				break;
+			case 1:
+				oc[0] = &cell(IDIM() - 1, 1, idx).NodeSeq(4);
+				oc[1] = &cell(IDIM() - 1, 1, idx - 1).NodeSeq(3);
+				break;
+			case 2:
+				oc[0] = &cell(IDIM() - 1, JDIM() - 1, idx).NodeSeq(8);
+				oc[1] = &cell(IDIM() - 1, JDIM() - 1, idx - 1).NodeSeq(7);
+				break;
+			case 3:
+				oc[0] = &cell(1, JDIM() - 1, idx).NodeSeq(5);
+				oc[1] = &cell(1, JDIM() - 1, idx - 1).NodeSeq(6);
+				break;
+			case 4:
+				oc[0] = &cell(idx, 1, 1).NodeSeq(1);
+				oc[1] = &cell(idx - 1, 1, 1).NodeSeq(4);
+				break;
+			case 5:
+				oc[0] = &cell(idx, 1, KDIM() - 1).NodeSeq(2);
+				oc[1] = &cell(idx - 1, 1, KDIM() - 1).NodeSeq(3);
+				break;
+			case 6:
+				oc[0] = &cell(idx, JDIM() - 1, KDIM() - 1).NodeSeq(6);
+				oc[1] = &cell(idx - 1, JDIM() - 1, KDIM() - 1).NodeSeq(7);
+				break;
+			case 7:
+				oc[0] = &cell(idx, JDIM() - 1, 1).NodeSeq(5);
+				oc[1] = &cell(idx - 1, JDIM() - 1, 1).NodeSeq(8);
+				break;
+			case 8:
+				oc[0] = &cell(1, idx, 1).NodeSeq(1);
+				oc[1] = &cell(1, idx - 1, 1).NodeSeq(5);
+				break;
+			case 9:
+				oc[0] = &cell(1, idx, KDIM() - 1).NodeSeq(2);
+				oc[1] = &cell(1, idx - 1, KDIM() - 1).NodeSeq(6);
+				break;
+			case 10:
+				oc[0] = &cell(IDIM() - 1, idx, KDIM() - 1).NodeSeq(3);
+				oc[1] = &cell(IDIM() - 1, idx - 1, KDIM() - 1).NodeSeq(7);
+				break;
+			case 11:
+				oc[0] = &cell(IDIM() - 1, idx, 1).NodeSeq(4);
+				oc[1] = &cell(IDIM() - 1, idx - 1, 1).NodeSeq(8);
+				break;
+			default:
+				throw not_a_frame(f);
+			}
+		}
 
 	private:
 		void establish_connections()
@@ -2398,22 +2453,22 @@ namespace NMF
 			// Frame
 			for (const auto &e : m_frame)
 			{
-                std::vector<size_t*> fnoc(2, nullptr);
+				std::vector<size_t*> fnoc(2, nullptr);
 
-                // Process the first frame in this group
-			    auto r = e[0];
-			    auto b = r->dependentBlock;
-                const auto itn = b->frame_internal_node_num(r->local_index);
-                for(size_t lidx = 0; lidx < itn; ++lidx)
-                {
-                    b->frame_internal_node_occurace(r->local_index, lidx+2, fnoc);
-                    *fnoc[0] = *fnoc[1] = ++cnt;
-                }
+				// Process the first frame in this group
+				auto r = e[0];
+				auto b = r->dependentBlock;
+				const auto itn = b->frame_internal_node_num(r->local_index);
+				for (size_t lidx = 0; lidx < itn; ++lidx)
+				{
+					b->frame_internal_node_occurace(r->local_index, lidx + 2, fnoc);
+					*fnoc[0] = *fnoc[1] = ++cnt;
+				}
 
-                // Process remaining frames
+				// Process remaining frames
 				for (size_t i = 1; i < e.size(); ++i)
 				{
-				    // TODO
+					// TODO
 				}
 			}
 

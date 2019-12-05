@@ -1892,10 +1892,20 @@ namespace NMF
 							F1->counterpartFrame[2] = F2->includedFrame[3];
 							F1->counterpartFrame[3] = F2->includedFrame[0];
 
+							F1->counterpartFrameIsOpposite[0] = false;
+							F1->counterpartFrameIsOpposite[1] = true;
+							F1->counterpartFrameIsOpposite[2] = false;
+							F1->counterpartFrameIsOpposite[3] = true;
+
 							F2->counterpartFrame[0] = F1->includedFrame[3];
 							F2->counterpartFrame[1] = F1->includedFrame[0];
 							F2->counterpartFrame[2] = F1->includedFrame[1];
 							F2->counterpartFrame[3] = F1->includedFrame[2];
+
+							F2->counterpartFrameIsOpposite[0] = true;
+							F2->counterpartFrameIsOpposite[1] = false;
+							F2->counterpartFrameIsOpposite[2] = true;
+							F2->counterpartFrameIsOpposite[3] = false;
 
 							F1->counterpartVertex[0] = F2->includedVertex[1];
 							F1->counterpartVertex[1] = F2->includedVertex[2];
@@ -1914,10 +1924,20 @@ namespace NMF
 							F1->counterpartFrame[2] = F2->includedFrame[1];
 							F1->counterpartFrame[3] = F2->includedFrame[2];
 
+							F1->counterpartFrameIsOpposite[0] = true;
+							F1->counterpartFrameIsOpposite[1] = false;
+							F1->counterpartFrameIsOpposite[2] = true;
+							F1->counterpartFrameIsOpposite[3] = false;
+
 							F2->counterpartFrame[0] = F1->includedFrame[1];
 							F2->counterpartFrame[1] = F1->includedFrame[2];
 							F2->counterpartFrame[2] = F1->includedFrame[3];
 							F2->counterpartFrame[3] = F1->includedFrame[0];
+
+							F2->counterpartFrameIsOpposite[0] = false;
+							F2->counterpartFrameIsOpposite[1] = true;
+							F2->counterpartFrameIsOpposite[2] = false;
+							F2->counterpartFrameIsOpposite[3] = true;
 
 							F1->counterpartVertex[0] = F2->includedVertex[3];
 							F1->counterpartVertex[1] = F2->includedVertex[0];
@@ -1939,17 +1959,27 @@ namespace NMF
 						// not only parallel but also in the same directions, otherwise, 
 						// they are only parallel, but runs in different directions.
 
-						if (p->Range1().pri_trend() != p->Range2().pri_trend()) // parallel, but opposite.
+						if (p->Range1().pri_trend() != p->Range2().pri_trend()) // Parallel, but goes in opposite direction.
 						{
 							F1->counterpartFrame[0] = F2->includedFrame[2];
 							F1->counterpartFrame[1] = F2->includedFrame[3];
 							F1->counterpartFrame[2] = F2->includedFrame[0];
 							F1->counterpartFrame[3] = F2->includedFrame[1];
 
+							F1->counterpartFrameIsOpposite[0] = true;
+							F1->counterpartFrameIsOpposite[1] = true;
+							F1->counterpartFrameIsOpposite[2] = true;
+							F1->counterpartFrameIsOpposite[3] = true;
+
 							F2->counterpartFrame[0] = F1->includedFrame[2];
 							F2->counterpartFrame[1] = F1->includedFrame[3];
 							F2->counterpartFrame[2] = F1->includedFrame[0];
 							F2->counterpartFrame[3] = F1->includedFrame[1];
+
+							F2->counterpartFrameIsOpposite[0] = true;
+							F2->counterpartFrameIsOpposite[1] = true;
+							F2->counterpartFrameIsOpposite[2] = true;
+							F2->counterpartFrameIsOpposite[3] = true;
 
 							F1->counterpartVertex[0] = F2->includedVertex[2];
 							F1->counterpartVertex[1] = F2->includedVertex[3];
@@ -1961,17 +1991,27 @@ namespace NMF
 							F2->counterpartVertex[2] = F1->includedVertex[0];
 							F2->counterpartVertex[3] = F1->includedVertex[1];
 						}
-						else // parallel, and same direction.
+						else // Parallel, and goes in the same direction.
 						{
 							F1->counterpartFrame[0] = F2->includedFrame[0];
 							F1->counterpartFrame[1] = F2->includedFrame[1];
 							F1->counterpartFrame[2] = F2->includedFrame[2];
 							F1->counterpartFrame[3] = F2->includedFrame[3];
 
+							F1->counterpartFrameIsOpposite[0] = false;
+							F1->counterpartFrameIsOpposite[1] = false;
+							F1->counterpartFrameIsOpposite[2] = false;
+							F1->counterpartFrameIsOpposite[3] = false;
+
 							F2->counterpartFrame[0] = F1->includedFrame[0];
 							F2->counterpartFrame[1] = F1->includedFrame[1];
 							F2->counterpartFrame[2] = F1->includedFrame[2];
 							F2->counterpartFrame[3] = F1->includedFrame[3];
+
+							F2->counterpartFrameIsOpposite[0] = false;
+							F2->counterpartFrameIsOpposite[1] = false;
+							F2->counterpartFrameIsOpposite[2] = false;
+							F2->counterpartFrameIsOpposite[3] = false;
 
 							F1->counterpartVertex[0] = F2->includedVertex[0];
 							F1->counterpartVertex[1] = F2->includedVertex[1];

@@ -1,13 +1,14 @@
-#include <iostream>
 #include <fstream>
 #include <vector>
-#include "../../inc/nmf.hpp"
+#include "../../inc/nmf.h"
+
+using namespace GridTool;
 
 const std::vector<std::string> test
 {
 	"Cavity", // Single block.
 	"Sky1", // 2 blocks connected through 1 surface.
-	"Langley GeoLab", // 4 blocks in 2x2 form.
+	"Langley", // 4 blocks in 2x2 form.
 };
 
 int main(int argc, char *argv[])

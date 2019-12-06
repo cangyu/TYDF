@@ -16,7 +16,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
-#include "common.hpp"
+#include "common.h"
 
 /**
 	If connectivity info concerning each node is required, uncomment the following

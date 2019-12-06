@@ -1,10 +1,14 @@
+ICEM/
+
 report.txt
+*blessed*
+
 .vscode/
+
 .vs/
+
 .idea/
 cmake-build-debug/
-
-*blessed*
 
 *.o
 *.out

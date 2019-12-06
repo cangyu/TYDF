@@ -8,7 +8,9 @@ static void str_formalize(std::string &s)
 			e = '_';
 }
 
-namespace GridTool::NMF
+namespace GridTool
+{
+	namespace NMF
 	{
 		bool BC::isValidBCIdx(int x)
 		{
@@ -90,12 +92,8 @@ namespace GridTool::NMF
 				int NumOfBlk = std::stoi(res1[1].str());
 				if (NumOfBlk > 0)
 				{
-					// NOT release all existing resources until 
-					// it is ensured that this input file is valid.
-					release_all();
-
-					// Re-Allocate storage for new recordings
-					m_blk.resize(NumOfBlk, nullptr);
+					release_all(); // NOT release all existing resources until it is ensured that this input file is valid.
+					m_blk.resize(NumOfBlk, nullptr); // Re-Allocate storage for new recordings.
 				}
 				else
 					throw std::runtime_error("Invalid num of blocks: \"" + res1[1].str() + "\".");
@@ -178,3 +176,4 @@ namespace GridTool::NMF
 			mfp.close();
 		}
 	}
+}

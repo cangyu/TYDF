@@ -1325,7 +1325,7 @@ namespace GridTool
 					out << std::endl;
 				}
 				out << "-----------------------------------------Surfaces---------------------------------------";
-				for (int i = 1; i <= nSa; ++i)
+				for (size_t i = 1; i <= nSa; ++i)
 				{
 					out << "\nGlobal Index: " << i << std::endl;
 					auto sf_rep = m_surf(i)[0];
@@ -1337,7 +1337,7 @@ namespace GridTool
 					out << std::endl;
 				}
 				out << "------------------------------------------Frames----------------------------------------";
-				for (int i = 1; i <= nFrame(); ++i)
+				for (size_t i = 1; i <= nFrame(); ++i)
 				{
 					out << "\nGlobal Index: " << i << std::endl;
 					auto f_rep = m_frame(i)[0];
@@ -1348,7 +1348,7 @@ namespace GridTool
 					out << std::endl;
 				}
 				out << "-----------------------------------------Vertexes---------------------------------------";
-				for (int i = 1; i <= nVertex(); ++i)
+				for (size_t i = 1; i <= nVertex(); ++i)
 				{
 					out << "\nGlobal Index: " << i << std::endl;
 					out << "Occurance:";

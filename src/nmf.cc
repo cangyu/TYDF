@@ -967,52 +967,64 @@ namespace GridTool
 			// Frame
 			for (const auto &e : m_frame)
 			{
-				// Process the first frame in this group
-				std::vector<size_t*> fnoc(2, nullptr);
-				auto r = e[0];
-				auto b = r->dependentBlock;
-				const auto itn = b->frame_internal_node_num(r->local_index);
-				for (size_t lidx = 0; lidx < itn; ++lidx)
-				{
-					b->frame_internal_node_occurace(r->local_index, lidx + 2, fnoc);
-					*fnoc[0] = *fnoc[1] = ++cnt;
-				}
-
+				// Identify directions
 				std::map<Block3D::FRAME*, size_t> ptr2idx;
-				for(size_t i = 0; i < e.size(); ++i)
-				    ptr2idx[e[i]]=i;
+				for (size_t i = 0; i < e.size(); ++i)
+					ptr2idx[e[i]] = i;
 				std::vector<bool> swap_flag(e.size(), false);
 				std::vector<bool> visited(e.size(), false);
 				visited[0] = true;
 				std::queue<Block3D::FRAME*> q;
 				q.push(e[0]);
 
-				while(!q.empty())
-                {
-				    auto r = q.front();
-				    q.pop();
-				    auto par_idx = ptr2idx[r];
+				while (!q.empty())
+				{
+					auto r = q.front();
+					q.pop();
+					auto par_idx = ptr2idx[r];
 
-				    for(auto s : r->dependentSurf)
-                    {
-				        if(s->neighbourSurf)
-                        {
-				            size_t i = 0;
-				            while(s->includedFrame[i] != r)
-				                ++i;
-				            auto rr = s->counterpartFrame[i];
-				            auto loc_idx = ptr2idx[rr];
-				            if(!visited[loc_idx])
-                            {
-				                visited[loc_idx] = true;
-                                swap_flag[loc_idx] = s->counterpartFrameIsOpposite[i] ? !swap_flag[par_idx] : swap_flag[par_idx];
-				                q.push(rr);
-                            }
-                        }
-                    }
-                }
+					for (auto s : r->dependentSurf)
+					{
+						if (s->neighbourSurf)
+						{
+							size_t i = 0;
+							while (i < s->includedFrame.size() && s->includedFrame[i] != r)
+								++i;
+							if (i >= s->includedFrame.size())
+								throw std::runtime_error("Internal error detected.");
+
+							auto rr = s->counterpartFrame[i];
+							auto loc_idx = ptr2idx[rr];
+							if (!visited[loc_idx])
+							{
+								visited[loc_idx] = true;
+								swap_flag[loc_idx] = s->counterpartFrameIsOpposite[i] ? !swap_flag[par_idx] : swap_flag[par_idx];
+								q.push(rr);
+							}
+						}
+					}
+				}
+
+				// Assign index
+				auto r0 = e[0];
+				auto b0 = r0->dependentBlock;
+				const auto itn = b0->frame_internal_node_num(r0->local_index);
+				for (size_t lidx = 0; lidx < itn; ++lidx)
+				{
+					auto cur_cnt = ++cnt;
+					for (size_t i = 0; i < e.size(); ++i)
+					{
+						std::vector<size_t*> fnoc(2, nullptr);
+						auto r = e[i];
+						auto b = r->dependentBlock;
+						const size_t loc_pos = swap_flag[i] ? (itn + 1 - lidx) : (lidx + 2);
+						b->frame_internal_node_occurace(r->local_index, loc_pos, fnoc);
+						*fnoc[0] = *fnoc[1] = cur_cnt;
+					}
+				}
 			}
 
+			// Ensure total amount is right
 			if (cnt != totalNodeNum)
 				throw std::length_error("Inconsistent num of nodes detected.");
 		}

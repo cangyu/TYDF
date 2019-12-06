@@ -31,7 +31,6 @@ namespace GridTool
 
 			static bool isValidBCIdx(int x);
 			static bool isValidBCStr(const std::string &x);
-
 			static const std::string &idx2str(int x);
 			static int str2idx(const std::string &x);
 
@@ -285,28 +284,13 @@ namespace GridTool
 					throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
 			}
 
-			size_t node_num() const
-			{
-				return IDIM() * JDIM();
-			}
+			size_t node_num() const { return IDIM() * JDIM(); }
 
-			size_t face_num() const
-			{
-				size_t ret = 0;
-				ret += (IDIM() - 1) * JDIM();
-				ret += IDIM() * (JDIM() - 1);
-				return ret;
-			}
+			size_t face_num() const { return (IDIM() - 1) * JDIM() + IDIM() * (JDIM() - 1); }
 
-			size_t cell_num() const
-			{
-				return (IDIM() - 1) * (JDIM() - 1);
-			}
+			size_t cell_num() const { return (IDIM() - 1) * (JDIM() - 1); }
 
-			size_t block_internal_node_num() const
-			{
-				return (IDIM() - 2) * (JDIM() - 2);
-			}
+			size_t block_internal_node_num() const { return (IDIM() - 2) * (JDIM() - 2); }
 
 			size_t surface_internal_node_num(short s_idx) const
 			{
@@ -548,10 +532,7 @@ namespace GridTool
 					throw not_a_surface(n);
 			}
 
-			size_t node_num() const
-			{
-				return IDIM() * JDIM() * KDIM();
-			}
+			size_t node_num() const { return IDIM() * JDIM() * KDIM(); }
 
 			size_t face_num() const
 			{
@@ -562,15 +543,9 @@ namespace GridTool
 				return ret;
 			}
 
-			size_t cell_num() const
-			{
-				return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1);
-			}
+			size_t cell_num() const { return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1); }
 
-			size_t block_internal_node_num() const
-			{
-				return (IDIM() - 2) * (JDIM() - 2) * (KDIM() - 2);
-			}
+			size_t block_internal_node_num() const { return (IDIM() - 2) * (JDIM() - 2) * (KDIM() - 2); }
 
 			size_t surface_internal_node_num(short s) const
 			{

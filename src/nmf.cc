@@ -248,32 +248,32 @@ namespace GridTool
 				out << "Num of nodes: " << b->node_num() << std::endl;
 
 				out << std::setiosflags(std::ios::left) << std::setw(24) << "Local Vertex Index:" << std::resetiosflags(std::ios::left);
-				for (int i = 1; i <= Block3D::NumOfVertex; ++i)
+				for (short i = 1; i <= Block3D::NumOfVertex; ++i)
 					out << std::setw(5) << b->vertex(i).local_index;
 				out << std::endl;
 
 				out << std::setiosflags(std::ios::left) << std::setw(24) << "Global Vertex Index:" << std::resetiosflags(std::ios::left);
-				for (int i = 1; i <= Block3D::NumOfVertex; ++i)
+				for (short i = 1; i <= Block3D::NumOfVertex; ++i)
 					out << std::setw(5) << b->vertex(i).global_index;
 				out << std::endl;
 
 				out << std::setiosflags(std::ios::left) << std::setw(24) << "Local Frame Index:" << std::resetiosflags(std::ios::left);
-				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+				for (short i = 1; i <= Block3D::NumOfFrame; ++i)
 					out << std::setw(5) << b->frame(i).local_index;
 				out << std::endl;
 
 				out << std::setiosflags(std::ios::left) << std::setw(24) << "Global Frame Index:" << std::resetiosflags(std::ios::left);
-				for (int i = 1; i <= Block3D::NumOfFrame; ++i)
+				for (short i = 1; i <= Block3D::NumOfFrame; ++i)
 					out << std::setw(5) << b->frame(i).global_index;
 				out << std::endl;
 
 				out << std::setiosflags(std::ios::left) << std::setw(24) << "Local Surface Index:" << std::resetiosflags(std::ios::left);
-				for (int i = 1; i <= Block3D::NumOfSurf; ++i)
+				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
 					out << std::setw(5) << b->surf(i).local_index;
 				out << std::endl;
 
 				out << std::setiosflags(std::ios::left) << std::setw(24) << "Global Surface Index:" << std::resetiosflags(std::ios::left);
-				for (int i = 1; i <= Block3D::NumOfSurf; ++i)
+				for (short i = 1; i <= Block3D::NumOfSurf; ++i)
 					out << std::setw(5) << b->surf(i).global_index;
 				out << std::endl;
 			}

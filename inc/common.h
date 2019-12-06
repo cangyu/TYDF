@@ -18,8 +18,6 @@ namespace GridTool
 		public:
 			wrong_index(long long idx) : std::exception(), m_msg("\"" + std::to_string(idx) + "\" ") {}
 			virtual ~wrong_index() = default;
-
-			char const *what() const { return m_msg.c_str(); }
 		};
 
 		typedef double Scalar;
@@ -129,7 +127,7 @@ namespace GridTool
 				ret += z() * b.z();
 				return ret;
 			}
-			
+
 			Vector cross(const Vector &b) const
 			{
 				Vector ret;
@@ -138,7 +136,7 @@ namespace GridTool
 				ret.z() = x() * b.y() - y() * b.x();
 				return ret;
 			}
-			
+
 			Scalar norm() const
 			{
 				Scalar ret = 0.0;
@@ -147,7 +145,7 @@ namespace GridTool
 				ret += std::pow(z(), 2);
 				return std::sqrt(ret);
 			}
-			
+
 			void normalize()
 			{
 				const Scalar L = norm();
@@ -218,7 +216,7 @@ namespace GridTool
 				return false;
 			}
 		};
-	} // namespace COMMON
-} // namespace GridTool
+	}
+}
 
 #endif

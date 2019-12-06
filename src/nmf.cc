@@ -1,5 +1,6 @@
 #include <iostream>
 #include <set>
+#include <map>
 #include <queue>
 #include <stack>
 #include "../inc/nmf.h"
@@ -966,9 +967,8 @@ namespace GridTool
 			// Frame
 			for (const auto &e : m_frame)
 			{
-				std::vector<size_t*> fnoc(2, nullptr);
-
 				// Process the first frame in this group
+				std::vector<size_t*> fnoc(2, nullptr);
 				auto r = e[0];
 				auto b = r->dependentBlock;
 				const auto itn = b->frame_internal_node_num(r->local_index);
@@ -978,14 +978,39 @@ namespace GridTool
 					*fnoc[0] = *fnoc[1] = ++cnt;
 				}
 
-				// Process remaining frames
-				for (size_t i = 1; i < e.size(); ++i)
-				{
-					r = e[i];
-					b = r->dependentBlock;
+				std::map<Block3D::FRAME*, size_t> ptr2idx;
+				for(size_t i = 0; i < e.size(); ++i)
+				    ptr2idx[e[i]]=i;
+				std::vector<bool> swap_flag(e.size(), false);
+				std::vector<bool> visited(e.size(), false);
+				visited[0] = true;
+				std::queue<Block3D::FRAME*> q;
+				q.push(e[0]);
 
-					// TODO
-				}
+				while(!q.empty())
+                {
+				    auto r = q.front();
+				    q.pop();
+				    auto par_idx = ptr2idx[r];
+
+				    for(auto s : r->dependentSurf)
+                    {
+				        if(s->neighbourSurf)
+                        {
+				            size_t i = 0;
+				            while(s->includedFrame[i] != r)
+				                ++i;
+				            auto rr = s->counterpartFrame[i];
+				            auto loc_idx = ptr2idx[rr];
+				            if(!visited[loc_idx])
+                            {
+				                visited[loc_idx] = true;
+                                swap_flag[loc_idx] = s->counterpartFrameIsOpposite[i] ? !swap_flag[par_idx] : swap_flag[par_idx];
+				                q.push(rr);
+                            }
+                        }
+                    }
+                }
 			}
 
 			if (cnt != totalNodeNum)

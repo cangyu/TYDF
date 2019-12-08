@@ -5,12 +5,58 @@
 #include <stack>
 #include "../inc/nmf.h"
 
+static bool isWhite(char c)
+{
+    return c == '\n' || c == ' ' || c == '\t';
+}
+
+static bool isBlankLine(const std::string &s)
+{
+    for (const auto &e : s)
+        if (!isWhite(e))
+            return false;
+    return true;
+}
+
+static bool checkStarting(const std::string &s, char c)
+{
+    for (const auto &e : s)
+    {
+        if (isWhite(e))
+            continue;
+        else
+            return e == c;
+    }
+    return false;
+}
+
+static void distribute_index(size_t s, size_t e, std::vector<size_t> &dst)
+{
+    if (s > e)
+    {
+        const size_t n = s - e + 1;
+        dst.resize(n);
+        size_t val = s;
+
+        for (size_t i = 0; i < n; ++i)
+            dst[i] = val--;
+    }
+    else
+    {
+        const size_t n = e - s + 1;
+        dst.resize(n);
+        size_t val = s;
+        for (size_t i = 0; i < n; ++i)
+            dst[i] = val++;
+    }
+}
+
 static void str_formalize(std::string &s)
 {
-	std::transform(s.begin(), s.end(), s.begin(), ::toupper);
-	for (auto &e : s)
-		if (e == '-')
-			e = '_';
+    std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+    for (auto &e : s)
+        if (e == '-')
+            e = '_';
 }
 
 namespace GridTool
@@ -971,6 +1017,8 @@ namespace GridTool
 				std::map<Block3D::FRAME*, size_t> ptr2idx;
 				for (size_t i = 0; i < e.size(); ++i)
 					ptr2idx[e[i]] = i;
+				if(ptr2idx.size()!=e.size())
+				    throw std::runtime_error("Something wired happens...");
 				std::vector<bool> swap_flag(e.size(), false);
 				std::vector<bool> visited(e.size(), false);
 				visited[0] = true;

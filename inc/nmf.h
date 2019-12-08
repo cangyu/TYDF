@@ -1026,23 +1026,14 @@ namespace GridTool
 
 					// True - Asscending;
 					// False - Descending.
-					bool pri_trend() const
-					{
-						return E1() > S1();
-					}
+					bool pri_trend() const{return E1() > S1();}
 
 					// True - Asscending;
 					// False - Descending.
-					bool sec_trend() const
-					{
-						return E2() > S2();
-					}
+					bool sec_trend() const{return E2() > S2();}
 
 					// Total nodes on this interface.
-					size_t node_num() const
-					{
-						return pri_node_num() * sec_node_num();
-					}
+					size_t node_num() const{return pri_node_num() * sec_node_num();}
 
 					// Total edges on this interface.
 					size_t edge_num() const
@@ -1053,10 +1044,7 @@ namespace GridTool
 					}
 
 					// Total quad cells on this interface.
-					size_t face_num() const
-					{
-						return (pri_node_num() - 1) * (sec_node_num() - 1);
-					}
+					size_t face_num() const{return (pri_node_num() - 1) * (sec_node_num() - 1);}
 
 				private:
 					void check_param()
@@ -1351,67 +1339,21 @@ namespace GridTool
 			}
 
 		private:
-			void release_all()
-			{
-				// Release memory used for blocks.
-				for (auto e : m_blk)
-					if (e)
-						delete e;
+            void release_all()
+            {
+                // Release memory used for blocks.
+                for (auto e : m_blk)
+                    if (e)
+                        delete e;
 
-				// Release memory used for entries.
-				for (auto e : m_entry)
-					if (e)
-						delete e;
+                // Release memory used for entries.
+                for (auto e : m_entry)
+                    if (e)
+                        delete e;
 
-				m_blk.clear();
-				m_entry.clear();
-			}
-
-			static bool isWhite(char c)
-			{
-				return c == '\n' || c == ' ' || c == '\t';
-			}
-
-			static bool isBlankLine(const std::string &s)
-			{
-				for (const auto &e : s)
-					if (!isWhite(e))
-						return false;
-				return true;
-			}
-
-			static bool checkStarting(const std::string &s, char c)
-			{
-				for (const auto &e : s)
-				{
-					if (isWhite(e))
-						continue;
-					else
-						return e == c;
-				}
-				return false;
-			}
-
-			static void distribute_index(size_t s, size_t e, std::vector<size_t> &dst)
-			{
-				if (s > e)
-				{
-					const size_t n = s - e + 1;
-					dst.resize(n);
-					size_t val = s;
-
-					for (size_t i = 0; i < n; ++i)
-						dst[i] = val--;
-				}
-				else
-				{
-					const size_t n = e - s + 1;
-					dst.resize(n);
-					size_t val = s;
-					for (size_t i = 0; i < n; ++i)
-						dst[i] = val++;
-				}
-			}
+                m_blk.clear();
+                m_entry.clear();
+            }
 
 			void connecting();
 

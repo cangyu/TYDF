@@ -382,8 +382,12 @@ namespace GridTool
 			Array1D<FRAME> m_frame;
 			Array1D<SURF> m_surf;
 
+			void setup_dependence();
+			void establish_connections();
+
 		public:
 			Block3D() = delete;
+
 			Block3D(int nI, int nJ, int nK) :
 				BLOCK(nI, nJ, nK),
 				m_cell(cell_num(), nullptr),
@@ -391,40 +395,23 @@ namespace GridTool
 				m_frame(NumOfFrame),
 				m_surf(NumOfSurf)
 			{
-				for (short i = 0; i < NumOfVertex; ++i)
-				{
-					auto &v = m_vertex[i];
-					v.local_index = i + 1;
-					v.dependentBlock = this;
-				}
-				for (short i = 0; i < NumOfFrame; ++i)
-				{
-					auto &e = m_frame[i];
-					e.local_index = i + 1;
-					e.dependentBlock = this;
-				}
-				for (short i = 0; i < NumOfSurf; ++i)
-				{
-					auto &s = m_surf[i];
-					s.local_index = i + 1;
-					s.dependentBlock = this;
-				}
+				setup_dependence();
 				establish_connections();
 			}
+
+			/// Copy constructor
+			/// Only copy dimensions.
 			Block3D(const Block3D &rhs) :
 				BLOCK(rhs.IDIM(), rhs.JDIM(), rhs.KDIM()),
 				m_cell(cell_num(), nullptr),
-				m_vertex(rhs.m_vertex),
-				m_frame(rhs.m_frame),
-				m_surf(rhs.m_surf)
+				m_vertex(NumOfVertex),
+				m_frame(NumOfFrame),
+				m_surf(NumOfSurf)
 			{
-				for (size_t i = 0; i < m_cell.size(); ++i)
-				{
-					auto p = rhs.m_cell[i];
-					if (p)
-						m_cell[i] = new HEX_CELL(*p);
-				}
+				setup_dependence();
+				establish_connections();
 			}
+
 			~Block3D()
 			{
 				release_cell_storage();
@@ -860,73 +847,6 @@ namespace GridTool
 					throw not_a_frame(f);
 				}
 			}
-
-		private:
-			void establish_connections()
-			{
-				// Connection between frame edges and surrounding surfaces.
-				// The order matters a lot!
-				m_surf[0].includedFrame = { &m_frame[4], &m_frame[11], &m_frame[7], &m_frame[8] };
-				m_surf[1].includedFrame = { &m_frame[5], &m_frame[10], &m_frame[6], &m_frame[9] };
-				m_surf[2].includedFrame = { &m_frame[8], &m_frame[3], &m_frame[9], &m_frame[0] };
-				m_surf[3].includedFrame = { &m_frame[11], &m_frame[2], &m_frame[10], &m_frame[1] };
-				m_surf[4].includedFrame = { &m_frame[0], &m_frame[5], &m_frame[1], &m_frame[4] };
-				m_surf[5].includedFrame = { &m_frame[3], &m_frame[6], &m_frame[2], &m_frame[7] };
-
-				m_frame[0].dependentSurf = { &m_surf[2], &m_surf[4] };
-				m_frame[1].dependentSurf = { &m_surf[4], &m_surf[3] };
-				m_frame[2].dependentSurf = { &m_surf[3], &m_surf[5] };
-				m_frame[3].dependentSurf = { &m_surf[5], &m_surf[2] };
-				m_frame[4].dependentSurf = { &m_surf[0], &m_surf[4] };
-				m_frame[5].dependentSurf = { &m_surf[4], &m_surf[1] };
-				m_frame[6].dependentSurf = { &m_surf[1], &m_surf[5] };
-				m_frame[7].dependentSurf = { &m_surf[5], &m_surf[0] };
-				m_frame[8].dependentSurf = { &m_surf[0], &m_surf[2] };
-				m_frame[9].dependentSurf = { &m_surf[2], &m_surf[1] };
-				m_frame[10].dependentSurf = { &m_surf[1], &m_surf[3] };
-				m_frame[11].dependentSurf = { &m_surf[3], &m_surf[0] };
-
-				// Connection between surrounding surfaces and block vertexes.
-				// The order matters a lot!
-				m_surf[0].includedVertex = { &m_vertex[0], &m_vertex[3], &m_vertex[7], &m_vertex[4] };
-				m_surf[1].includedVertex = { &m_vertex[1], &m_vertex[2], &m_vertex[6], &m_vertex[5] };
-				m_surf[2].includedVertex = { &m_vertex[0], &m_vertex[4], &m_vertex[5], &m_vertex[1] };
-				m_surf[3].includedVertex = { &m_vertex[3], &m_vertex[7], &m_vertex[6], &m_vertex[2] };
-				m_surf[4].includedVertex = { &m_vertex[0], &m_vertex[1], &m_vertex[2], &m_vertex[3] };
-				m_surf[5].includedVertex = { &m_vertex[4], &m_vertex[5], &m_vertex[6], &m_vertex[7] };
-
-				m_vertex[0].dependentSurf = { &m_surf[4], &m_surf[0], &m_surf[2] };
-				m_vertex[1].dependentSurf = { &m_surf[4], &m_surf[2], &m_surf[1] };
-				m_vertex[2].dependentSurf = { &m_surf[4], &m_surf[1], &m_surf[3] };
-				m_vertex[3].dependentSurf = { &m_surf[4], &m_surf[3], &m_surf[0] };
-				m_vertex[4].dependentSurf = { &m_surf[5], &m_surf[0], &m_surf[2] };
-				m_vertex[5].dependentSurf = { &m_surf[5], &m_surf[2], &m_surf[1] };
-				m_vertex[6].dependentSurf = { &m_surf[5], &m_surf[1], &m_surf[3] };
-				m_vertex[7].dependentSurf = { &m_surf[5], &m_surf[3], &m_surf[0] };
-
-				// Connection between frame edges and block vertexes.
-				m_frame[0].includedVertex = { &m_vertex[0], &m_vertex[1] };
-				m_frame[1].includedVertex = { &m_vertex[3], &m_vertex[2] };
-				m_frame[2].includedVertex = { &m_vertex[7], &m_vertex[6] };
-				m_frame[3].includedVertex = { &m_vertex[4], &m_vertex[5] };
-				m_frame[4].includedVertex = { &m_vertex[0], &m_vertex[3] };
-				m_frame[5].includedVertex = { &m_vertex[1], &m_vertex[2] };
-				m_frame[6].includedVertex = { &m_vertex[5], &m_vertex[6] };
-				m_frame[7].includedVertex = { &m_vertex[4], &m_vertex[7] };
-				m_frame[8].includedVertex = { &m_vertex[0], &m_vertex[4] };
-				m_frame[9].includedVertex = { &m_vertex[1], &m_vertex[5] };
-				m_frame[10].includedVertex = { &m_vertex[2], &m_vertex[6] };
-				m_frame[11].includedVertex = { &m_vertex[3], &m_vertex[7] };
-
-				m_vertex[0].dependentFrame = { &m_frame[8], &m_frame[4], &m_frame[0] };
-				m_vertex[1].dependentFrame = { &m_frame[9], &m_frame[0], &m_frame[5] };
-				m_vertex[2].dependentFrame = { &m_frame[10], &m_frame[5], &m_frame[1] };
-				m_vertex[3].dependentFrame = { &m_frame[11], &m_frame[1], &m_frame[4] };
-				m_vertex[4].dependentFrame = { &m_frame[8], &m_frame[7], &m_frame[3] };
-				m_vertex[5].dependentFrame = { &m_frame[9], &m_frame[3], &m_frame[6] };
-				m_vertex[6].dependentFrame = { &m_frame[10], &m_frame[6], &m_frame[2] };
-				m_vertex[7].dependentFrame = { &m_frame[11], &m_frame[2], &m_frame[7] };
-			}
 		};
 
 		class Mapping2D
@@ -1026,14 +946,14 @@ namespace GridTool
 
 					// True - Asscending;
 					// False - Descending.
-					bool pri_trend() const{return E1() > S1();}
+					bool pri_trend() const { return E1() > S1(); }
 
 					// True - Asscending;
 					// False - Descending.
-					bool sec_trend() const{return E2() > S2();}
+					bool sec_trend() const { return E2() > S2(); }
 
 					// Total nodes on this interface.
-					size_t node_num() const{return pri_node_num() * sec_node_num();}
+					size_t node_num() const { return pri_node_num() * sec_node_num(); }
 
 					// Total edges on this interface.
 					size_t edge_num() const
@@ -1044,7 +964,7 @@ namespace GridTool
 					}
 
 					// Total quad cells on this interface.
-					size_t face_num() const{return (pri_node_num() - 1) * (sec_node_num() - 1);}
+					size_t face_num() const { return (pri_node_num() - 1) * (sec_node_num() - 1); }
 
 				private:
 					void check_param()
@@ -1164,11 +1084,13 @@ namespace GridTool
 
 		public:
 			Mapping3D() = default;
+
 			Mapping3D(const std::string &inp)
 			{
 				readFromFile(inp);
 				compute_topology();
 			}
+
 			Mapping3D(const Mapping3D &rhs) :
 				m_blk(rhs.nBlock(), nullptr),
 				m_entry(rhs.m_entry.size(), nullptr)
@@ -1182,15 +1104,15 @@ namespace GridTool
 				{
 					auto ptr1 = dynamic_cast<SingleSideEntry*>(rhs.m_entry[i]);
 					auto ptr2 = dynamic_cast<DoubleSideEntry*>(rhs.m_entry[i]);
-
 					if (ptr2)
 						m_entry[i] = new DoubleSideEntry(*ptr2);
 					else
 						m_entry[i] = new SingleSideEntry(*ptr1);
 				}
 
-				// TODO
+				compute_topology();
 			}
+
 			~Mapping3D()
 			{
 				release_all();
@@ -1339,21 +1261,21 @@ namespace GridTool
 			}
 
 		private:
-            void release_all()
-            {
-                // Release memory used for blocks.
-                for (auto e : m_blk)
-                    if (e)
-                        delete e;
+			void release_all()
+			{
+				// Release memory used for blocks.
+				for (auto e : m_blk)
+					if (e)
+						delete e;
 
-                // Release memory used for entries.
-                for (auto e : m_entry)
-                    if (e)
-                        delete e;
+				// Release memory used for entries.
+				for (auto e : m_entry)
+					if (e)
+						delete e;
 
-                m_blk.clear();
-                m_entry.clear();
-            }
+				m_blk.clear();
+				m_entry.clear();
+			}
 
 			void connecting();
 

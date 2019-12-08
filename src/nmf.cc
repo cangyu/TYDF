@@ -7,56 +7,56 @@
 
 static bool isWhite(char c)
 {
-    return c == '\n' || c == ' ' || c == '\t';
+	return c == '\n' || c == ' ' || c == '\t';
 }
 
 static bool isBlankLine(const std::string &s)
 {
-    for (const auto &e : s)
-        if (!isWhite(e))
-            return false;
-    return true;
+	for (const auto &e : s)
+		if (!isWhite(e))
+			return false;
+	return true;
 }
 
 static bool checkStarting(const std::string &s, char c)
 {
-    for (const auto &e : s)
-    {
-        if (isWhite(e))
-            continue;
-        else
-            return e == c;
-    }
-    return false;
+	for (const auto &e : s)
+	{
+		if (isWhite(e))
+			continue;
+		else
+			return e == c;
+	}
+	return false;
 }
 
 static void distribute_index(size_t s, size_t e, std::vector<size_t> &dst)
 {
-    if (s > e)
-    {
-        const size_t n = s - e + 1;
-        dst.resize(n);
-        size_t val = s;
+	if (s > e)
+	{
+		const size_t n = s - e + 1;
+		dst.resize(n);
+		size_t val = s;
 
-        for (size_t i = 0; i < n; ++i)
-            dst[i] = val--;
-    }
-    else
-    {
-        const size_t n = e - s + 1;
-        dst.resize(n);
-        size_t val = s;
-        for (size_t i = 0; i < n; ++i)
-            dst[i] = val++;
-    }
+		for (size_t i = 0; i < n; ++i)
+			dst[i] = val--;
+	}
+	else
+	{
+		const size_t n = e - s + 1;
+		dst.resize(n);
+		size_t val = s;
+		for (size_t i = 0; i < n; ++i)
+			dst[i] = val++;
+	}
 }
 
 static void str_formalize(std::string &s)
 {
-    std::transform(s.begin(), s.end(), s.begin(), ::toupper);
-    for (auto &e : s)
-        if (e == '-')
-            e = '_';
+	std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+	for (auto &e : s)
+		if (e == '-')
+			e = '_';
 }
 
 namespace GridTool
@@ -118,6 +118,94 @@ namespace GridTool
 				}
 				return *it1;
 			}
+		}
+
+		void Block3D::setup_dependence()
+		{
+			for (short i = 0; i < NumOfVertex; ++i)
+			{
+				auto &v = m_vertex[i];
+				v.local_index = i + 1;
+				v.dependentBlock = this;
+			}
+			for (short i = 0; i < NumOfFrame; ++i)
+			{
+				auto &e = m_frame[i];
+				e.local_index = i + 1;
+				e.dependentBlock = this;
+			}
+			for (short i = 0; i < NumOfSurf; ++i)
+			{
+				auto &s = m_surf[i];
+				s.local_index = i + 1;
+				s.dependentBlock = this;
+			}
+		}
+
+		void Block3D::establish_connections()
+		{
+			// Connection between frame edges and surrounding surfaces.
+			// The order matters a lot!
+			m_surf[0].includedFrame = { &m_frame[4], &m_frame[11], &m_frame[7], &m_frame[8] };
+			m_surf[1].includedFrame = { &m_frame[5], &m_frame[10], &m_frame[6], &m_frame[9] };
+			m_surf[2].includedFrame = { &m_frame[8], &m_frame[3], &m_frame[9], &m_frame[0] };
+			m_surf[3].includedFrame = { &m_frame[11], &m_frame[2], &m_frame[10], &m_frame[1] };
+			m_surf[4].includedFrame = { &m_frame[0], &m_frame[5], &m_frame[1], &m_frame[4] };
+			m_surf[5].includedFrame = { &m_frame[3], &m_frame[6], &m_frame[2], &m_frame[7] };
+
+			m_frame[0].dependentSurf = { &m_surf[2], &m_surf[4] };
+			m_frame[1].dependentSurf = { &m_surf[4], &m_surf[3] };
+			m_frame[2].dependentSurf = { &m_surf[3], &m_surf[5] };
+			m_frame[3].dependentSurf = { &m_surf[5], &m_surf[2] };
+			m_frame[4].dependentSurf = { &m_surf[0], &m_surf[4] };
+			m_frame[5].dependentSurf = { &m_surf[4], &m_surf[1] };
+			m_frame[6].dependentSurf = { &m_surf[1], &m_surf[5] };
+			m_frame[7].dependentSurf = { &m_surf[5], &m_surf[0] };
+			m_frame[8].dependentSurf = { &m_surf[0], &m_surf[2] };
+			m_frame[9].dependentSurf = { &m_surf[2], &m_surf[1] };
+			m_frame[10].dependentSurf = { &m_surf[1], &m_surf[3] };
+			m_frame[11].dependentSurf = { &m_surf[3], &m_surf[0] };
+
+			// Connection between surrounding surfaces and block vertexes.
+			// The order matters a lot!
+			m_surf[0].includedVertex = { &m_vertex[0], &m_vertex[3], &m_vertex[7], &m_vertex[4] };
+			m_surf[1].includedVertex = { &m_vertex[1], &m_vertex[2], &m_vertex[6], &m_vertex[5] };
+			m_surf[2].includedVertex = { &m_vertex[0], &m_vertex[4], &m_vertex[5], &m_vertex[1] };
+			m_surf[3].includedVertex = { &m_vertex[3], &m_vertex[7], &m_vertex[6], &m_vertex[2] };
+			m_surf[4].includedVertex = { &m_vertex[0], &m_vertex[1], &m_vertex[2], &m_vertex[3] };
+			m_surf[5].includedVertex = { &m_vertex[4], &m_vertex[5], &m_vertex[6], &m_vertex[7] };
+
+			m_vertex[0].dependentSurf = { &m_surf[4], &m_surf[0], &m_surf[2] };
+			m_vertex[1].dependentSurf = { &m_surf[4], &m_surf[2], &m_surf[1] };
+			m_vertex[2].dependentSurf = { &m_surf[4], &m_surf[1], &m_surf[3] };
+			m_vertex[3].dependentSurf = { &m_surf[4], &m_surf[3], &m_surf[0] };
+			m_vertex[4].dependentSurf = { &m_surf[5], &m_surf[0], &m_surf[2] };
+			m_vertex[5].dependentSurf = { &m_surf[5], &m_surf[2], &m_surf[1] };
+			m_vertex[6].dependentSurf = { &m_surf[5], &m_surf[1], &m_surf[3] };
+			m_vertex[7].dependentSurf = { &m_surf[5], &m_surf[3], &m_surf[0] };
+
+			// Connection between frame edges and block vertexes.
+			m_frame[0].includedVertex = { &m_vertex[0], &m_vertex[1] };
+			m_frame[1].includedVertex = { &m_vertex[3], &m_vertex[2] };
+			m_frame[2].includedVertex = { &m_vertex[7], &m_vertex[6] };
+			m_frame[3].includedVertex = { &m_vertex[4], &m_vertex[5] };
+			m_frame[4].includedVertex = { &m_vertex[0], &m_vertex[3] };
+			m_frame[5].includedVertex = { &m_vertex[1], &m_vertex[2] };
+			m_frame[6].includedVertex = { &m_vertex[5], &m_vertex[6] };
+			m_frame[7].includedVertex = { &m_vertex[4], &m_vertex[7] };
+			m_frame[8].includedVertex = { &m_vertex[0], &m_vertex[4] };
+			m_frame[9].includedVertex = { &m_vertex[1], &m_vertex[5] };
+			m_frame[10].includedVertex = { &m_vertex[2], &m_vertex[6] };
+			m_frame[11].includedVertex = { &m_vertex[3], &m_vertex[7] };
+
+			m_vertex[0].dependentFrame = { &m_frame[8], &m_frame[4], &m_frame[0] };
+			m_vertex[1].dependentFrame = { &m_frame[9], &m_frame[0], &m_frame[5] };
+			m_vertex[2].dependentFrame = { &m_frame[10], &m_frame[5], &m_frame[1] };
+			m_vertex[3].dependentFrame = { &m_frame[11], &m_frame[1], &m_frame[4] };
+			m_vertex[4].dependentFrame = { &m_frame[8], &m_frame[7], &m_frame[3] };
+			m_vertex[5].dependentFrame = { &m_frame[9], &m_frame[3], &m_frame[6] };
+			m_vertex[6].dependentFrame = { &m_frame[10], &m_frame[6], &m_frame[2] };
+			m_vertex[7].dependentFrame = { &m_frame[11], &m_frame[2], &m_frame[7] };
 		}
 
 		void Mapping3D::readFromFile(const std::string &path)
@@ -1017,8 +1105,8 @@ namespace GridTool
 				std::map<Block3D::FRAME*, size_t> ptr2idx;
 				for (size_t i = 0; i < e.size(); ++i)
 					ptr2idx[e[i]] = i;
-				if(ptr2idx.size()!=e.size())
-				    throw std::runtime_error("Something wired happens...");
+				if (ptr2idx.size() != e.size())
+					throw std::runtime_error("Something wired happens...");
 				std::vector<bool> swap_flag(e.size(), false);
 				std::vector<bool> visited(e.size(), false);
 				visited[0] = true;

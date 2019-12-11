@@ -25,7 +25,16 @@ namespace GridTool
 			if (nmf->nBlock() != p3d->numOfBlock())
 				throw std::invalid_argument("Inconsistent num of blocks.");
 
-			// TODO
+			// Allocate storage.
+			m_totalNodeNum = nmf->nNode();
+			m_totalCellNum = nmf->nCell();
+			size_t innerFaceNum = 0, bdryFaceNum = 0;
+			nmf->nFace(m_totalFaceNum, innerFaceNum, bdryFaceNum);
+			m_node.resize(numOfNode());
+			m_face.resize(numOfFace());
+			m_cell.resize(numOfCell());
+
+			// Copy coordinates.
 
 			// Convert to primary form.
 			derived2raw();

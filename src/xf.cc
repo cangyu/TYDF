@@ -1,4 +1,3 @@
-#include <iostream>
 #include "../inc/xf.h"
 
 // Convert a boundary condition string literal to unified form within the scope of this code.
@@ -243,7 +242,7 @@ namespace GridTool
 			return candidate_set.find(x_) != candidate_set.end();
 		}
 
-		const std::string &CELL::type_idx2str(int x)
+		const std::string &CELL::idx2str_type(int x)
 		{
 			static const std::map<int, std::string> mapping_set{
 				std::pair<int, std::string>(CELL::FLUID, "fluid"),
@@ -258,7 +257,7 @@ namespace GridTool
 				return it->second;
 		}
 
-		int CELL::type_str2idx(const std::string &x)
+		int CELL::str2idx_type(const std::string &x)
 		{
 			static const std::map<std::string, int> mapping_set{
 				std::pair<std::string, int>("fluid", CELL::FLUID),
@@ -308,7 +307,7 @@ namespace GridTool
 			return candidate_set.find(x_) == candidate_set.end();
 		}
 
-		const std::string &CELL::elem_idx2str(int x)
+		const std::string &CELL::idx2str_elem(int x)
 		{
 			static const std::map<int, std::string> mapping_set{
 				std::pair<int, std::string>(CELL::MIXED, "mixed"),
@@ -328,7 +327,7 @@ namespace GridTool
 				return it->second;
 		}
 
-		int CELL::elem_str2idx(const std::string &x)
+		int CELL::str2idx_elem(const std::string &x)
 		{
 			static const std::map<std::string, int> mapping_set{
 				std::pair<std::string, int>("mixed", CELL::MIXED),
@@ -375,6 +374,102 @@ namespace GridTool
 				}
 				out << std::endl << "))" << std::endl;
 			}
+		}
+
+		bool FACE::isValidIdx(int x)
+		{
+			static const std::set<int> candidate_set{
+				MIXED,
+				LINEAR,
+				TRIANGULAR,
+				QUADRILATERAL,
+				POLYGONAL
+			};
+
+			return candidate_set.find(x) != candidate_set.end();
+		}
+
+		bool FACE::isValidStr(const std::string &x)
+		{
+			static const std::set<std::string> candidate_set{
+				"mixed",
+				"linear",
+				"triangular",
+				"quadrilateral",
+				"polygonal"
+			};
+
+			return candidate_set.find(x) != candidate_set.end();
+		}
+
+		const std::string &FACE::idx2str(int x)
+		{
+			static const std::map<int, std::string> mapping_set{
+				std::pair<int, std::string>(FACE::MIXED, "mixed"),
+				std::pair<int, std::string>(FACE::LINEAR, "linear"),
+				std::pair<int, std::string>(FACE::TRIANGULAR, "triangular"),
+				std::pair<int, std::string>(FACE::QUADRILATERAL, "quadrilateral"),
+				std::pair<int, std::string>(FACE::POLYGONAL, "polygonal")
+			};
+
+			auto it = mapping_set.find(x);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid FACE-TYPE index.");
+			else
+				return it->second;
+		}
+
+		int FACE::str2idx(const std::string &x)
+		{
+			static const std::map<std::string, int> mapping_set{
+				std::pair<std::string, int>("mixed", FACE::MIXED),
+				std::pair<std::string, int>("linear", FACE::LINEAR),
+				std::pair<std::string, int>("line", FACE::LINEAR),
+				std::pair<std::string, int>("triangular", FACE::TRIANGULAR),
+				std::pair<std::string, int>("tri", FACE::TRIANGULAR),
+				std::pair<std::string, int>("quadrilateral", FACE::QUADRILATERAL),
+				std::pair<std::string, int>("quad", FACE::QUADRILATERAL),
+				std::pair<std::string, int>("polygonal", FACE::POLYGONAL)
+			};
+
+			auto it = mapping_set.find(x);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + x + "\" is not a valid FACE-TYPE string.");
+			else
+				return it->second;
+		}
+
+		void FACE::repr(std::ostream &out)
+		{
+			out << "(" << std::dec << identity() << " (";
+			out << std::hex;
+			out << zone() << " " << first_index() << " " << last_index() << " ";
+			out << bc_type() << " " << face_type() << ")(" << std::endl;
+
+			const size_t N = num();
+			if (m_face == FACE::MIXED)
+			{
+				for (size_t i = 0; i < N; ++i)
+				{
+					const auto &loc_cnect = m_connectivity[i];
+					out << " " << loc_cnect.x;
+					for (int j = 0; j < loc_cnect.x; ++j)
+						out << " " << loc_cnect.n[j];
+					out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
+				}
+			}
+			else
+			{
+				for (size_t i = 0; i < N; ++i)
+				{
+					const auto &loc_cnect = m_connectivity[i];
+					for (int j = 0; j < loc_cnect.x; ++j)
+						out << " " << loc_cnect.n[j];
+					out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
+				}
+			}
+
+			out << "))" << std::endl;
 		}
 
 		void MESH::raw2derived()
@@ -855,7 +950,7 @@ namespace GridTool
 							fout << "Done!" << std::endl;
 						}
 						else
-							fout << e->num() << " " << CELL::elem_idx2str(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
+							fout << e->num() << " " << CELL::idx2str_elem(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
 
 						eat(fin, ')');
 						add_entry(e);
@@ -1054,7 +1149,7 @@ namespace GridTool
 		{
 			// Check num of total faces
 			if (tet.includedFace.size() != 4)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_idx2str(tet.type) + R"(" and num of faces: )" + std::to_string(tet.includedFace.size()));
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::idx2str_elem(tet.type) + R"(" and num of faces: )" + std::to_string(tet.includedFace.size()));
 
 			// Ensure all faces are triangular
 			const auto &f0 = face(tet.includedFace.at(0));
@@ -1108,7 +1203,7 @@ namespace GridTool
 		{
 			// Check num of total faces
 			if (pyramid.includedFace.size() != 5)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_idx2str(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.includedFace.size()));
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::idx2str_elem(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.includedFace.size()));
 
 			// Find the bottom quad and ensure other faces are triangular.
 			size_t f0_idx = 0;
@@ -1246,7 +1341,7 @@ namespace GridTool
 		{
 			// Check num of total faces
 			if (prism.includedFace.size() != 5)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_idx2str(prism.type) + R"(" and num of faces: )" + std::to_string(prism.includedFace.size()));
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::idx2str_elem(prism.type) + R"(" and num of faces: )" + std::to_string(prism.includedFace.size()));
 
 			// Ensure there're only 2 triangle and 3 quad
 			size_t f0_idx = 0, f1_idx = 0;
@@ -1396,7 +1491,7 @@ namespace GridTool
 		{
 			// Check num of total faces
 			if (hex.includedFace.size() != 6)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_idx2str(hex.type) + R"(" and num of faces: )" + std::to_string(hex.includedFace.size()));
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::idx2str_elem(hex.type) + R"(" and num of faces: )" + std::to_string(hex.includedFace.size()));
 
 			// Ensure all faces are quad
 			for (auto e : hex.includedFace)

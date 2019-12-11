@@ -253,19 +253,17 @@ namespace GridTool
 			std::vector<int> m_mixedElemDesc; // Only effective when 'm_elem == MIXED', empty otherwise.
 
 		public:
-			enum { DEAD = 0, FLUID = 1, SOLID = 17 }; // Cell type.
+			enum { DEAD = 0, FLUID = 1, SOLID = 17 };
+			enum { MIXED = 0, TRIANGULAR = 1, TETRAHEDRAL = 2, QUADRILATERAL = 3, HEXAHEDRAL = 4, PYRAMID = 5, WEDGE = 6, POLYHEDRAL = 7 };
 
 			static bool isValidTypeIdx(int x);
 			static bool isValidTypeStr(const std::string &x);
-			static const std::string &type_idx2str(int x);
-			static int type_str2idx(const std::string &x);
-
-			enum { MIXED = 0, TRIANGULAR = 1, TETRAHEDRAL = 2, QUADRILATERAL = 3, HEXAHEDRAL = 4, PYRAMID = 5, WEDGE = 6, POLYHEDRAL = 7 }; // Cell element type.
-
+			static const std::string &idx2str_type(int x);
+			static int str2idx_type(const std::string &x);
 			static bool isValidElemIdx(int x);
 			static bool isValidElemStr(const std::string &x);
-			static const std::string &elem_idx2str(int x);
-			static int elem_str2idx(const std::string &x);
+			static const std::string &idx2str_elem(int x);
+			static int str2idx_elem(const std::string &x);
 
 			CELL() = delete;
 			CELL(size_t zone, size_t first, size_t last, int type, int elem_type) :
@@ -390,56 +388,10 @@ namespace GridTool
 		public:
 			enum { MIXED = 0, LINEAR = 2, TRIANGULAR = 3, QUADRILATERAL = 4, POLYGONAL = 5 };
 
-			static bool isValidFaceTypeIdx(int x)
-			{
-				static const std::set<int> candidate_set{ MIXED, LINEAR, TRIANGULAR, QUADRILATERAL, POLYGONAL };
-
-				return candidate_set.find(x) != candidate_set.end();
-			}
-
-			static bool isValidFaceTypeStr(const std::string &x)
-			{
-				static const std::set<std::string> candidate_set{ "mixed", "linear", "triangular", "quadrilateral", "polygonal" };
-
-				return candidate_set.find(x) != candidate_set.end();
-			}
-
-			static const std::string &idx2str(int x)
-			{
-				static const std::map<int, std::string> mapping_set{
-					std::pair<int, std::string>(FACE::MIXED, "mixed"),
-					std::pair<int, std::string>(FACE::LINEAR, "linear"),
-					std::pair<int, std::string>(FACE::TRIANGULAR, "triangular"),
-					std::pair<int, std::string>(FACE::QUADRILATERAL, "quadrilateral"),
-					std::pair<int, std::string>(FACE::POLYGONAL, "polygonal")
-				};
-
-				auto it = mapping_set.find(x);
-				if (it == mapping_set.end())
-					throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid FACE-TYPE index.");
-				else
-					return it->second;
-			}
-
-			static int str2idx(const std::string &x)
-			{
-				static const std::map<std::string, int> mapping_set{
-					std::pair<std::string, int>("mixed", FACE::MIXED),
-					std::pair<std::string, int>("linear", FACE::LINEAR),
-					std::pair<std::string, int>("line", FACE::LINEAR),
-					std::pair<std::string, int>("triangular", FACE::TRIANGULAR),
-					std::pair<std::string, int>("tri", FACE::TRIANGULAR),
-					std::pair<std::string, int>("quadrilateral", FACE::QUADRILATERAL),
-					std::pair<std::string, int>("quad", FACE::QUADRILATERAL),
-					std::pair<std::string, int>("polygonal", FACE::POLYGONAL)
-				};
-
-				auto it = mapping_set.find(x);
-				if (it == mapping_set.end())
-					throw std::runtime_error("\"" + x + "\" is not a valid FACE-TYPE string.");
-				else
-					return it->second;
-			}
+			static bool isValidIdx(int x);
+			static bool isValidStr(const std::string &x);
+			static const std::string &idx2str(int x);
+			static int str2idx(const std::string &x);
 
 			FACE() = delete;
 			FACE(size_t zone, size_t first, size_t last, int bc, int face) :
@@ -452,7 +404,7 @@ namespace GridTool
 					m_bc = bc;
 
 				// Check face type before assign
-				if (!isValidFaceTypeIdx(face))
+				if (!isValidIdx(face))
 					throw std::runtime_error("Invalid face type: " + std::to_string(face));
 				else if (face == FACE::POLYGONAL)
 					throw std::runtime_error("Polygonal face is not supported currently.");
@@ -474,38 +426,7 @@ namespace GridTool
 			const CONNECTIVITY &connectivity(size_t loc_idx) const { return m_connectivity.at(loc_idx); }
 			CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity.at(loc_idx); }
 
-			void repr(std::ostream &out)
-			{
-				out << "(" << std::dec << identity() << " (";
-				out << std::hex;
-				out << zone() << " " << first_index() << " " << last_index() << " ";
-				out << bc_type() << " " << face_type() << ")(" << std::endl;
-
-				const size_t N = num();
-				if (m_face == FACE::MIXED)
-				{
-					for (size_t i = 0; i < N; ++i)
-					{
-						const auto &loc_cnect = m_connectivity[i];
-						out << " " << loc_cnect.x;
-						for (int j = 0; j < loc_cnect.x; ++j)
-							out << " " << loc_cnect.n[j];
-						out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
-					}
-				}
-				else
-				{
-					for (size_t i = 0; i < N; ++i)
-					{
-						const auto &loc_cnect = m_connectivity[i];
-						for (int j = 0; j < loc_cnect.x; ++j)
-							out << " " << loc_cnect.n[j];
-						out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
-					}
-				}
-
-				out << "))" << std::endl;
-			}
+			void repr(std::ostream &out);
 		};
 
 		class ZONE :public SECTION
@@ -799,7 +720,7 @@ namespace GridTool
 			void hex_standardization(CELL_ELEM &hex);
 			void triangle_standardization(CELL_ELEM &tri);
 			void quad_standardization(CELL_ELEM &quad);
-			};
-		}
+		};
 	}
+}
 #endif

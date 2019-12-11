@@ -770,16 +770,6 @@ namespace GridTool
 			// TODO
 		}
 
-		MESH::MESH(const std::string &inp, std::ostream &fout) :
-			DIM(3),
-			m_totalNodeNum(0),
-			m_totalCellNum(0),
-			m_totalFaceNum(0),
-			m_totalZoneNum(0)
-		{
-			readFromFile(inp, fout);
-		}
-
 		void MESH::readFromFile(const std::string &src, std::ostream &fout)
 		{
 			// Open grid file

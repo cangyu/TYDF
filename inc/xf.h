@@ -520,12 +520,18 @@ namespace GridTool
 
 		public:
 			MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {} // 3D by default
-			MESH(const std::string &inp, std::ostream &fout);
-			MESH(const MESH &rhs) = delete;
-			~MESH()
+			MESH(const std::string &inp, std::ostream &fout) :
+				DIM(3),
+				m_totalNodeNum(0),
+				m_totalCellNum(0),
+				m_totalFaceNum(0),
+				m_totalZoneNum(0)
 			{
-				clear_entry();
+				readFromFile(inp, fout);
 			}
+			MESH(const std::string &f_nmf, const std::string &f_p3d, std::ostream &fout);
+			MESH(const MESH &rhs) = delete;
+			~MESH() { clear_entry(); }
 
 			/* IO */
 			void readFromFile(const std::string &src, std::ostream &fout);

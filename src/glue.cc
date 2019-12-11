@@ -1,27 +1,38 @@
-#include "../inc/glue.h"
+#include "../inc/nmf.h"
+#include "../inc/plot3d.h"
+#include "../inc/xf.h"
 
 namespace GridTool
 {
-	void glue_3d(const std::string &f_nmf, const std::string &f_p3d, std::string &f_msh)
+	namespace XF
 	{
-		auto nmf = new NMF::Mapping3D(f_nmf);
-		nmf->compute_topology();
-		nmf->numbering();
-		auto p3d = new PLOT3D::GRID(f_p3d);
-		auto msh = new XF::MESH();
-		glue_3d(*nmf, *p3d, *msh);
-		msh->writeToFile(f_msh);
+		MESH::MESH(const std::string &f_nmf, const std::string &f_p3d, std::ostream &fout) :
+			DIM(3),
+			m_totalNodeNum(0),
+			m_totalCellNum(0),
+			m_totalFaceNum(0),
+			m_totalZoneNum(0)
+		{
+			// Load mapping file.
+			auto nmf = new NMF::Mapping3D(f_nmf);
+			nmf->compute_topology();
+			nmf->numbering();
 
-		delete nmf;
-		delete p3d;
-		delete msh;
-	}
+			// Load grid file.
+			auto p3d = new PLOT3D::GRID(f_p3d);
 
-	void glue_3d(const NMF::Mapping3D &src1, const PLOT3D::GRID &src2, XF::MESH &dst)
-	{
-		if (src1.nBlock() != src2.numOfBlock())
-			throw std::invalid_argument("Inconsistent num of blocks.");
+			// Check consistency
+			if (nmf->nBlock() != p3d->numOfBlock())
+				throw std::invalid_argument("Inconsistent num of blocks.");
 
-		// TODO
+			// TODO
+
+			// Convert to primary form.
+			derived2raw();
+
+			// Finalize.
+			delete nmf;
+			delete p3d;
+		}
 	}
 }

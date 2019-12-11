@@ -38,7 +38,7 @@ namespace GridTool
 
 		public:
 			DIM() = delete;
-			DIM(int dim, bool is3d) : m_is3D(is3d)
+			DIM(int dim, bool is3d = true) : m_is3D(is3d)
 			{
 				if (dim == 2 || dim == 3)
 					m_dim = dim;

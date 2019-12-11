@@ -1,9 +1,982 @@
+#include <iostream>
 #include "../inc/xf.h"
+
+// Convert a boundary condition string literal to unified form within the scope of this code.
+// Outcome will be composed of LOWER case lettes and '-' only!
+static void formalize(std::string &s)
+{
+	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+	for (auto &e : s)
+		if (e == '_')
+			e = '-';
+}
+
+static void eat(std::istream &in, char c)
+{
+	char tmp = 0;
+	do {
+		in >> tmp;
+	} while (tmp != c);
+}
+
+static void skip_white(std::istream &in)
+{
+	char tmp = 0;
+	do {
+		in >> tmp;
+	} while (tmp == ' ' || tmp == '\t' || tmp == '\n');
+
+	if (!in.eof())
+		in.unget();
+}
 
 namespace GridTool
 {
 	namespace XF
 	{
+		bool BC::isValidIdx(int x)
+		{
+			static const std::set<int> candidate_set{
+				INTERIOR,
+				WALL,
+				PRESSURE_INLET,
+				PRESSURE_OUTLET,
+				SYMMETRY,
+				PERIODIC_SHADOW,
+				PRESSURE_FAR_FIELD,
+				VELOCITY_INLET,
+				PERIODIC,
+				FAN,
+				MASS_FLOW_INLET,
+				INTERFACE,
+				PARENT,
+				OUTFLOW,
+				AXIS
+			};
+
+			return candidate_set.find(x) != candidate_set.end();
+		}
+
+		bool BC::isValidStr(const std::string &x)
+		{
+			static const std::set<std::string> candidate_set{
+				"interior",
+				"wall",
+				"pressure-inlet", "inlet-vent", "intake-fan",
+				"pressure-outlet", "exhaust-fan", "outlet-vent",
+				"symmetry",
+				"periodic-shadow",
+				"pressure-far-field",
+				"velocity-inlet",
+				"periodic",
+				"fan", "porous-jump", "radiator",
+				"mass-flow-inlet",
+				"interface",
+				"parent",
+				"outflow",
+				"axis"
+			};
+
+			std::string x_(x);
+			formalize(x_);
+			return candidate_set.find(x_) != candidate_set.end();
+		}
+
+		const std::string &BC::idx2str(int x)
+		{
+			static const std::map<int, std::string> mapping_set{
+				std::pair<int, std::string>(INTERIOR, "interior"),
+				std::pair<int, std::string>(WALL, "wall"),
+				std::pair<int, std::string>(PRESSURE_INLET, "pressure-inlet"),
+				std::pair<int, std::string>(PRESSURE_OUTLET, "pressure-outlet"),
+				std::pair<int, std::string>(SYMMETRY, "symmetry"),
+				std::pair<int, std::string>(PERIODIC_SHADOW, "periodic-shadow"),
+				std::pair<int, std::string>(PRESSURE_FAR_FIELD, "pressure-far-field"),
+				std::pair<int, std::string>(VELOCITY_INLET, "velocity-inlet"),
+				std::pair<int, std::string>(PERIODIC, "periodic"),
+				std::pair<int, std::string>(FAN, "fan"),
+				std::pair<int, std::string>(MASS_FLOW_INLET, "mass-flow-inlet"),
+				std::pair<int, std::string>(INTERFACE, "interface"),
+				std::pair<int, std::string>(PARENT, "parent"),
+				std::pair<int, std::string>(OUTFLOW, "outflow"),
+				std::pair<int, std::string>(AXIS, "axis")
+			};
+
+			auto it = mapping_set.find(x);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid B.C. index.");
+			else
+				return it->second;
+		}
+
+		const int BC::str2idx(const std::string &x)
+		{
+			static const std::map<std::string, int> mapping_set{
+				std::pair<std::string, int>("interior", INTERIOR),
+				std::pair<std::string, int>("wall", WALL),
+				std::pair<std::string, int>("pressure-inlet", PRESSURE_INLET),
+				std::pair<std::string, int>("inlet-vent", INLET_VENT),
+				std::pair<std::string, int>("intake-fan", INTAKE_FAN),
+				std::pair<std::string, int>("pressure-outlet", PRESSURE_OUTLET),
+				std::pair<std::string, int>("exhaust-fan", EXHAUST_FAN),
+				std::pair<std::string, int>("outlet-vent", OUTLET_VENT),
+				std::pair<std::string, int>("symmetry", SYMMETRY),
+				std::pair<std::string, int>("periodic-shadow", PERIODIC_SHADOW),
+				std::pair<std::string, int>("pressure-far-field", PRESSURE_FAR_FIELD),
+				std::pair<std::string, int>("velocity-inlet", VELOCITY_INLET),
+				std::pair<std::string, int>("periodic", PERIODIC),
+				std::pair<std::string, int>("fan", FAN),
+				std::pair<std::string, int>("porous-jump", POROUS_JUMP),
+				std::pair<std::string, int>("radiator", RADIATOR),
+				std::pair<std::string, int>("mass-flow-inlet", MASS_FLOW_INLET),
+				std::pair<std::string, int>("interface", INTERFACE),
+				std::pair<std::string, int>("parent", PARENT),
+				std::pair<std::string, int>("outflow", OUTFLOW),
+				std::pair<std::string, int>("axis", AXIS)
+			};
+
+			std::string x_(x);
+			formalize(x_);
+			auto it = mapping_set.find(x_);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + x + "\" is not a valid B.C. string.");
+			else
+				return it->second;
+		}
+
+		void STR::repr(std::ostream &out)
+		{
+			out << "(" << std::dec << identity() << " \"" << str() << "\")" << std::endl;
+		}
+
+		void DIMENSION::repr(std::ostream &out)
+		{
+			out << "(" << std::dec << identity() << " " << ND() << ")" << std::endl;
+		}
+
+		bool NODE::isValidTypeIdx(int x)
+		{
+			return x == VIRTUAL || x == ANY || x == BOUNDARY;
+		}
+
+		bool NODE::isValidTypeStr(const std::string &x)
+		{
+			static const std::set<std::string> candidate_set{
+				"virtual",
+				"any",
+				"boundary"
+			};
+
+			std::string x_(x);
+			formalize(x_);
+			auto it = candidate_set.find(x_);
+			return it != candidate_set.end();
+		}
+
+		const std::string &NODE::idx2str(int x)
+		{
+			static const std::map<int, std::string> mapping_set{
+				std::pair<int, std::string>(VIRTUAL, "virtual"),
+				std::pair<int, std::string>(ANY, "any"),
+				std::pair<int, std::string>(BOUNDARY, "boundary")
+			};
+
+			auto it = mapping_set.find(x);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid NODE-TYPE index.");
+			else
+				return it->second;
+		}
+
+		const int NODE::str2idx(const std::string &x)
+		{
+			static const std::map<std::string, int> mapping_set{
+				std::pair<std::string, int>("virtual", VIRTUAL),
+				std::pair<std::string, int>("any", ANY),
+				std::pair<std::string, int>("boundary", BOUNDARY),
+			};
+
+			std::string x_(x);
+			formalize(x_);
+			auto it = mapping_set.find(x_);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + x + "\" is not a valid NODE-TYPE string.");
+			else
+				return it->second;
+		}
+
+		void NODE::repr(std::ostream &out)
+		{
+			out << "(" << std::dec << identity();
+			out << " (" << std::hex << zone() << " " << first_index() << " " << last_index() << " ";
+			out << std::dec << type() << " " << ND() << ")(" << std::endl;
+
+			out.precision(12);
+			const size_t N = num();
+			for (size_t i = 0; i < N; ++i)
+			{
+				const auto &node = m_node.at(i);
+				for (int k = 0; k < m_dim; ++k)
+					out << " " << node.at(k);
+				out << std::endl;
+			}
+			out << "))" << std::endl;
+		}
+
+		bool  CELL::isValidTypeIdx(int x)
+		{
+			static const std::set<int> candidate_set{
+				DEAD,
+				FLUID,
+				SOLID
+			};
+
+			return candidate_set.find(x) != candidate_set.end();
+		}
+
+		bool CELL::isValidTypeStr(const std::string &x)
+		{
+			static const std::set<std::string> candidate_set{ "dead", "fluid", "solid" };
+
+			std::string x_(x);
+			formalize(x_);
+			return candidate_set.find(x_) != candidate_set.end();
+		}
+
+		const std::string &CELL::type_idx2str(int x)
+		{
+			static const std::map<int, std::string> mapping_set{
+				std::pair<int, std::string>(CELL::FLUID, "fluid"),
+				std::pair<int, std::string>(CELL::SOLID, "solid"),
+				std::pair<int, std::string>(CELL::DEAD, "dead")
+			};
+
+			auto it = mapping_set.find(x);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid CELL-TYPE index.");
+			else
+				return it->second;
+		}
+
+		int CELL::type_str2idx(const std::string &x)
+		{
+			static const std::map<std::string, int> mapping_set{
+				std::pair<std::string, int>("fluid", CELL::FLUID),
+				std::pair<std::string, int>("solid", CELL::SOLID),
+				std::pair<std::string, int>("dead", CELL::DEAD),
+			};
+
+			auto it = mapping_set.find(x);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + x + "\" is not a valid CELL-TYPE string.");
+			else
+				return it->second;
+		}
+
+		bool CELL::isValidElemIdx(int x)
+		{
+			static const std::set<int> candidate_set{
+				MIXED,
+				TRIANGULAR,
+				TETRAHEDRAL,
+				QUADRILATERAL,
+				HEXAHEDRAL,
+				PYRAMID,
+				WEDGE,
+				POLYHEDRAL
+			};
+
+			return candidate_set.find(x) != candidate_set.end();
+		}
+
+		bool CELL::isValidElemStr(const std::string &x)
+		{
+			static const std::set<std::string> candidate_set{
+				"mixed",
+				"triangular",
+				"tetrahedral",
+				"quadrilateral",
+				"hexahedral",
+				"pyramid",
+				"wedge",
+				"prism",
+				"polyhedral"
+			};
+
+			std::string x_(x);
+			formalize(x_);
+			return candidate_set.find(x_) == candidate_set.end();
+		}
+
+		const std::string &CELL::elem_idx2str(int x)
+		{
+			static const std::map<int, std::string> mapping_set{
+				std::pair<int, std::string>(CELL::MIXED, "mixed"),
+				std::pair<int, std::string>(CELL::TRIANGULAR, "triangular"),
+				std::pair<int, std::string>(CELL::TETRAHEDRAL, "tetrahedral"),
+				std::pair<int, std::string>(CELL::QUADRILATERAL, "quadrilateral"),
+				std::pair<int, std::string>(CELL::HEXAHEDRAL, "hexahedral"),
+				std::pair<int, std::string>(CELL::PYRAMID, "pyramid"),
+				std::pair<int, std::string>(CELL::WEDGE, "wedge"),
+				std::pair<int, std::string>(CELL::POLYHEDRAL, "polyhedral")
+			};
+
+			auto it = mapping_set.find(x);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid CELL-ELEM-TYPE index.");
+			else
+				return it->second;
+		}
+
+		int CELL::elem_str2idx(const std::string &x)
+		{
+			static const std::map<std::string, int> mapping_set{
+				std::pair<std::string, int>("mixed", CELL::MIXED),
+				std::pair<std::string, int>("triangular", CELL::TRIANGULAR),
+				std::pair<std::string, int>("tri", CELL::TRIANGULAR),
+				std::pair<std::string, int>("tetrahedral", CELL::TETRAHEDRAL),
+				std::pair<std::string, int>("tet", CELL::TETRAHEDRAL),
+				std::pair<std::string, int>("quadrilateral", CELL::QUADRILATERAL),
+				std::pair<std::string, int>("quad", CELL::QUADRILATERAL),
+				std::pair<std::string, int>("hexahedral", CELL::HEXAHEDRAL),
+				std::pair<std::string, int>("hex", CELL::HEXAHEDRAL),
+				std::pair<std::string, int>("pyramid", CELL::PYRAMID),
+				std::pair<std::string, int>("wedge", CELL::WEDGE),
+				std::pair<std::string, int>("prism", CELL::WEDGE),
+				std::pair<std::string, int>("polyhedral", CELL::POLYHEDRAL)
+			};
+
+			auto it = mapping_set.find(x);
+			if (it == mapping_set.end())
+				throw std::runtime_error("\"" + x + "\" is not a valid CELL-ELEM-TYPE string.");
+			else
+				return it->second;
+		}
+
+		void CELL::repr(std::ostream &out)
+		{
+			out << "(" << std::dec << identity() << " (";
+			out << std::hex;
+			out << zone() << " " << first_index() << " " << last_index() << " ";
+			out << m_type << " " << m_elem << ")";
+
+			if (m_elem != CELL::MIXED)
+				out << ")" << std::endl;
+			else
+			{
+				out << "(";
+
+				const size_t N = num();
+				for (size_t i = 0; i < N; ++i)
+				{
+					if (i % 40 == 0)
+						out << std::endl;
+					out << " " << elem(i);
+				}
+				out << std::endl << "))" << std::endl;
+			}
+		}
+
+		void MESH::raw2derived()
+		{
+			/************************* Allocate storage ***************************/
+			m_node.resize(numOfNode());
+			m_face.resize(numOfFace());
+			m_cell.resize(numOfCell());
+
+			/************************ Set initial values **************************/
+			for (auto &e : m_node)
+			{
+				e.coordinate.z() = 0.0;
+				e.atBdry = false;
+#ifdef XF_EXTRACT_NODE_CONNECTIVITY
+				e.adjacentNode.clear();
+				e.dependentFace.clear();
+				e.dependentCell.clear();
+#endif // XF_EXTRACT_NODE_CONNECTIVITY
+			}
+			for (auto &e : m_face)
+			{
+				e.center.z() = 0.0;
+				e.n_LR.z() = 0.0;
+				e.n_RL.z() = 0.0;
+			}
+			for (auto &e : m_cell)
+			{
+				e.center.z() = 0.0;
+			}
+
+			/************************* Parse node and face ************************/
+			// Basic records
+			for (auto curPtr : m_content)
+			{
+				if (curPtr->identity() == SECTION::NODE)
+				{
+					auto curObj = dynamic_cast<NODE*>(curPtr);
+
+					// Node type within this zone
+					const bool flag = curObj->is_boundary_node();
+
+					// 1-based global node index
+					const size_t cur_first = curObj->first_index();
+					const size_t cur_last = curObj->last_index();
+
+					for (size_t i = cur_first; i <= cur_last; ++i)
+					{
+						// Node Coordinates
+						curObj->get_coordinate(i - cur_first, node(i).coordinate.data());
+
+						// Node on boundary or not
+						node(i).atBdry = flag;
+					}
+				}
+
+				if (curPtr->identity() == SECTION::FACE)
+				{
+					auto curObj = dynamic_cast<FACE*>(curPtr);
+
+					// 1-based global face index
+					const size_t cur_first = curObj->first_index();
+					const size_t cur_last = curObj->last_index();
+
+					// Face type of this zone
+					const int ft = curObj->face_type();
+
+					for (size_t i = cur_first; i <= cur_last; ++i)
+					{
+						const auto &cnct = curObj->connectivity(i - cur_first);
+
+						// Check consistency of face-type
+						if (ft == 0)
+							face(i).type = cnct.x;
+						else if (cnct.x != ft)
+							throw std::runtime_error("Internal error!");
+						else
+							face(i).type = ft;
+
+						// Nodes within this face, 1-based node index are stored, right-hand convention is preserved.
+						face(i).includedNode.assign(cnct.n, cnct.n + cnct.x);
+
+						// Adjacent cells, 1-based cell index are stored, 0 stands for boundary, right-hand convention is preserved.
+						size_t lc = cnct.cl(), rc = cnct.cr();
+						face(i).leftCell = lc;
+						face(i).rightCell = rc;
+						if (lc != 0)
+							cell(lc).includedFace.push_back(i);
+						if (rc != 0)
+							cell(rc).includedFace.push_back(i);
+
+						// Face on boundary or not
+						face(i).atBdry = (cnct.c0() == 0 || cnct.c1() == 0);
+
+						//Face area & center
+						if (cnct.x == FACE::LINEAR)
+						{
+							auto na = cnct.n[0], nb = cnct.n[1];
+							auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data();
+
+							face(i).area = distance(p1, p2);
+							line_center(p1, p2, face(i).center.data());
+							line_normal(p1, p2, face(i).n_LR.data(), face(i).n_RL.data());
+						}
+						else if (cnct.x == FACE::TRIANGULAR)
+						{
+							auto na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2];
+							auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data(), p3 = node(nc).coordinate.data();
+
+							face(i).area = triangle_area(p1, p2, p3);
+							triangle_center(p1, p2, p3, face(i).center.data());
+							triangle_normal(p1, p2, p3, face(i).n_LR.data(), face(i).n_RL.data());
+						}
+						else if (cnct.x == FACE::QUADRILATERAL)
+						{
+							auto na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2], nd = cnct.n[3];
+							auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data(), p3 = node(nc).coordinate.data(), p4 = node(nd).coordinate.data();
+
+							face(i).area = quadrilateral_area(p1, p2, p3, p4);
+							quadrilateral_center(p1, p2, p3, p4, face(i).center.data());
+							quadrilateral_normal(p1, p2, p3, p4, face(i).n_LR.data(), face(i).n_RL.data());
+						}
+						else if (cnct.x == FACE::POLYGONAL)
+							throw std::runtime_error("Not supported currently!");
+						else
+							throw std::runtime_error("Internal error!");
+					}
+				}
+			}
+#ifdef XF_EXTRACT_NODE_CONNECTIVITY
+			// Adjacent nodes, dependent faces, and dependent cells of each node
+			for (auto curPtr : m_content) // Count all occurance
+			{
+				if (curPtr->identity() == SECTION::FACE)
+				{
+					auto curObj = dynamic_cast<FACE*>(curPtr);
+
+					// 1-based index
+					const auto cur_first = curObj->first_index();
+					const auto cur_last = curObj->last_index();
+
+					for (auto i = cur_first; i <= cur_last; ++i)
+					{
+						const auto &cnct = curObj->connectivity(i - cur_first);
+						const auto loc_leftCell = cnct.cl();
+						const auto loc_rightCell = cnct.cr();
+
+						for (int j = 0; j < cnct.x; ++j)
+						{
+							const auto idx_ = cnct.n[j];
+							auto &curNode = node(idx_);
+
+							const auto loc_leftNode = cnct.leftAdj(j);
+							const auto loc_rightNode = cnct.rightAdj(j);
+
+							// Adjacent nodes
+							curNode.adjacentNode.push_back(loc_leftNode);
+							if (cnct.x > 2)
+								curNode.adjacentNode.push_back(loc_rightNode);
+
+							// Dependent faces
+							curNode.dependentFace.push_back(i);
+
+							// Dependent cells
+							if (loc_leftCell != 0)
+								curNode.dependentCell.push_back(loc_leftCell);
+							if (loc_rightCell != 0)
+								curNode.dependentCell.push_back(loc_rightCell);
+						}
+					}
+				}
+			}
+			for (size_t i = 1; i <= numOfNode(); ++i) // Remove duplication
+			{
+				auto &curNode = node(i);
+
+				const std::set<size_t> st1(curNode.adjacentNode.begin(), curNode.adjacentNode.end());
+				curNode.adjacentNode.assign(st1.begin(), st1.end());
+
+				const std::set<size_t> st2(curNode.dependentCell.begin(), curNode.dependentCell.end());
+				curNode.dependentCell.assign(st2.begin(), st2.end());
+			}
+#endif  // XF_EXTRACT_NODE_CONNECTIVITY
+
+			/*********************** Parse records of cell ************************/
+			for (auto curPtr : m_content)
+			{
+				if (curPtr->identity() == SECTION::CELL)
+				{
+					auto curObj = dynamic_cast<CELL*>(curPtr);
+
+					// 1-based global face index
+					const size_t cur_first = curObj->first_index();
+					const size_t cur_last = curObj->last_index();
+
+					for (size_t i = cur_first; i <= cur_last; ++i)
+					{
+						auto &curCell = cell(i);
+
+						// Element type of cells in this zone
+						curCell.type = curObj->elem(i - cur_first);
+
+						// Organize order of included nodes and faces
+						cell_standardization(curCell);
+
+						// Adjacent cells and normal
+						curCell.adjacentCell.resize(curCell.includedFace.size());
+						curCell.n.resize(curCell.includedFace.size());
+						curCell.S.resize(curCell.includedFace.size());
+						for (size_t j = 0; j < curCell.includedFace.size(); ++j)
+						{
+							const auto f_idx = curCell.includedFace[j];
+							const auto &f = face(f_idx);
+							const auto c0 = f.leftCell, c1 = f.rightCell;
+							if (c0 == i)
+							{
+								curCell.adjacentCell[j] = c1;
+								curCell.n[j] = f.n_LR;
+							}
+							else if (c1 == i)
+							{
+								curCell.adjacentCell[j] = c0;
+								curCell.n[j] = f.n_RL;
+							}
+							else
+								throw std::runtime_error("Internal error.");
+
+							for (int k = 1; k <= dimension(); ++k)
+								curCell.S[j](k) = f.area * curCell.n[j](k);
+						}
+
+						// Volume and Centroid. 
+						// Based on the divergence theorem. See (5.15) and (5.17) of Jiri Blazek's CFD book.
+						curCell.volume = 0.0;
+						curCell.center.x() = 0.0; curCell.center.y() = 0.0; curCell.center.z() = 0.0;
+						for (size_t j = 0; j < curCell.includedFace.size(); ++j)
+						{
+							const auto cfi = curCell.includedFace.at(j);
+							const auto &cf = face(cfi);
+							const auto &cf_c = cf.center;
+							const auto &cf_S = curCell.S.at(j);
+							const auto w = dot_product(cf_c, cf_S);
+							curCell.volume += w;
+							for (int k = 1; k <= dimension(); ++k)
+								curCell.center(k) += w * cf_c(k);
+						}
+						curCell.volume /= dimension();
+						const double cde = (1.0 + dimension()) * curCell.volume;
+						for (int k = 1; k <= dimension(); ++k)
+							curCell.center(k) /= cde;
+					}
+				}
+			}
+
+			/*********************** Parse records of zone ************************/
+			m_totalZoneNum = 0;
+			m_zoneMapping.clear();
+			for (auto curPtr : m_content) // Determine the total num of zones.
+			{
+				auto curObj = dynamic_cast<RANGE*>(curPtr);
+				if (curObj == nullptr)
+					continue;
+
+				const auto curZone = curObj->zone();
+				if (m_zoneMapping.find(curZone) == m_zoneMapping.end())
+					m_zoneMapping[curZone] = m_totalZoneNum++;
+				else
+					throw std::runtime_error("Duplicated zone detected.");
+			}
+			m_zone.clear();
+			m_zone.resize(numOfZone());
+			for (auto curPtr : m_content) // Assign zone contents
+			{
+				auto curObj = dynamic_cast<RANGE*>(curPtr);
+				if (curObj == nullptr)
+					continue;
+
+				const auto curZoneIdx = curObj->zone();
+				auto &curZone = m_zone.at(m_zoneMapping.at(curZoneIdx));
+				curZone.ID = curZoneIdx;
+				curZone.obj = curObj;
+			}
+			for (auto e : m_content)
+			{
+				const auto curObj = dynamic_cast<ZONE*>(e);
+				if (curObj == nullptr)
+					continue;
+
+				const auto curZoneIdx = curObj->zone();
+				auto &curZone = m_zone.at(m_zoneMapping.at(curZoneIdx));
+				curZone.name = curObj->name();
+				curZone.type = curObj->type();
+			}
+		}
+
+		void MESH::derived2raw()
+		{
+			// TODO
+		}
+
+		MESH::MESH(const std::string &inp, std::ostream &fout) :
+			DIM(3),
+			m_totalNodeNum(0),
+			m_totalCellNum(0),
+			m_totalFaceNum(0),
+			m_totalZoneNum(0)
+		{
+			readFromFile(inp, fout);
+		}
+
+		void MESH::readFromFile(const std::string &src, std::ostream &fout)
+		{
+			// Open grid file
+			std::ifstream fin(src);
+			if (fin.fail())
+				throw std::runtime_error("Failed to open input grid file: \"" + src + "\".");
+
+			// Clear existing records if any.
+			clear_entry();
+
+			// Read contents
+			while (!fin.eof())
+			{
+				skip_white(fin);
+				eat(fin, '(');
+				int ti = -1;
+				fin >> std::dec >> ti;
+				if (ti == SECTION::COMMENT)
+				{
+					eat(fin, '\"');
+					std::string ts;
+					char tc;
+					while ((tc = fin.get()) != '\"')
+						ts.push_back(tc);
+					eat(fin, ')');
+					add_entry(new COMMENT(ts));
+					skip_white(fin);
+				}
+				else if (ti == SECTION::HEADER)
+				{
+					eat(fin, '\"');
+					std::string ts;
+					char tc;
+					while ((tc = fin.get()) != '\"')
+						ts.push_back(tc);
+					eat(fin, ')');
+					add_entry(new HEADER(ts));
+					skip_white(fin);
+				}
+				else if (ti == SECTION::DIMENSION)
+				{
+					int nd = 0;
+					fin >> std::dec >> nd;
+					eat(fin, ')');
+					add_entry(new DIMENSION(nd));
+					skip_white(fin);
+					m_dim = nd;
+					m_is3D = (nd == 3);
+				}
+				else if (ti == SECTION::NODE)
+				{
+					eat(fin, '(');
+					int zone;
+					fin >> std::hex >> zone;
+					if (zone == 0)
+					{
+						// If zone-id is 0, indicating total number of nodes in the mesh.
+						int tmp;
+						fin >> std::hex;
+						fin >> tmp;
+						if (tmp != 1)
+							throw std::runtime_error("Invalid \"first-index\" in NODE declaration!");
+						fin >> m_totalNodeNum;
+						fout << "Total number of nodes: " << m_totalNodeNum << std::endl;
+						fin >> tmp;
+						if (tmp != 0)
+							throw std::runtime_error("Invalid \"type\" in NODE declaration!");
+						char ndc = fin.get();
+						if (ndc != ')')
+						{
+							fin >> tmp;
+							eat(fin, ')');
+						}
+						eat(fin, ')');
+					}
+					else
+					{
+						// If zone-id is positive, it indicates the zone to which the nodes belong.
+						int first, last, tp, nd;
+						fin >> std::hex;
+						fin >> first >> last;
+						fin >> tp >> nd;
+						auto e = new NODE(zone, first, last, tp, nd);
+						eat(fin, ')');
+						eat(fin, '(');
+						fout << "Reading " << e->num() << " nodes in zone " << zone << " (from " << first << " to " << last << "), whose type is \"" << NODE::idx2str(tp) << "\"  ... ";
+
+						if (nd != dimension())
+							throw std::runtime_error("Inconsistent with previous DIMENSION declaration!");
+
+						if (nd == 3)
+						{
+							double x, y, z;
+							for (int i = first; i <= last; ++i)
+							{
+								size_t i_loc = i - first;
+								fin >> x >> y >> z;
+								e->set_coordinate(i_loc, x, y, z);
+							}
+						}
+						else
+						{
+							double x, y;
+							for (int i = first; i <= last; ++i)
+							{
+								size_t i_loc = i - first;
+								fin >> x >> y;
+								e->set_coordinate(i_loc, x, y);
+							}
+						}
+						eat(fin, ')');
+						eat(fin, ')');
+						fout << "Done!" << std::endl;
+						add_entry(e);
+					}
+					skip_white(fin);
+				}
+				else if (ti == SECTION::CELL)
+				{
+					eat(fin, '(');
+					int zone;
+					fin >> std::hex >> zone;
+					if (zone == 0)
+					{
+						// If zone-id is 0, indicating total number of cells in the mesh.
+						int tmp;
+						fin >> std::hex;
+						fin >> tmp;
+						if (tmp != 1)
+							throw std::runtime_error("Invalid \"first-index\" in CELL declaration!");
+						fin >> m_totalCellNum;
+						fout << "Total number of cells: " << m_totalCellNum << std::endl;
+						fin >> tmp;
+						if (tmp != 0)
+							throw std::runtime_error("Invalid \"type\" in CELL declaration!");
+						char ndc = fin.get();
+						if (ndc != ')')
+						{
+							fin >> tmp;
+							eat(fin, ')');
+						}
+						eat(fin, ')');
+					}
+					else
+					{
+						// If zone-id is positive, it indicates the zone to which the cells belong.
+						int first, last, tp, elem;
+						fin >> std::hex;
+						fin >> first >> last;
+						fin >> tp >> elem;
+						auto e = new CELL(zone, first, last, tp, elem);
+						eat(fin, ')');
+
+						if (elem == 0)
+						{
+							fout << "Reading " << e->num() << " mixed cells in zone " << zone << " (from " << first << " to " << last << ") ... ";
+							eat(fin, '(');
+							for (int i = first; i <= last; ++i)
+							{
+								fin >> elem;
+								const size_t i_loc = i - first;
+								if (CELL::isValidElemIdx(elem))
+									e->elem(i_loc) = elem;
+								else
+									throw std::runtime_error("Invalid CELL-ELEM-TYPE: \"" + std::to_string(elem) + "\"");
+							}
+							eat(fin, ')');
+							fout << "Done!" << std::endl;
+						}
+						else
+							fout << e->num() << " " << CELL::elem_idx2str(elem) << " in zone " << zone << " (from " << first << " to " << last << ")" << std::endl;
+
+						eat(fin, ')');
+						add_entry(e);
+					}
+					skip_white(fin);
+				}
+				else if (ti == SECTION::FACE)
+				{
+					eat(fin, '(');
+					int zone;
+					fin >> std::hex >> zone;
+					if (zone == 0)
+					{
+						// If zone-id is 0, indicating total number of faces in the mesh.
+						int tmp;
+						fin >> tmp;
+						if (tmp != 1)
+							throw std::runtime_error("Invalid \"first-index\" in FACE declaration!");
+						fin >> m_totalFaceNum;
+						fout << "Total number of faces: " << m_totalFaceNum << std::endl;
+						fin >> tmp;
+						char ndc = fin.get();
+						if (ndc != ')')
+						{
+							fin >> tmp;
+							eat(fin, ')');
+						}
+						eat(fin, ')');
+					}
+					else
+					{
+						// If zone-id is positive, it indicates a regular face section and will be
+						// followed by a body containing information about the grid connectivity.
+						size_t first, last;
+						int bc, face;
+						fin >> first >> last;
+						fin >> bc >> face;
+						auto e = new FACE(zone, first, last, bc, face);
+						eat(fin, ')');
+						eat(fin, '(');
+						fout << "Reading " << e->num() << " " << FACE::idx2str(face) << " faces in zone " << zone << " (from " << first << " to " << last << "), whose B.C. is \"" << BC::idx2str(bc) << "\" ... ";
+
+						size_t tmp_n[4];
+						size_t tmp_c[2];
+						if (face == FACE::MIXED)
+						{
+							int x = -1;
+							for (size_t i = first; i <= last; ++i)
+							{
+								// Local index
+								size_t i_loc = i - first;
+
+								// Read connectivity record
+								fin >> x;
+								if (x <= 1 || x >= 5)
+									throw std::invalid_argument("Invalid node num in the mixed face.");
+								for (int j = 0; j < x; ++j)
+									fin >> tmp_n[j];
+								fin >> tmp_c[0] >> tmp_c[1];
+
+								// Store current connectivity info
+								e->connectivity(i_loc).set(x, tmp_n, tmp_c);
+							}
+						}
+						else
+						{
+							for (size_t i = first; i <= last; ++i)
+							{
+								// Local index
+								size_t i_loc = i - first;
+
+								// Read connectivity record
+								for (int j = 0; j < face; ++j)
+									fin >> tmp_n[j];
+								fin >> tmp_c[0] >> tmp_c[1];
+
+								// Store current connectivity info
+								e->connectivity(i_loc).set(face, tmp_n, tmp_c);
+							}
+						}
+						eat(fin, ')');
+						eat(fin, ')');
+						fout << "Done!" << std::endl;
+						add_entry(e);
+					}
+					skip_white(fin);
+				}
+				else if (ti == SECTION::ZONE || ti == SECTION::ZONE_MESHING)
+				{
+					eat(fin, '(');
+					int zone;
+					fin >> std::dec >> zone;
+					std::string ztp;
+					fin >> ztp;
+					skip_white(fin);
+					std::string zname;
+					char t0;
+					while ((t0 = fin.get()) != ')')
+						zname.push_back(t0);
+					eat(fin, '(');
+					eat(fin, ')');
+					eat(fin, ')');
+					auto e = new ZONE(zone, ztp, zname);
+					add_entry(e);
+					skip_white(fin);
+					fout << "ZONE " << e->zone() << ", named " << R"(")" << e->name() << R"(", )" << "is " << R"(")" << e->type() << R"(")" << std::endl;
+				}
+				else
+					throw std::runtime_error("Unsupported section index: " + std::to_string(ti));
+			}
+
+			// Close grid file
+			fin.close();
+
+			// Re-orginize grid connectivities in a much easier way,
+			// and compute some derived quantities.
+			fout << "Converting into high-level representation ... ";
+			raw2derived();
+			fout << "Done!" << std::endl;
+		}
+
 		void MESH::writeToFile(const std::string &dst) const
 		{
 			if (numOfCell() == 0)
@@ -81,7 +1054,7 @@ namespace GridTool
 		{
 			// Check num of total faces
 			if (tet.includedFace.size() != 4)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(tet.type) + R"(" and num of faces: )" + std::to_string(tet.includedFace.size()));
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_idx2str(tet.type) + R"(" and num of faces: )" + std::to_string(tet.includedFace.size()));
 
 			// Ensure all faces are triangular
 			const auto &f0 = face(tet.includedFace.at(0));
@@ -135,7 +1108,7 @@ namespace GridTool
 		{
 			// Check num of total faces
 			if (pyramid.includedFace.size() != 5)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.includedFace.size()));
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_idx2str(pyramid.type) + R"(" and num of faces: )" + std::to_string(pyramid.includedFace.size()));
 
 			// Find the bottom quad and ensure other faces are triangular.
 			size_t f0_idx = 0;
@@ -273,7 +1246,7 @@ namespace GridTool
 		{
 			// Check num of total faces
 			if (prism.includedFace.size() != 5)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(prism.type) + R"(" and num of faces: )" + std::to_string(prism.includedFace.size()));
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_idx2str(prism.type) + R"(" and num of faces: )" + std::to_string(prism.includedFace.size()));
 
 			// Ensure there're only 2 triangle and 3 quad
 			size_t f0_idx = 0, f1_idx = 0;
@@ -423,7 +1396,7 @@ namespace GridTool
 		{
 			// Check num of total faces
 			if (hex.includedFace.size() != 6)
-				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_type_idx2str(hex.type) + R"(" and num of faces: )" + std::to_string(hex.includedFace.size()));
+				throw std::runtime_error(R"(Mismatch between cell type ")" + CELL::elem_idx2str(hex.type) + R"(" and num of faces: )" + std::to_string(hex.includedFace.size()));
 
 			// Ensure all faces are quad
 			for (auto e : hex.includedFace)

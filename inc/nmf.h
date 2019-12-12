@@ -110,16 +110,8 @@ namespace GridTool
 
 		public:
 			BLOCK() = delete;
-			BLOCK(size_t nI, size_t nJ) : m_idx(0), m_name(""), m_dim{ nI, nJ, 1 }
-			{
-				if (nI < 2 || nJ < 2)
-					throw std::invalid_argument("Invalid dimension.");
-			}
-			BLOCK(size_t nI, size_t nJ, size_t nK) : m_idx(0), m_name(""), m_dim{ nI, nJ, nK }
-			{
-				if (nI < 2 || nJ < 2 || nK < 2)
-					throw std::invalid_argument("Invalid dimension.");
-			}
+			BLOCK(size_t nI, size_t nJ);
+			BLOCK(size_t nI, size_t nJ, size_t nK);
 			BLOCK(const BLOCK &rhs) : m_idx(rhs.index()), m_name(rhs.name()), m_dim{ rhs.IDIM(), rhs.JDIM(), rhs.KDIM() } {}
 			virtual ~BLOCK() = default;
 
@@ -399,10 +391,8 @@ namespace GridTool
 				establish_connections();
 			}
 
-			/// Copy constructor
-			/// Only copy dimensions.
 			Block3D(const Block3D &rhs) :
-				BLOCK(rhs.IDIM(), rhs.JDIM(), rhs.KDIM()),
+				BLOCK(rhs.IDIM(), rhs.JDIM(), rhs.KDIM()), // Only copy dimensions
 				m_cell(cell_num(), nullptr),
 				m_vertex(NumOfVertex),
 				m_frame(NumOfFrame),
@@ -534,47 +524,9 @@ namespace GridTool
 
 			size_t block_internal_node_num() const { return (IDIM() - 2) * (JDIM() - 2) * (KDIM() - 2); }
 
-			size_t surface_internal_node_num(short s) const
-			{
-				switch (s)
-				{
-				case 1:
-				case 2:
-					return (IDIM() - 2) * (JDIM() - 2);
-				case 3:
-				case 4:
-					return (JDIM() - 2) * (KDIM() - 2);
-				case 5:
-				case 6:
-					return (KDIM() - 2) * (IDIM() - 2);
-				default:
-					throw not_a_surface(s);
-				}
-			}
+			size_t surface_internal_node_num(short s) const;
 
-			size_t frame_node_num(short idx) const
-			{
-				switch (idx - 1)
-				{
-				case 4:
-				case 5:
-				case 6:
-				case 7:
-					return IDIM();
-				case 8:
-				case 9:
-				case 10:
-				case 11:
-					return JDIM();
-				case 0:
-				case 1:
-				case 2:
-				case 3:
-					return KDIM();
-				default:
-					throw not_a_frame(idx);
-				}
-			}
+			size_t frame_node_num(short idx) const;
 
 			size_t frame_internal_node_num(short idx) const
 			{
@@ -585,41 +537,9 @@ namespace GridTool
 					throw std::runtime_error("Internal error: too less nodes not detected when constructing.");
 			}
 
-			size_t surface_node_num(short idx) const
-			{
-				switch (idx - 1)
-				{
-				case 0:
-				case 1:
-					return IDIM() * JDIM();
-				case 2:
-				case 3:
-					return JDIM() * KDIM();
-				case 4:
-				case 5:
-					return KDIM() * IDIM();
-				default:
-					throw not_a_surface(idx);
-				}
-			}
+			size_t surface_node_num(short idx) const;
 
-			size_t surface_face_num(short idx) const
-			{
-				switch (idx - 1)
-				{
-				case 0:
-				case 1:
-					return (IDIM() - 1) * (JDIM() - 1);
-				case 2:
-				case 3:
-					return (JDIM() - 1) * (KDIM() - 1);
-				case 4:
-				case 5:
-					return (KDIM() - 1) * (IDIM() - 1);
-				default:
-					throw not_a_surface(idx);
-				}
-			}
+			size_t surface_face_num(short idx) const;
 
 			size_t shell_face_num() const
 			{
@@ -629,69 +549,9 @@ namespace GridTool
 				return ret;
 			}
 
-			size_t &surface_face_index(short f, size_t pri, size_t sec)
-			{
-				HEX_CELL *p = nullptr;
-				switch (f)
-				{
-				case 1:
-					p = &cell(pri, sec, 1);
-					break;
-				case 2:
-					p = &cell(pri, sec, KDIM() - 1);
-					break;
-				case 3:
-					p = &cell(1, pri, sec);
-					break;
-				case 4:
-					p = &cell(IDIM() - 1, pri, sec);
-					break;
-				case 5:
-					p = &cell(sec, 1, pri);
-					break;
-				case 6:
-					p = &cell(sec, JDIM() - 1, pri);
-					break;
-				default:
-					throw not_a_surface(f);
-				}
-				return p->FaceSeq(f);
-			}
+			size_t &surface_face_index(short f, size_t pri, size_t sec);
 
-			size_t &vertex_node_index(short v)
-			{
-				HEX_CELL *p = nullptr;
-				switch (v)
-				{
-				case 1:
-					p = &cell(1, 1, 1);
-					break;
-				case 2:
-					p = &cell(1, 1, KDIM() - 1);
-					break;
-				case 3:
-					p = &cell(IDIM() - 1, 1, KDIM() - 1);
-					break;
-				case 4:
-					p = &cell(IDIM() - 1, 1, 1);
-					break;
-				case 5:
-					p = &cell(1, JDIM() - 1, 1);
-					break;
-				case 6:
-					p = &cell(1, JDIM() - 1, KDIM() - 1);
-					break;
-				case 7:
-					p = &cell(IDIM() - 1, JDIM() - 1, KDIM() - 1);
-					break;
-				case 8:
-					p = &cell(IDIM() - 1, JDIM() - 1, 1);
-					break;
-				default:
-					throw not_a_vertex(v);
-				}
-				return p->NodeSeq(v);
-			}
+			size_t &vertex_node_index(short v);
 
 			void interior_node_occurance(size_t i, size_t j, size_t k, std::vector<size_t*> &oc)
 			{
@@ -705,148 +565,11 @@ namespace GridTool
 				oc[7] = &cell(i, j, k).NodeSeq(1);
 			}
 
-			void surface_node_coordinate(short f, size_t pri_seq, size_t sec_seq, size_t &i, size_t &j, size_t &k)
-			{
-				switch (f)
-				{
-				case 1:
-					k = 1;
-					i = pri_seq;
-					j = sec_seq;
-					break;
-				case 2:
-					k = KDIM();
-					i = pri_seq;
-					j = sec_seq;
-					break;
-				case 3:
-					i = 1;
-					j = pri_seq;
-					k = sec_seq;
-					break;
-				case 4:
-					i = IDIM();
-					j = pri_seq;
-					k = sec_seq;
-					break;
-				case 5:
-					j = 1;
-					k = pri_seq;
-					i = sec_seq;
-					break;
-				case 6:
-					j = JDIM();
-					k = pri_seq;
-					i = sec_seq;
-					break;
-				default:
-					throw not_a_surface(f);
-				}
-			}
+			void surface_node_coordinate(short f, size_t pri_seq, size_t sec_seq, size_t &i, size_t &j, size_t &k);
 
-			void surface_internal_node_occurance(short f, size_t pri, size_t sec, std::vector<size_t*> &oc)
-			{
-				size_t i = 0, j = 0, k = 0;
-				surface_node_coordinate(f, pri, sec, i, j, k);
-				switch (f)
-				{
-				case 1:
-					oc[0] = &cell(i, j, k).NodeSeq(1);
-					oc[1] = &cell(i - 1, j, k).NodeSeq(4);
-					oc[2] = &cell(i, j - 1, k).NodeSeq(5);
-					oc[3] = &cell(i - 1, j - 1, k).NodeSeq(8);
-					break;
-				case 2:
-					oc[0] = &cell(i, j, k - 1).NodeSeq(2);
-					oc[1] = &cell(i - 1, j, k - 1).NodeSeq(3);
-					oc[2] = &cell(i, j - 1, k - 1).NodeSeq(6);
-					oc[3] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
-					break;
-				case 3:
-					oc[0] = &cell(i, j, k).NodeSeq(1);
-					oc[1] = &cell(i, j - 1, k).NodeSeq(5);
-					oc[2] = &cell(i, j, k - 1).NodeSeq(2);
-					oc[3] = &cell(i, j - 1, k - 1).NodeSeq(6);
-					break;
-				case 4:
-					oc[0] = &cell(i - 1, j, k).NodeSeq(4);
-					oc[1] = &cell(i - 1, j - 1, k).NodeSeq(8);
-					oc[2] = &cell(i - 1, j, k - 1).NodeSeq(3);
-					oc[3] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
-					break;
-				case 5:
-					oc[0] = &cell(i, j, k).NodeSeq(1);
-					oc[1] = &cell(i - 1, j, k).NodeSeq(4);
-					oc[2] = &cell(i, j, k - 1).NodeSeq(2);
-					oc[3] = &cell(i - 1, j, k - 1).NodeSeq(3);
-					break;
-				case 6:
-					oc[0] = &cell(i, j - 1, k).NodeSeq(5);
-					oc[1] = &cell(i - 1, j - 1, k).NodeSeq(8);
-					oc[2] = &cell(i, j - 1, k - 1).NodeSeq(6);
-					oc[3] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
-					break;
-				default:
-					throw not_a_surface(f);
-				}
-			}
+			void surface_internal_node_occurance(short f, size_t pri, size_t sec, std::vector<size_t*> &oc);
 
-			void frame_internal_node_occurace(short f, size_t idx, std::vector<size_t*> &oc)
-			{
-				switch (f - 1)
-				{
-				case 0:
-					oc[0] = &cell(1, 1, idx).NodeSeq(1);
-					oc[1] = &cell(1, 1, idx - 1).NodeSeq(2);
-					break;
-				case 1:
-					oc[0] = &cell(IDIM() - 1, 1, idx).NodeSeq(4);
-					oc[1] = &cell(IDIM() - 1, 1, idx - 1).NodeSeq(3);
-					break;
-				case 2:
-					oc[0] = &cell(IDIM() - 1, JDIM() - 1, idx).NodeSeq(8);
-					oc[1] = &cell(IDIM() - 1, JDIM() - 1, idx - 1).NodeSeq(7);
-					break;
-				case 3:
-					oc[0] = &cell(1, JDIM() - 1, idx).NodeSeq(5);
-					oc[1] = &cell(1, JDIM() - 1, idx - 1).NodeSeq(6);
-					break;
-				case 4:
-					oc[0] = &cell(idx, 1, 1).NodeSeq(1);
-					oc[1] = &cell(idx - 1, 1, 1).NodeSeq(4);
-					break;
-				case 5:
-					oc[0] = &cell(idx, 1, KDIM() - 1).NodeSeq(2);
-					oc[1] = &cell(idx - 1, 1, KDIM() - 1).NodeSeq(3);
-					break;
-				case 6:
-					oc[0] = &cell(idx, JDIM() - 1, KDIM() - 1).NodeSeq(6);
-					oc[1] = &cell(idx - 1, JDIM() - 1, KDIM() - 1).NodeSeq(7);
-					break;
-				case 7:
-					oc[0] = &cell(idx, JDIM() - 1, 1).NodeSeq(5);
-					oc[1] = &cell(idx - 1, JDIM() - 1, 1).NodeSeq(8);
-					break;
-				case 8:
-					oc[0] = &cell(1, idx, 1).NodeSeq(1);
-					oc[1] = &cell(1, idx - 1, 1).NodeSeq(5);
-					break;
-				case 9:
-					oc[0] = &cell(1, idx, KDIM() - 1).NodeSeq(2);
-					oc[1] = &cell(1, idx - 1, KDIM() - 1).NodeSeq(6);
-					break;
-				case 10:
-					oc[0] = &cell(IDIM() - 1, idx, KDIM() - 1).NodeSeq(3);
-					oc[1] = &cell(IDIM() - 1, idx - 1, KDIM() - 1).NodeSeq(7);
-					break;
-				case 11:
-					oc[0] = &cell(IDIM() - 1, idx, 1).NodeSeq(4);
-					oc[1] = &cell(IDIM() - 1, idx - 1, 1).NodeSeq(8);
-					break;
-				default:
-					throw not_a_frame(f);
-				}
-			}
+			void frame_internal_node_occurace(short f, size_t idx, std::vector<size_t*> &oc);
 		};
 
 		class Mapping2D
@@ -1211,6 +934,7 @@ namespace GridTool
 				return ret;
 			}
 
+			// 1-based indexing
 			Block3D &block(size_t n)
 			{
 				if (1 <= n && n <= nBlock())

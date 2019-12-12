@@ -4,12 +4,15 @@
 #include <cmath>
 #include <array>
 #include <string>
+#include <vector>
 #include <exception>
 
 namespace GridTool
 {
 	namespace COMMON
 	{
+		double relaxation(double a, double b, double x);
+
 		class wrong_index : public std::exception
 		{
 		protected:
@@ -38,16 +41,7 @@ namespace GridTool
 
 		public:
 			DIM() = delete;
-			DIM(int dim, bool is3d = true) : m_is3D(is3d)
-			{
-				if (dim == 2 || dim == 3)
-					m_dim = dim;
-				else
-					throw wrong_dimension(dim);
-
-				if (dim == 3 && is3d == false)
-					throw std::invalid_argument("Inconsistent dimensions.");
-			}
+			DIM(int dim, bool is3d = true);
 			DIM(const DIM &rhs) = default;
 			virtual ~DIM() = default;
 

@@ -12,8 +12,9 @@ namespace GridTool
 {
 	namespace SPACING
 	{
-		std::vector<double> uniform(size_t n);
-		std::vector<double> uniform(double start, double end, size_t n);
+		int uniform(size_t n, std::vector<double> &dst);
+		int uniform(double start, double end, size_t n, std::vector<double> &dst);
+
 		std::vector<double> expansion(const std::vector<double> &seq, double start, double end);
 		std::vector<double> chebshev(double start, double end, size_t n);
 		std::vector<double> chebshev_multi(const std::vector<double> &seg, const std::vector<size_t> &n);

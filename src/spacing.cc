@@ -1,23 +1,44 @@
 #include <cmath>
 #include <algorithm>
+#include "../inc/common.h"
 #include "../inc/spacing.h"
 
 namespace GridTool
 {
 	namespace SPACING
 	{
-		std::vector<double> uniform(size_t n)
-		{
-			std::vector<double> ret(n, 0.0);
+		using COMMON::relaxation;
 
-			return ret;
+		int uniform(size_t n, std::vector<double> &dst)
+		{
+			if (n == 0)
+				return -1;
+			if (n == 1)
+				return -2;
+
+			dst.resize(n);
+			for (size_t i = 0; i < n; ++i)
+			{
+				const double ratio = 1.0 * i / (n - 1);
+				dst[i] = relaxation(0, 1, ratio);
+			}
+			return 0;
 		}
 
-		std::vector<double> uniform(double start, double end, size_t n)
+		int uniform(double start, double end, size_t n, std::vector<double> &dst)
 		{
-			std::vector<double> ret(n, start);
+			if (n == 0)
+				return -1;
+			if (n == 1)
+				return -2;
 
-			return ret;
+			dst.resize(n);
+			for (size_t i = 0; i < n; ++i)
+			{
+				const double ratio = 1.0 * i / (n - 1);
+				dst[i] = relaxation(start, end, ratio);
+			}
+			return 0;
 		}
 
 		std::vector<double> expansion(const std::vector<double> &seq, double start, double end)

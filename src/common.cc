@@ -18,7 +18,7 @@ namespace GridTool
 			else
 				throw wrong_dimension(dim);
 
-			if (dim == 3 && is3d == false)
+			if (dim == 3 && !is3d)
 				throw std::invalid_argument("Inconsistent dimensions.");
 		}
 	}

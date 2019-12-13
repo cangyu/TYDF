@@ -47,10 +47,33 @@ namespace GridTool
 			m_cell.resize(numOfCell());
 
 			// Copy coordinates.
+			std::vector<bool> visited(m_node.size(), false);
 			for (size_t n = 1; n <= NBLK; ++n)
 			{
-				const auto &b = nmf->block(n);
+				auto &b = nmf->block(n);
 				auto g = p3d->block(n - 1);
+
+				const size_t nI = b.IDIM();
+				const size_t nJ = b.JDIM();
+				const size_t nK = b.KDIM();
+
+				for (size_t k = 1; k <= nK; ++k)
+					for (size_t j = 1; j <= nJ; ++j)
+						for (size_t i = 1; i <= nI; ++i)
+						{
+							const auto idx = b.node_index(i, j, k);
+							if (!visited[idx - 1])
+							{
+								m_node(idx).coordinate = g(i, j, k);
+								visited[idx - 1] = true;
+							}
+						}
+			}
+
+			// Copy connections.
+			for (size_t n = 1; n <= NBLK; ++n)
+			{
+				auto &b = nmf->block(n);
 
 				const size_t nI = b.IDIM();
 				const size_t nJ = b.JDIM();
@@ -60,16 +83,9 @@ namespace GridTool
 					for (size_t j = 1; j < nJ; ++j)
 						for (size_t i = 1; i < nI; ++i)
 						{
-							const auto &c = b.cell(i, j, k);
-							for (short l = 1; l <= NMF::Block3D::NumOfVertex; ++l)
-							{
-								auto ci = c.NodeSeq(l);
-							}
+							// TODO
 						}
 			}
-
-			// Copy connections.
-
 
 			// Convert to primary form.
 			derived2raw();

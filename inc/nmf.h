@@ -553,23 +553,22 @@ namespace GridTool
 
 			size_t &vertex_node_index(short v);
 
-			void interior_node_occurance(size_t i, size_t j, size_t k, std::vector<size_t*> &oc)
-			{
-				oc[0] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
-				oc[1] = &cell(i, j - 1, k - 1).NodeSeq(6);
-				oc[2] = &cell(i - 1, j, k - 1).NodeSeq(3);
-				oc[3] = &cell(i, j, k - 1).NodeSeq(2);
-				oc[4] = &cell(i - 1, j - 1, k).NodeSeq(8);
-				oc[5] = &cell(i, j - 1, k).NodeSeq(5);
-				oc[6] = &cell(i - 1, j, k).NodeSeq(4);
-				oc[7] = &cell(i, j, k).NodeSeq(1);
-			}
+			void interior_node_occurance(size_t i, size_t j, size_t k, std::vector<size_t*> &oc);
 
 			void surface_node_coordinate(short f, size_t pri_seq, size_t sec_seq, size_t &i, size_t &j, size_t &k);
 
 			void surface_internal_node_occurance(short f, size_t pri, size_t sec, std::vector<size_t*> &oc);
 
 			void frame_internal_node_occurace(short f, size_t idx, std::vector<size_t*> &oc);
+
+			size_t node_index(size_t i, size_t j, size_t k);
+
+		private:
+			short isVertexNode(size_t i, size_t j, size_t k) const;
+
+			void isFrameInternalNode(size_t i, size_t j, size_t k, short &f, size_t &idx) const;
+
+			void isSurfaceInternalNode(size_t i, size_t j, size_t k, short &s, size_t &pri, size_t &sec) const;
 		};
 
 		class Mapping2D
@@ -709,14 +708,7 @@ namespace GridTool
 
 			public:
 				ENTRY() : m_bc(-1), m_rg1() {}
-				ENTRY(const std::string &t, size_t B, short F, size_t S1, size_t E1, size_t S2, size_t E2) :
-					m_rg1(B, F, S1, E1, S2, E2)
-				{
-					if (BC::isValidBCStr(t))
-						m_bc = BC::str2idx(t);
-					else
-						throw std::runtime_error("Unsupported B.C. name: \"" + t + "\"");
-				}
+				ENTRY(const std::string &t, size_t B, short F, size_t S1, size_t E1, size_t S2, size_t E2);
 				ENTRY(const ENTRY &rhs) = default;
 				virtual ~ENTRY() = default;
 
@@ -750,14 +742,7 @@ namespace GridTool
 
 			public:
 				DoubleSideEntry() : m_rg2(), m_swap(false) {}
-				DoubleSideEntry(const std::string &t, size_t B1, short F1, size_t S11, size_t E11, size_t S12, size_t E12, size_t B2, short F2, size_t S21, size_t E21, size_t S22, size_t E22, bool f) :
-					ENTRY(t, B1, F1, S11, E11, S12, E12),
-					m_rg2(B2, F2, S21, E21, S22, E22),
-					m_swap(f)
-				{
-					if (!check_dim_consistency())
-						throw std::invalid_argument("Inconsistent dimensions bwtween 2 surfaces.");
-				}
+				DoubleSideEntry(const std::string &t, size_t B1, short F1, size_t S11, size_t E11, size_t S12, size_t E12, size_t B2, short F2, size_t S21, size_t E21, size_t S22, size_t E22, bool f);
 				DoubleSideEntry(const DoubleSideEntry &rhs) = default;
 				~DoubleSideEntry() = default;
 
@@ -767,35 +752,10 @@ namespace GridTool
 				bool Swap() const { return m_swap; }
 				bool &Swap() { return m_swap; }
 
-				int contains(size_t bs, short fs, size_t lpri, size_t lsec) const
-				{
-					const auto &rg1 = this->Range1();
-					const auto &rg2 = this->Range2();
-
-					if (rg1.B() == bs && rg1.F() == fs && rg1.constains(lpri, lsec))
-						return 1;
-					else if (rg2.B() == bs && rg2.F() == fs && rg2.constains(lpri, lsec))
-						return 2;
-					else
-						return 0;
-				}
+				int contains(size_t bs, short fs, size_t lpri, size_t lsec) const;
 
 			private:
-				bool check_dim_consistency()
-				{
-					if (Swap())
-					{
-						const bool cond1 = Range1().pri_node_num() == Range2().sec_node_num();
-						const bool cond2 = Range1().sec_node_num() == Range2().pri_node_num();
-						return cond1 && cond2;
-					}
-					else
-					{
-						const bool cond1 = Range1().pri_node_num() == Range2().pri_node_num();
-						const bool cond2 = Range1().sec_node_num() == Range2().sec_node_num();
-						return cond1 && cond2;
-					}
-				}
+				bool check_dim_consistency() const;
 			};
 
 		private:
@@ -836,10 +796,7 @@ namespace GridTool
 				compute_topology();
 			}
 
-			~Mapping3D()
-			{
-				release_all();
-			}
+			~Mapping3D() { release_all(); }
 
 			void readFromFile(const std::string &path);
 
@@ -853,20 +810,7 @@ namespace GridTool
 
 			size_t nBlock() const { return m_blk.size(); }
 
-			void nSurface(size_t &_all, size_t &_inter, size_t &_bdry) const
-			{
-				_all = Block3D::NumOfSurf * nBlock();
-				_inter = 0;
-				for (auto e : m_entry)
-				{
-					if (e->Type() == BC::ONE_TO_ONE)
-					{
-						_all -= 1;
-						_inter += 1;
-					}
-				}
-				_bdry = _all - _inter;
-			}
+			void nSurface(size_t &_all, size_t &_inter, size_t &_bdry) const;
 
 			size_t nFrame() const { return m_frame.size(); }
 
@@ -880,59 +824,9 @@ namespace GridTool
 				return ret;
 			}
 
-			void nFace(size_t &_all, size_t &_inner, size_t &_bdry) const
-			{
-				// Counting all faces.
-				_all = 0;
-				for (auto b : m_blk)
-					_all += b->face_num();
+			void nFace(size_t &_all, size_t &_inner, size_t &_bdry) const;
 
-				// Boundary
-				_bdry = 0;
-				for (auto b : m_blk)
-					_bdry += b->shell_face_num();
-
-				// Faces at internal interfaces.
-				size_t ii = 0;
-				for (const auto &e : m_entry)
-					if (e->Type() == BC::ONE_TO_ONE)
-						ii += e->Range1().face_num();
-
-				// Substract duplicated
-				_all -= ii;
-				_bdry -= ii * 2;
-
-				// Inner
-				_inner = _all - _bdry;
-			}
-
-			size_t nNode() const
-			{
-				size_t ret = nVertex();
-				for (auto b : m_blk)
-				{
-					ret += b->block_internal_node_num();
-					for (int i = 1; i <= Block3D::NumOfSurf; ++i)
-						ret += b->surface_internal_node_num(i);
-				}
-				for (auto e : m_entry)
-				{
-					if (e->Type() == BC::ONE_TO_ONE)
-					{
-						const auto b = e->Range1().B();
-						const auto f = e->Range1().F();
-						ret -= m_blk(b)->surface_internal_node_num(f);
-					}
-				}
-				for (const auto &rec : m_frame)
-				{
-					auto ff = rec[0];
-					auto b = ff->dependentBlock->index();
-					auto f = ff->local_index;
-					ret += m_blk(b)->frame_internal_node_num(f);
-				}
-				return ret;
-			}
+			size_t nNode() const;
 
 			// 1-based indexing
 			Block3D &block(size_t n)
@@ -985,21 +879,7 @@ namespace GridTool
 			}
 
 		private:
-			void release_all()
-			{
-				// Release memory used for blocks.
-				for (auto e : m_blk)
-					if (e)
-						delete e;
-
-				// Release memory used for entries.
-				for (auto e : m_entry)
-					if (e)
-						delete e;
-
-				m_blk.clear();
-				m_entry.clear();
-			}
+			void release_all();
 
 			void connecting();
 

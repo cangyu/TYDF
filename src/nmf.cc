@@ -51,7 +51,7 @@ static void distribute_index(size_t s, size_t e, std::vector<size_t> &dst)
 	}
 }
 
-static void str_formalize(std::string &s)
+static void formalize(std::string &s)
 {
 	std::transform(s.begin(), s.end(), s.begin(), ::toupper);
 	for (auto &e : s)
@@ -73,7 +73,7 @@ namespace GridTool
 		{
 			static const std::set<std::string> candidate_str_set = BC_STR;
 			std::string x_(x);
-			str_formalize(x_);
+			formalize(x_);
 			return candidate_str_set.find(x_) != candidate_str_set.end();
 		}
 
@@ -103,7 +103,7 @@ namespace GridTool
 			static const std::vector<std::string> candidate_str_set = BC_STR;
 
 			std::string x_(x);
-			str_formalize(x_);
+			formalize(x_);
 
 			if (!isValidBCStr(x_))
 				throw std::runtime_error("Not found!");
@@ -369,6 +369,18 @@ namespace GridTool
 			return p->NodeSeq(v);
 		}
 
+		void Block3D::interior_node_occurance(size_t i, size_t j, size_t k, std::vector<size_t*> &oc)
+		{
+			oc[0] = &cell(i - 1, j - 1, k - 1).NodeSeq(7);
+			oc[1] = &cell(i, j - 1, k - 1).NodeSeq(6);
+			oc[2] = &cell(i - 1, j, k - 1).NodeSeq(3);
+			oc[3] = &cell(i, j, k - 1).NodeSeq(2);
+			oc[4] = &cell(i - 1, j - 1, k).NodeSeq(8);
+			oc[5] = &cell(i, j - 1, k).NodeSeq(5);
+			oc[6] = &cell(i - 1, j, k).NodeSeq(4);
+			oc[7] = &cell(i, j, k).NodeSeq(1);
+		}
+
 		void Block3D::surface_node_coordinate(short f, size_t pri_seq, size_t sec_seq, size_t &i, size_t &j, size_t &k)
 		{
 			switch (f)
@@ -513,6 +525,225 @@ namespace GridTool
 			}
 		}
 
+		size_t Block3D::node_index(size_t i, size_t j, size_t k)
+		{
+			if (i == 0 || j == 0 || k == 0)
+				throw std::invalid_argument("Should be 1-based index.");
+			if (i > IDIM() || j > JDIM() || k > KDIM())
+				throw std::invalid_argument("Out of range.");
+
+			const auto v = isVertexNode(i, j, k);
+			if (v != -1)
+				return vertex_node_index(v);
+
+			std::vector<size_t*> c;
+
+			short f;
+			size_t f_idx;
+			isFrameInternalNode(i, j, k, f, f_idx);
+			if (f != -1)
+			{
+				frame_internal_node_occurace(f, f_idx, c);
+				return *c[0];
+			}
+
+			short s;
+			size_t s_pri, s_sec;
+			isSurfaceInternalNode(i, j, k, s, s_pri, s_sec);
+			if (s != -1)
+			{
+				surface_internal_node_occurance(s, s_pri, s_sec, c);
+				return *c[0];
+			}
+
+			interior_node_occurance(i, j, k, c);
+			return *c[0];
+		}
+
+		short Block3D::isVertexNode(size_t i, size_t j, size_t k) const
+		{
+			if (i == 1 && j == 1 && k == 1)
+				return 1;
+			else if (i == 1 && j == 1 && k == KDIM())
+				return 2;
+			else if (i == IDIM() && j == 1 && k == KDIM())
+				return 3;
+			else if (i == IDIM() && j == 1 && k == 1)
+				return 4;
+			else if (i == 1 && j == JDIM() && k == 1)
+				return 5;
+			else if (i == 1 && j == JDIM() && k == KDIM())
+				return 6;
+			else if (i == IDIM() && j == JDIM() && k == KDIM())
+				return 7;
+			else if (i == IDIM() && j == JDIM() && k == 1)
+				return 8;
+			else
+				return -1;
+		}
+
+		void Block3D::isFrameInternalNode(size_t i, size_t j, size_t k, short &f, size_t &idx) const
+		{
+			if (i == 1 && j == 1)
+			{
+				f = 1;
+				idx = k;
+			}
+			else if (i == IDIM() && j == 1)
+			{
+				f = 2;
+				idx = k;
+			}
+			else if (i == IDIM() && j == JDIM())
+			{
+				f = 3;
+				idx = k;
+			}
+			else if (i == 1 && j == JDIM())
+			{
+				f = 4;
+				idx = k;
+			}
+			else if (j == 1 && k == 1)
+			{
+				f = 5;
+				idx = i;
+			}
+			else if (j == 1 && k == KDIM())
+			{
+				f = 6;
+				idx = i;
+			}
+			else if (j == JDIM() && k == KDIM())
+			{
+				f = 7;
+				idx = i;
+			}
+			else if (j == JDIM() && k == 1)
+			{
+				f = 8;
+				idx = i;
+			}
+			else if (k == 1 && i == 1)
+			{
+				f = 9;
+				idx = j;
+			}
+			else if (k == KDIM() && i == 1)
+			{
+				f = 10;
+				idx = j;
+			}
+			else if (k == KDIM() && i == IDIM())
+			{
+				f = 11;
+				idx = j;
+			}
+			else if (k == 1 && i == IDIM())
+			{
+				f = 12;
+				idx = j;
+			}
+			else
+			{
+				f = -1;
+				idx = 0;
+			}
+		}
+
+		void Block3D::isSurfaceInternalNode(size_t i, size_t j, size_t k, short &s, size_t &pri, size_t &sec) const
+		{
+			if (k == 1 && (1 < j && j < JDIM()) && (1 < i && i < IDIM()))
+			{
+				s = 1;
+				pri = i;
+				sec = j;
+			}
+			else if (k == KDIM() && (1 < j && j < JDIM()) && (1 < i && i < IDIM()))
+			{
+				s = 2;
+				pri = i;
+				sec = j;
+			}
+			else if (i == 1 && (1 < j && j < JDIM()) && (1 < k && k < KDIM()))
+			{
+				s = 3;
+				pri = j;
+				sec = k;
+			}
+			else if (i == IDIM() && (1 < j && j < JDIM()) && (1 < k && k < KDIM()))
+			{
+				s = 4;
+				pri = j;
+				sec = k;
+			}
+			else if (j == 1 && (1 < k && k < KDIM()) && (1 < i && i < IDIM()))
+			{
+				s = 5;
+				pri = k;
+				sec = i;
+			}
+			else if (j == JDIM() && (1 < k && k < KDIM()) && (1 < i && i < IDIM()))
+			{
+				s = 6;
+				pri = k;
+				sec = i;
+			}
+			else
+			{
+				s = -1;
+				pri = 0;
+				sec = 0;
+			}
+		}
+
+		Mapping3D::ENTRY::ENTRY(const std::string &t, size_t B, short F, size_t S1, size_t E1, size_t S2, size_t E2) :
+			m_rg1(B, F, S1, E1, S2, E2)
+		{
+			if (BC::isValidBCStr(t))
+				m_bc = BC::str2idx(t);
+			else
+				throw std::invalid_argument("B.C. named \"" + t + "\" is not supported.");
+		}
+
+		Mapping3D::DoubleSideEntry::DoubleSideEntry(const std::string &t, size_t B1, short F1, size_t S11, size_t E11, size_t S12, size_t E12, size_t B2, short F2, size_t S21, size_t E21, size_t S22, size_t E22, bool f) :
+			ENTRY(t, B1, F1, S11, E11, S12, E12),
+			m_rg2(B2, F2, S21, E21, S22, E22),
+			m_swap(f)
+		{
+			if (!check_dim_consistency())
+				throw std::invalid_argument("Inconsistent dimensions bwtween 2 surfaces.");
+		}
+
+		int Mapping3D::DoubleSideEntry::contains(size_t bs, short fs, size_t lpri, size_t lsec) const
+		{
+			const auto &rg1 = this->Range1();
+			const auto &rg2 = this->Range2();
+
+			if (rg1.B() == bs && rg1.F() == fs && rg1.constains(lpri, lsec))
+				return 1;
+			else if (rg2.B() == bs && rg2.F() == fs && rg2.constains(lpri, lsec))
+				return 2;
+			else
+				return 0;
+		}
+
+		bool Mapping3D::DoubleSideEntry::check_dim_consistency() const
+		{
+			if (Swap())
+			{
+				const bool cond1 = Range1().pri_node_num() == Range2().sec_node_num();
+				const bool cond2 = Range1().sec_node_num() == Range2().pri_node_num();
+				return cond1 && cond2;
+			}
+			else
+			{
+				const bool cond1 = Range1().pri_node_num() == Range2().pri_node_num();
+				const bool cond2 = Range1().sec_node_num() == Range2().sec_node_num();
+				return cond1 && cond2;
+			}
+		}
+
 		void Mapping3D::readFromFile(const std::string &path)
 		{
 			std::string s;
@@ -589,7 +820,7 @@ namespace GridTool
 			if (!mfp.eof())
 			{
 				do {
-					str_formalize(s);
+					formalize(s);
 					ss.clear();
 					ss << s;
 					std::string bc_str;
@@ -816,6 +1047,91 @@ namespace GridTool
 
 			// Close output file
 			f_out.close();
+		}
+
+		void Mapping3D::nSurface(size_t &_all, size_t &_inter, size_t &_bdry) const
+		{
+			_all = Block3D::NumOfSurf * nBlock();
+			_inter = 0;
+			for (auto e : m_entry)
+			{
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					_all -= 1;
+					_inter += 1;
+				}
+			}
+			_bdry = _all - _inter;
+		}
+
+		void Mapping3D::nFace(size_t &_all, size_t &_inner, size_t &_bdry) const
+		{
+			// Counting all faces.
+			_all = 0;
+			for (auto b : m_blk)
+				_all += b->face_num();
+
+			// Boundary
+			_bdry = 0;
+			for (auto b : m_blk)
+				_bdry += b->shell_face_num();
+
+			// Faces at internal interfaces.
+			size_t ii = 0;
+			for (const auto &e : m_entry)
+				if (e->Type() == BC::ONE_TO_ONE)
+					ii += e->Range1().face_num();
+
+			// Substract duplicated
+			_all -= ii;
+			_bdry -= ii * 2;
+
+			// Inner
+			_inner = _all - _bdry;
+		}
+
+		size_t Mapping3D::nNode() const
+		{
+			size_t ret = nVertex();
+			for (auto b : m_blk)
+			{
+				ret += b->block_internal_node_num();
+				for (int i = 1; i <= Block3D::NumOfSurf; ++i)
+					ret += b->surface_internal_node_num(i);
+			}
+			for (auto e : m_entry)
+			{
+				if (e->Type() == BC::ONE_TO_ONE)
+				{
+					const auto b = e->Range1().B();
+					const auto f = e->Range1().F();
+					ret -= m_blk(b)->surface_internal_node_num(f);
+				}
+			}
+			for (const auto &rec : m_frame)
+			{
+				auto ff = rec[0];
+				auto b = ff->dependentBlock->index();
+				auto f = ff->local_index;
+				ret += m_blk(b)->frame_internal_node_num(f);
+			}
+			return ret;
+		}
+
+		void Mapping3D::release_all()
+		{
+			// Release memory used for blocks.
+			for (auto e : m_blk)
+				if (e)
+					delete e;
+
+			// Release memory used for entries.
+			for (auto e : m_entry)
+				if (e)
+					delete e;
+
+			m_blk.clear();
+			m_entry.clear();
 		}
 
 		void Mapping3D::connecting()

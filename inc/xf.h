@@ -195,9 +195,9 @@ namespace GridTool
 			}
 			~NODE() = default;
 
-            bool is_virtual_node() const { return type() == NODE::VIRTUAL; }
-            bool is_boundary_node() const { return type() == NODE::BOUNDARY; }
-            bool is_internal_node() const { return type() == NODE::ANY; }
+			bool is_virtual_node() const { return type() == NODE::VIRTUAL; }
+			bool is_boundary_node() const { return type() == NODE::BOUNDARY; }
+			bool is_internal_node() const { return type() == NODE::ANY; }
 
 			int &type() { return m_type; }
 			int type() const { return m_type; }
@@ -437,10 +437,7 @@ namespace GridTool
 			// NOT used.
 			int domain() const { return m_domainID; }
 
-			void repr(std::ostream &out)
-			{
-				out << std::dec << "(" << identity() << " (" << zone() << " " << type() << " " << name() << ")())" << std::endl;
-			}
+			void repr(std::ostream &out);
 		};
 
 		class MESH : public DIM

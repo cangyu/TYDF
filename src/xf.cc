@@ -108,7 +108,7 @@ namespace GridTool
 				return it->second;
 		}
 
-		const int BC::str2idx(const std::string &x)
+		int BC::str2idx(const std::string &x)
 		{
 			static const std::map<std::string, int> mapping_set{
 				std::pair<std::string, int>("interior", INTERIOR),
@@ -153,6 +153,26 @@ namespace GridTool
 			out << "(" << std::dec << identity() << " " << ND() << ")" << std::endl;
 		}
 
+        RANGE::RANGE(int id, size_t zone, size_t first, size_t last) :
+            SECTION(id),
+            m_zone(zone),
+            m_first(first),
+            m_last(last)
+        {
+            if (first > last)
+                throw std::runtime_error("Invalid range.");
+        }
+
+        RANGE::RANGE(const RANGE &rhs) :
+            SECTION(rhs.identity()),
+            m_zone(rhs.zone()),
+            m_first(rhs.first_index()),
+            m_last(rhs.last_index())
+        {
+            if (first_index() > last_index())
+                throw std::runtime_error("Invalid node range.");
+        }
+
 		bool NODE::isValidTypeIdx(int x)
 		{
 			return x == VIRTUAL || x == ANY || x == BOUNDARY;
@@ -187,7 +207,7 @@ namespace GridTool
 				return it->second;
 		}
 
-		const int NODE::str2idx(const std::string &x)
+		int NODE::str2idx(const std::string &x)
 		{
 			static const std::map<std::string, int> mapping_set{
 				std::pair<std::string, int>("virtual", VIRTUAL),
@@ -471,6 +491,16 @@ namespace GridTool
 
 			out << "))" << std::endl;
 		}
+
+        MESH::MESH(const std::string &inp, std::ostream &fout) :
+                DIM(3),
+                m_totalNodeNum(0),
+                m_totalCellNum(0),
+                m_totalFaceNum(0),
+                m_totalZoneNum(0)
+        {
+            readFromFile(inp, fout);
+        }
 
 		void MESH::raw2derived()
 		{

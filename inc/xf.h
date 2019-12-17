@@ -88,7 +88,7 @@ namespace GridTool
 			static bool isValidIdx(int x);
 			static bool isValidStr(const std::string &x);
 			static const std::string &idx2str(int x);
-			static const int str2idx(const std::string &x);
+			static int str2idx(const std::string &x);
 		};
 
 		class STR : public SECTION
@@ -147,24 +147,8 @@ namespace GridTool
 
 		public:
 			RANGE() = delete;
-			RANGE(int id, size_t zone, size_t first, size_t last) :
-				SECTION(id),
-				m_zone(zone),
-				m_first(first),
-				m_last(last)
-			{
-				if (first > last)
-					throw std::runtime_error("Invalid range.");
-			}
-			RANGE(const RANGE &rhs) :
-				SECTION(rhs.identity()),
-				m_zone(rhs.zone()),
-				m_first(rhs.first_index()),
-				m_last(rhs.last_index())
-			{
-				if (first_index() > last_index())
-					throw std::runtime_error("Invalid node range.");
-			}
+			RANGE(int id, size_t zone, size_t first, size_t last);
+			RANGE(const RANGE &rhs);
 			virtual ~RANGE() = default;
 
 			size_t zone() const { return m_zone; }
@@ -188,7 +172,7 @@ namespace GridTool
 			static bool isValidTypeIdx(int x);
 			static bool isValidTypeStr(const std::string &x);
 			static const std::string &idx2str(int x);
-			static const int str2idx(const std::string &x);
+			static int str2idx(const std::string &x);
 
 			NODE() = delete;
 			NODE(size_t zone, size_t first, size_t last, int tp, int ND) :
@@ -210,6 +194,10 @@ namespace GridTool
 					throw std::runtime_error("Invalid description of node type!");
 			}
 			~NODE() = default;
+
+            bool is_virtual_node() const { return type() == NODE::VIRTUAL; }
+            bool is_boundary_node() const { return type() == NODE::BOUNDARY; }
+            bool is_internal_node() const { return type() == NODE::ANY; }
 
 			int &type() { return m_type; }
 			int type() const { return m_type; }
@@ -239,10 +227,6 @@ namespace GridTool
 			}
 
 			void repr(std::ostream &out);
-
-			bool is_virtual_node() const { return type() == NODE::VIRTUAL; }
-			bool is_boundary_node() const { return type() == NODE::BOUNDARY; }
-			bool is_internal_node() const { return type() == NODE::ANY; }
 		};
 
 		class CELL : public RANGE
@@ -520,15 +504,7 @@ namespace GridTool
 
 		public:
 			MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {} // 3D by default
-			MESH(const std::string &inp, std::ostream &fout) :
-				DIM(3),
-				m_totalNodeNum(0),
-				m_totalCellNum(0),
-				m_totalFaceNum(0),
-				m_totalZoneNum(0)
-			{
-				readFromFile(inp, fout);
-			}
+			MESH(const std::string &inp, std::ostream &fout);
 			MESH(const std::string &f_nmf, const std::string &f_p3d, std::ostream &fout);
 			MESH(const MESH &rhs) = delete;
 			~MESH() { clear_entry(); }

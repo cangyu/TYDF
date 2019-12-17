@@ -51,7 +51,7 @@ namespace GridTool
 			for (size_t n = 1; n <= NBLK; ++n)
 			{
 				auto &b = nmf->block(n);
-				auto g = p3d->block(n - 1);
+				auto &g = *p3d->block(n - 1);
 
 				const size_t nI = b.IDIM();
 				const size_t nJ = b.JDIM();

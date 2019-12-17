@@ -160,11 +160,10 @@ namespace GridTool
 			size_t num() const { return(last_index() - first_index() + 1); }
 		};
 
-		class NODE : public RANGE, public DIM
+	    class NODE : public RANGE, public DIM, public std::vector<Vector>
 		{
 		private:
 			int m_type;
-			Array1D<Vector> m_node;
 
 		public:
 			enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
@@ -175,24 +174,8 @@ namespace GridTool
 			static int str2idx(const std::string &x);
 
 			NODE() = delete;
-			NODE(size_t zone, size_t first, size_t last, int tp, int ND) :
-				RANGE(SECTION::NODE, zone, first, last),
-				DIM(ND),
-				m_type(tp),
-				m_node(num())
-			{
-				if (!isValidTypeIdx(type()))
-					throw std::runtime_error("Invalid description of node type!");
-			}
-			NODE(const NODE &rhs) :
-				RANGE(SECTION::NODE, rhs.zone(), rhs.first_index(), rhs.last_index()),
-				DIM(rhs.ND(), rhs.is3D()),
-				m_type(rhs.type()),
-				m_node(rhs.num())
-			{
-				if (!isValidTypeIdx(type()))
-					throw std::runtime_error("Invalid description of node type!");
-			}
+			NODE(size_t zone, size_t first, size_t last, int tp, int ND);
+			NODE(const NODE &rhs);
 			~NODE() = default;
 
 			bool is_virtual_node() const { return type() == NODE::VIRTUAL; }
@@ -203,28 +186,6 @@ namespace GridTool
 			int type() const { return m_type; }
 
 			int ND() const { return dimension(); }
-
-			void get_coordinate(size_t loc_idx, std::vector<double> &dst) const
-			{
-				const auto &node = m_node.at(loc_idx); // 0-based indexing
-				for (int i = 0; i < m_dim; ++i)
-					dst[i] = node.at(i);
-			}
-
-			void get_coordinate(size_t loc_idx, double *dst) const
-			{
-				const auto &node = m_node.at(loc_idx); // 0-based indexing
-				for (int i = 0; i < m_dim; ++i)
-					dst[i] = node.at(i);
-			}
-
-			void set_coordinate(size_t loc_idx, double x0, double x1, double x2 = 0.0)
-			{
-				auto &node = m_node.at(loc_idx);
-				node.x() = x0;
-				node.y() = x1;
-				node.z() = x2;
-			}
 
 			void repr(std::ostream &out);
 		};
@@ -304,14 +265,12 @@ namespace GridTool
 			void repr(std::ostream &out);
 		};
 
-		class CONNECTIVITY
+		struct CONNECTIVITY
 		{
-		public:
 			int x; // Num of nodes.
 			size_t n[4]; // At most 4 nodes within a single face, polygon faces are not supported currently.
 			size_t c[2]; // Adjacent cells.
 
-		public:
 			CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
 			CONNECTIVITY(const CONNECTIVITY &rhs) = default;
 			~CONNECTIVITY() = default;

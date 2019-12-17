@@ -224,6 +224,25 @@ namespace GridTool
 				return it->second;
 		}
 
+        NODE::NODE(size_t zone, size_t first, size_t last, int tp, int ND) :
+            RANGE(SECTION::NODE, zone, first, last),
+            DIM(ND),
+            std::vector<Vector>(num()),
+            m_type(tp)
+        {
+            if (!isValidTypeIdx(type()))
+                throw std::runtime_error("Invalid description of node type!");
+        }
+        NODE::NODE(const NODE &rhs) :
+            RANGE(SECTION::NODE, rhs.zone(), rhs.first_index(), rhs.last_index()),
+            DIM(rhs.ND(), rhs.is3D()),
+            std::vector<Vector>(num()),
+            m_type(rhs.type())
+        {
+            if (!isValidTypeIdx(type()))
+                throw std::runtime_error("Invalid description of node type!");
+        }
+
 		void NODE::repr(std::ostream &out)
 		{
 			out << "(" << std::dec << identity();
@@ -234,7 +253,7 @@ namespace GridTool
 			const size_t N = num();
 			for (size_t i = 0; i < N; ++i)
 			{
-				const auto &node = m_node.at(i);
+				const auto &node = at(i);
 				for (int k = 0; k < m_dim; ++k)
 					out << " " << node.at(k);
 				out << std::endl;
@@ -553,11 +572,8 @@ namespace GridTool
 
 					for (size_t i = cur_first; i <= cur_last; ++i)
 					{
-						// Node Coordinates
-						curObj->get_coordinate(i - cur_first, node(i).coordinate.data());
-
-						// Node on boundary or not
-						node(i).atBdry = flag;
+                        node(i).coordinate = curObj->at(i - cur_first); // Node Coordinates
+						node(i).atBdry = flag; // Node on boundary or not
 					}
 				}
 
@@ -897,22 +913,18 @@ namespace GridTool
 
 						if (nd == 3)
 						{
-							double x, y, z;
 							for (int i = first; i <= last; ++i)
 							{
-								size_t i_loc = i - first;
-								fin >> x >> y >> z;
-								e->set_coordinate(i_loc, x, y, z);
+								auto &ce = e->at(i - first);
+								fin >> ce.x() >> ce.y() >> ce.z();
 							}
 						}
 						else
 						{
-							double x, y;
 							for (int i = first; i <= last; ++i)
 							{
-								size_t i_loc = i - first;
-								fin >> x >> y;
-								e->set_coordinate(i_loc, x, y);
+                                auto &ce = e->at(i - first);
+                                fin >> ce.x() >> ce.y();
 							}
 						}
 						eat(fin, ')');

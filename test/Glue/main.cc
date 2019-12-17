@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "../../inc/glue.h"
+#include "../../inc/xf.h"
 
 const std::vector<std::string> test
 {

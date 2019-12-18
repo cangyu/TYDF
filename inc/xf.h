@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <istream>
 #include <ostream>
+#include <iostream>
 #include <fstream>
 #include <iomanip>
 #include <string>
@@ -166,7 +167,11 @@ namespace GridTool
 			int m_type;
 
 		public:
-			enum { VIRTUAL = 0, ANY = 1, BOUNDARY = 2 };
+			enum {
+				VIRTUAL = 0,
+				ANY = 1,
+				BOUNDARY = 2
+			};
 
 			static bool isValidTypeIdx(int x);
 			static bool isValidTypeStr(const std::string &x);
@@ -420,8 +425,8 @@ namespace GridTool
 
 		public:
 			MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {} // 3D by default
-			MESH(const std::string &inp, std::ostream &fout);
-			MESH(const std::string &f_nmf, const std::string &f_p3d, std::ostream &fout);
+			MESH(const std::string &inp, std::ostream &fout = std::cout);
+			MESH(const std::string &f_nmf, const std::string &f_p3d, std::ostream &fout = std::cout);
 			MESH(const MESH &rhs) = delete;
 			~MESH() { clear_entry(); }
 
@@ -452,20 +457,8 @@ namespace GridTool
 			ZONE_ELEM &zone(int id, bool isRealZoneID = false) { return  isRealZoneID ? m_zone.at(m_zoneMapping.at(id)) : m_zone(id); }
 
 		private:
-			void add_entry(SECTION *e)
-			{
-				m_content.push_back(e);
-			}
-			void clear_entry()
-			{
-				// Release previous contents
-				for (auto ptr : m_content)
-					if (ptr)
-						delete ptr;
-
-				// Clear container
-				m_content.clear();
-			}
+			void add_entry(SECTION *e);
+			void clear_entry();
 
 			void raw2derived();
 			void derived2raw();

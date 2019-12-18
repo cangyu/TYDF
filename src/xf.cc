@@ -836,7 +836,7 @@ namespace GridTool
 
 					for (auto i = cur_first; i <= cur_last; ++i)
 					{
-						const auto &cnct = curObj->connectivity(i - cur_first);
+						const auto &cnct = curObj->at(i - cur_first);
 						const auto loc_leftCell = cnct.cl();
 						const auto loc_rightCell = cnct.cr();
 
@@ -991,6 +991,22 @@ namespace GridTool
 		void MESH::derived2raw()
 		{
 			// TODO
+		}
+
+		void MESH::add_entry(SECTION *e)
+		{
+			m_content.push_back(e);
+		}
+
+		void MESH::clear_entry()
+		{
+			// Release previous contents.
+			for (auto ptr : m_content)
+				if (ptr)
+					delete ptr;
+
+			// Clear container.
+			m_content.clear();
 		}
 
 		void MESH::readFromFile(const std::string &src, std::ostream &fout)

@@ -103,7 +103,7 @@ namespace GridTool
 
 			auto it = mapping_set.find(x);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid B.C. index.");
+				throw std::invalid_argument("\"" + std::to_string(x) + "\" is not a valid B.C. index.");
 			else
 				return it->second;
 		}
@@ -138,7 +138,7 @@ namespace GridTool
 			formalize(x_);
 			auto it = mapping_set.find(x_);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + x + "\" is not a valid B.C. string.");
+				throw std::invalid_argument("\"" + x + "\" is not a valid B.C. string.");
 			else
 				return it->second;
 		}
@@ -160,7 +160,7 @@ namespace GridTool
 			m_last(last)
 		{
 			if (first > last)
-				throw std::runtime_error("Invalid range.");
+				throw std::invalid_argument("Invalid range in constructor.");
 		}
 
 		RANGE::RANGE(const RANGE &rhs) :
@@ -170,7 +170,7 @@ namespace GridTool
 			m_last(rhs.last_index())
 		{
 			if (first_index() > last_index())
-				throw std::runtime_error("Invalid node range.");
+				throw std::invalid_argument("Invalid node range in copy-constructor.");
 		}
 
 		bool NODE::isValidTypeIdx(int x)
@@ -202,7 +202,7 @@ namespace GridTool
 
 			auto it = mapping_set.find(x);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid NODE-TYPE index.");
+				throw std::invalid_argument("\"" + std::to_string(x) + "\" is not a valid NODE-TYPE index.");
 			else
 				return it->second;
 		}
@@ -219,29 +219,30 @@ namespace GridTool
 			formalize(x_);
 			auto it = mapping_set.find(x_);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + x + "\" is not a valid NODE-TYPE string.");
+				throw std::invalid_argument("\"" + x + "\" is not a valid NODE-TYPE string.");
 			else
 				return it->second;
 		}
 
-        NODE::NODE(size_t zone, size_t first, size_t last, int tp, int ND) :
-            RANGE(SECTION::NODE, zone, first, last),
-            DIM(ND),
-            std::vector<Vector>(num()),
-            m_type(tp)
-        {
-            if (!isValidTypeIdx(type()))
-                throw std::runtime_error("Invalid description of node type!");
-        }
-        NODE::NODE(const NODE &rhs) :
-            RANGE(SECTION::NODE, rhs.zone(), rhs.first_index(), rhs.last_index()),
-            DIM(rhs.ND(), rhs.is3D()),
-            std::vector<Vector>(num()),
-            m_type(rhs.type())
-        {
-            if (!isValidTypeIdx(type()))
-                throw std::runtime_error("Invalid description of node type!");
-        }
+		NODE::NODE(size_t zone, size_t first, size_t last, int tp, int ND) :
+			RANGE(SECTION::NODE, zone, first, last),
+			DIM(ND),
+			std::vector<Vector>(num()),
+			m_type(tp)
+		{
+			if (!isValidTypeIdx(type()))
+				throw std::invalid_argument("Invalid description of node type!");
+		}
+
+		NODE::NODE(const NODE &rhs) :
+			RANGE(SECTION::NODE, rhs.zone(), rhs.first_index(), rhs.last_index()),
+			DIM(rhs.ND(), rhs.is3D()),
+			std::vector<Vector>(rhs.begin(), rhs.end()),
+			m_type(rhs.type())
+		{
+			if (!isValidTypeIdx(type()))
+				throw std::invalid_argument("Invalid description of node type!");
+		}
 
 		void NODE::repr(std::ostream &out)
 		{
@@ -274,7 +275,11 @@ namespace GridTool
 
 		bool CELL::isValidTypeStr(const std::string &x)
 		{
-			static const std::set<std::string> candidate_set{ "dead", "fluid", "solid" };
+			static const std::set<std::string> candidate_set{
+				"dead",
+				"fluid",
+				"solid"
+			};
 
 			std::string x_(x);
 			formalize(x_);
@@ -291,7 +296,7 @@ namespace GridTool
 
 			auto it = mapping_set.find(x);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid CELL-TYPE index.");
+				throw std::invalid_argument("\"" + std::to_string(x) + "\" is not a valid CELL-TYPE index.");
 			else
 				return it->second;
 		}
@@ -306,7 +311,7 @@ namespace GridTool
 
 			auto it = mapping_set.find(x);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + x + "\" is not a valid CELL-TYPE string.");
+				throw std::invalid_argument("\"" + x + "\" is not a valid CELL-TYPE string.");
 			else
 				return it->second;
 		}
@@ -361,7 +366,7 @@ namespace GridTool
 
 			auto it = mapping_set.find(x);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid CELL-ELEM-TYPE index.");
+				throw std::invalid_argument("\"" + std::to_string(x) + "\" is not a valid CELL-ELEM-TYPE index.");
 			else
 				return it->second;
 		}
@@ -386,13 +391,38 @@ namespace GridTool
 
 			auto it = mapping_set.find(x);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + x + "\" is not a valid CELL-ELEM-TYPE string.");
+				throw std::invalid_argument("\"" + x + "\" is not a valid CELL-ELEM-TYPE string.");
 			else
 				return it->second;
 		}
 
+		CELL::CELL(size_t zone, size_t first, size_t last, int type, int elem_type) :
+			RANGE(SECTION::CELL, zone, first, last),
+			std::vector<int>(num(), elem_type),
+			m_type(type),
+			m_elem(elem_type)
+		{
+			if (!isValidTypeIdx(type))
+				throw std::invalid_argument("Invalid cell type: " + std::to_string(type));
+
+			if (!isValidElemIdx(elem_type))
+				throw std::invalid_argument("Invalid cell element type: " + std::to_string(elem_type));
+		}
+
+		CELL::CELL(const CELL &rhs) :
+			RANGE(SECTION::CELL, rhs.zone(), rhs.first_index(), rhs.last_index()),
+			std::vector<int>(rhs.begin(), rhs.end()),
+			m_type(rhs.type()),
+			m_elem(rhs.element_type())
+		{
+			if (num() != rhs.num())
+				throw std::runtime_error("Default copy operation is inconsistent.");
+		}
+
 		void CELL::repr(std::ostream &out)
 		{
+			static const size_t NumPerLine = 40;
+
 			out << "(" << std::dec << identity() << " (";
 			out << std::hex;
 			out << zone() << " " << first_index() << " " << last_index() << " ";
@@ -403,13 +433,12 @@ namespace GridTool
 			else
 			{
 				out << "(";
-
 				const size_t N = num();
 				for (size_t i = 0; i < N; ++i)
 				{
-					if (i % 40 == 0)
+					if (i % NumPerLine == 0)
 						out << std::endl;
-					out << " " << elem(i);
+					out << " " << at(i);
 				}
 				out << std::endl << "))" << std::endl;
 			}
@@ -453,7 +482,7 @@ namespace GridTool
 
 			auto it = mapping_set.find(x);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + std::to_string(x) + "\" is not a valid FACE-TYPE index.");
+				throw std::invalid_argument("\"" + std::to_string(x) + "\" is not a valid FACE-TYPE index.");
 			else
 				return it->second;
 		}
@@ -473,9 +502,26 @@ namespace GridTool
 
 			auto it = mapping_set.find(x);
 			if (it == mapping_set.end())
-				throw std::runtime_error("\"" + x + "\" is not a valid FACE-TYPE string.");
+				throw std::invalid_argument("\"" + x + "\" is not a valid FACE-TYPE string.");
 			else
 				return it->second;
+		}
+
+		FACE::FACE(size_t zone, size_t first, size_t last, int bc, int face) :
+			RANGE(SECTION::FACE, zone, first, last),
+			std::vector<CONNECTIVITY>(num()),
+			m_bc(bc),
+			m_face(face)
+		{
+			// Check B.C. before assign.
+			if (!BC::isValidIdx(bc))
+				throw std::runtime_error("Invalid B.C. type: " + std::to_string(bc));
+
+			// Check face type before assign.
+			if (!isValidIdx(face))
+				throw std::runtime_error("Invalid face type: " + std::to_string(face));
+			if (face == POLYGONAL)
+				throw std::runtime_error("Polygonal face is not supported currently.");
 		}
 
 		void FACE::repr(std::ostream &out)
@@ -490,7 +536,7 @@ namespace GridTool
 			{
 				for (size_t i = 0; i < N; ++i)
 				{
-					const auto &loc_cnect = m_connectivity[i];
+					const auto &loc_cnect = at(i);
 					out << " " << loc_cnect.x;
 					for (int j = 0; j < loc_cnect.x; ++j)
 						out << " " << loc_cnect.n[j];
@@ -501,7 +547,7 @@ namespace GridTool
 			{
 				for (size_t i = 0; i < N; ++i)
 				{
-					const auto &loc_cnect = m_connectivity[i];
+					const auto &loc_cnect = at(i);
 					for (int j = 0; j < loc_cnect.x; ++j)
 						out << " " << loc_cnect.n[j];
 					out << " " << loc_cnect.c[0] << " " << loc_cnect.c[1] << std::endl;
@@ -572,7 +618,7 @@ namespace GridTool
 
 					for (size_t i = cur_first; i <= cur_last; ++i)
 					{
-                        node(i).coordinate = curObj->at(i - cur_first); // Node Coordinates
+						node(i).coordinate = curObj->at(i - cur_first); // Node Coordinates
 						node(i).atBdry = flag; // Node on boundary or not
 					}
 				}
@@ -590,7 +636,7 @@ namespace GridTool
 
 					for (size_t i = cur_first; i <= cur_last; ++i)
 					{
-						const auto &cnct = curObj->connectivity(i - cur_first);
+						const auto &cnct = curObj->at(i - cur_first);
 
 						// Check consistency of face-type
 						if (ft == 0)
@@ -721,7 +767,7 @@ namespace GridTool
 						auto &curCell = cell(i);
 
 						// Element type of cells in this zone
-						curCell.type = curObj->elem(i - cur_first);
+						curCell.type = curObj->at(i - cur_first);
 
 						// Organize order of included nodes and faces
 						cell_standardization(curCell);
@@ -814,7 +860,7 @@ namespace GridTool
 				curZone.name = curObj->name();
 				curZone.type = curObj->type();
 			}
-		}
+			}
 
 		void MESH::derived2raw()
 		{
@@ -923,8 +969,8 @@ namespace GridTool
 						{
 							for (int i = first; i <= last; ++i)
 							{
-                                auto &ce = e->at(i - first);
-                                fin >> ce.x() >> ce.y();
+								auto &ce = e->at(i - first);
+								fin >> ce.x() >> ce.y();
 							}
 						}
 						eat(fin, ')');
@@ -977,9 +1023,8 @@ namespace GridTool
 							for (int i = first; i <= last; ++i)
 							{
 								fin >> elem;
-								const size_t i_loc = i - first;
 								if (CELL::isValidElemIdx(elem))
-									e->elem(i_loc) = elem;
+									e->at(i - first) = elem;
 								else
 									throw std::runtime_error("Invalid CELL-ELEM-TYPE: \"" + std::to_string(elem) + "\"");
 							}
@@ -1037,9 +1082,6 @@ namespace GridTool
 							int x = -1;
 							for (size_t i = first; i <= last; ++i)
 							{
-								// Local index
-								size_t i_loc = i - first;
-
 								// Read connectivity record
 								fin >> x;
 								if (x <= 1 || x >= 5)
@@ -1049,23 +1091,20 @@ namespace GridTool
 								fin >> tmp_c[0] >> tmp_c[1];
 
 								// Store current connectivity info
-								e->connectivity(i_loc).set(x, tmp_n, tmp_c);
+								e->at(i - first).set(x, tmp_n, tmp_c);
 							}
 						}
 						else
 						{
 							for (size_t i = first; i <= last; ++i)
 							{
-								// Local index
-								size_t i_loc = i - first;
-
 								// Read connectivity record
 								for (int j = 0; j < face; ++j)
 									fin >> tmp_n[j];
 								fin >> tmp_c[0] >> tmp_c[1];
 
 								// Store current connectivity info
-								e->connectivity(i_loc).set(face, tmp_n, tmp_c);
+								e->at(i - first).set(face, tmp_n, tmp_c);
 							}
 						}
 						eat(fin, ')');
@@ -1878,5 +1917,5 @@ namespace GridTool
 			quad.includedNode.at(2) = n2;
 			quad.includedNode.at(3) = n3;
 		}
+		}
 	}
-}

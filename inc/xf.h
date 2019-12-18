@@ -160,7 +160,7 @@ namespace GridTool
 			size_t num() const { return(last_index() - first_index() + 1); }
 		};
 
-	    class NODE : public RANGE, public DIM, public std::vector<Vector>
+		class NODE : public RANGE, public DIM, public std::vector<Vector>
 		{
 		private:
 			int m_type;
@@ -190,77 +190,52 @@ namespace GridTool
 			void repr(std::ostream &out);
 		};
 
-		class CELL : public RANGE
+		class CELL : public RANGE, public std::vector<int>
 		{
 		private:
 			int m_type;
 			int m_elem;
-			std::vector<int> m_mixedElemDesc; // Only effective when 'm_elem == MIXED', empty otherwise.
 
 		public:
-			enum { DEAD = 0, FLUID = 1, SOLID = 17 };
-			enum { MIXED = 0, TRIANGULAR = 1, TETRAHEDRAL = 2, QUADRILATERAL = 3, HEXAHEDRAL = 4, PYRAMID = 5, WEDGE = 6, POLYHEDRAL = 7 };
+			enum {
+				DEAD = 0,
+				FLUID = 1,
+				SOLID = 17
+			};
 
 			static bool isValidTypeIdx(int x);
 			static bool isValidTypeStr(const std::string &x);
 			static const std::string &idx2str_type(int x);
 			static int str2idx_type(const std::string &x);
+
+			enum {
+				MIXED = 0,
+				TRIANGULAR = 1,
+				TETRAHEDRAL = 2,
+				QUADRILATERAL = 3,
+				HEXAHEDRAL = 4,
+				PYRAMID = 5,
+				WEDGE = 6,
+				POLYHEDRAL = 7
+			};
+
 			static bool isValidElemIdx(int x);
 			static bool isValidElemStr(const std::string &x);
 			static const std::string &idx2str_elem(int x);
 			static int str2idx_elem(const std::string &x);
 
 			CELL() = delete;
-			CELL(size_t zone, size_t first, size_t last, int type, int elem_type) :
-				RANGE(SECTION::CELL, zone, first, last)
-			{
-				// Check cell type before assign
-				if (!isValidTypeIdx(type))
-					throw std::runtime_error("Invalid cell type: " + std::to_string(type));
-				else
-					m_type = type;
-
-				// Check cell elem before assign
-				if (!isValidElemIdx(elem_type))
-					throw std::runtime_error("Invalid cell element type: " + std::to_string(elem_type));
-				else
-					m_elem = elem_type;
-
-				// Special treatment for mixed cell
-				if (elem_type == CELL::MIXED)
-				{
-					m_mixedElemDesc.resize(num());
-					std::fill(m_mixedElemDesc.begin(), m_mixedElemDesc.end(), CELL::MIXED);
-				}
-			}
+			CELL(size_t zone, size_t first, size_t last, int type, int elem_type);
+			CELL(const CELL &rhs);
 			~CELL() = default;
 
-			// Type of cells within this section: DEAD cell, FLUOID cell or SOLID cell.
+			// Type of cells within this section: DEAD cell, FLUID cell or SOLID cell.
 			int type() const { return m_type; }
 			int &type() { return m_type; }
 
 			// General description of ALL cell elements within this section.
-			int element_type() const { return m_elem; }
+			int element_type() const { return  m_elem; }
 			int &element_type() { return m_elem; }
-
-			// Element-Type of each cell within this section.
-			// Typically used when "element_type() == MIXED".
-			int elem(size_t loc_idx) const
-			{
-				int et = element_type();
-				if (et == CELL::MIXED)
-					return m_mixedElemDesc[loc_idx];
-				else
-					return et;
-			}
-			int &elem(size_t loc_idx)
-			{
-				int &et = element_type();
-				if (et == CELL::MIXED)
-					return m_mixedElemDesc[loc_idx];
-				else
-					return et;
-			}
 
 			void repr(std::ostream &out);
 		};
@@ -321,15 +296,20 @@ namespace GridTool
 			}
 		};
 
-		class FACE : public RANGE
+		class FACE : public RANGE, public std::vector<CONNECTIVITY>
 		{
 		private:
 			int m_bc;
 			int m_face;
-			std::vector<CONNECTIVITY> m_connectivity;
 
 		public:
-			enum { MIXED = 0, LINEAR = 2, TRIANGULAR = 3, QUADRILATERAL = 4, POLYGONAL = 5 };
+			enum {
+				MIXED = 0,
+				LINEAR = 2,
+				TRIANGULAR = 3,
+				QUADRILATERAL = 4,
+				POLYGONAL = 5
+			};
 
 			static bool isValidIdx(int x);
 			static bool isValidStr(const std::string &x);
@@ -337,37 +317,16 @@ namespace GridTool
 			static int str2idx(const std::string &x);
 
 			FACE() = delete;
-			FACE(size_t zone, size_t first, size_t last, int bc, int face) :
-				RANGE(SECTION::FACE, zone, first, last)
-			{
-				// Check B.C. before assign
-				if (!BC::isValidIdx(bc))
-					throw std::runtime_error("Invalid B.C. type: " + std::to_string(bc));
-				else
-					m_bc = bc;
-
-				// Check face type before assign
-				if (!isValidIdx(face))
-					throw std::runtime_error("Invalid face type: " + std::to_string(face));
-				else if (face == FACE::POLYGONAL)
-					throw std::runtime_error("Polygonal face is not supported currently.");
-				else
-					m_face = face;
-
-				// Resize local storage
-				m_connectivity.resize(num());
-			}
+			FACE(size_t zone, size_t first, size_t last, int bc, int face);
 			~FACE() = default;
 
 			// The B.C. of this group of faces.
 			int bc_type() const { return m_bc; }
+			int &bc_type() { return m_bc; }
 
 			// The shape of this group of faces.
 			int face_type() const { return m_face; }
-
-			// 0-based local indexing
-			const CONNECTIVITY &connectivity(size_t loc_idx) const { return m_connectivity.at(loc_idx); }
-			CONNECTIVITY &connectivity(size_t loc_idx) { return m_connectivity.at(loc_idx); }
+			int &face_type() { return m_face; }
 
 			void repr(std::ostream &out);
 		};

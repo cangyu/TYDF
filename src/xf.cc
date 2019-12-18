@@ -29,6 +29,132 @@ static void skip_white(std::istream &in)
 		in.unget();
 }
 
+static void cross_product(const double *a, const double *b, double *dst)
+{
+	dst[0] = a[1] * b[2] - a[2] * b[1];
+	dst[1] = a[2] * b[0] - a[0] * b[2];
+	dst[2] = a[0] * b[1] - a[1] * b[0];
+}
+
+static void delta(double *na, double *nb, double *dst)
+{
+	for (size_t i = 0; i < 3; ++i)
+		dst[i] = nb[i] - na[i];
+}
+
+static void normalize(double *src, double *dst)
+{
+	double L = 0.0;
+	for (size_t i = 0; i < 3; ++i)
+		L += src[i] * src[i];
+	L = std::sqrt(L);
+	for (size_t i = 0; i < 3; ++i)
+		dst[i] = src[i] / L;
+}
+
+static double distance(double *na, double *nb)
+{
+	double L = 0.0;
+	for (size_t i = 0; i < 3; ++i)
+	{
+		double di = nb[i] - na[i];
+		L += di * di;
+	}
+	return std::sqrt(L);
+}
+
+static void line_center(double *na, double *nb, double *dst)
+{
+	for (size_t i = 0; i < 3; ++i)
+		dst[i] = 0.5*(na[i] + nb[i]);
+}
+
+static void line_normal(double *na, double *nb, double *dst, double *dst_r)
+{
+	// dst: unit normal vector from left cell to right cell.
+	// dst_r: unit normal vector from right cell to left cell.
+
+	delta(na, nb, dst);
+	// Rotate 90 deg in clockwise direction
+	std::swap(dst[0], dst[1]);
+	dst[1] = -dst[1];
+	normalize(dst, dst);
+
+	for (size_t i = 0; i < 3; ++i)
+		dst_r[i] = -dst[i];
+}
+
+static void triangle_center(double *na, double *nb, double *nc, double *dst)
+{
+	for (size_t i = 0; i < 3; ++i)
+		dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
+}
+
+static double triangle_area(double *na, double *nb, double *nc)
+{
+	const double c = distance(na, nb);
+	const double a = distance(nb, nc);
+	const double b = distance(nc, na);
+	const double p = 0.5*(a + b + c);
+	return std::sqrt(p*(p - a)*(p - b)*(p - c)); // Heron's formula
+}
+
+static void triangle_normal(double *na, double *nb, double *nc, double *dst, double *dst_r)
+{
+	// dst: unit normal vector from left cell to right cell.
+	// dst_r: unit normal vector from right cell to left cell.
+	// Order of "na, nb, nc" follows the right-hand convention.
+
+	double rab[3], rac[3];
+	delta(na, nb, rab);
+	delta(na, nc, rac);
+	cross_product(rac, rab, dst); // Take cross product to find normal direction
+	normalize(dst, dst); // Normalize
+
+	for (size_t i = 0; i < 3; ++i)
+		dst_r[i] = -dst[i];
+}
+
+static void quadrilateral_center(double *n1, double *n2, double *n3, double *n4, double *dst)
+{
+	// Order of "n1, n2, n3, n4" follows the right-hand convention.
+	const double S123 = triangle_area(n1, n2, n3);
+	const double S134 = triangle_area(n1, n3, n4);
+
+	double rc123[3], rc134[3];
+	triangle_center(n1, n2, n3, rc123);
+	triangle_center(n1, n3, n4, rc134);
+
+	const double alpha = S123 / (S123 + S134);
+	const double beta = 1.0 - alpha;
+
+	for (size_t i = 0; i < 3; ++i)
+		dst[i] = alpha * rc123[i] + beta * rc134[i];
+}
+
+static double quadrilateral_area(double *n1, double *n2, double *n3, double *n4)
+{
+	// Order of "n1, n2, n3, n4" follows the right-hand convention.
+	const double S123 = triangle_area(n1, n2, n3);
+	const double S134 = triangle_area(n1, n3, n4);
+	return S123 + S134;
+}
+
+static void quadrilateral_normal(double *n1, double *n2, double *n3, double *n4, double *dst, double *dst_r)
+{
+	// dst: unit normal vector from left cell to right cell.
+	// dst_r: unit normal vector from right cell to left cell.
+	// Order of "n1, n2, n3, n4" follows the right-hand convention.
+
+	double ra[3] = { 0 }, rb[3] = { 0 };
+	delta(n2, n4, ra);
+	delta(n1, n3, rb);
+	cross_product(ra, rb, dst);
+	normalize(dst, dst);
+	for (size_t i = 0; i < 3; ++i)
+		dst_r[i] = -dst[i];
+}
+
 namespace GridTool
 {
 	namespace XF
@@ -808,7 +934,7 @@ namespace GridTool
 							const auto &cf = face(cfi);
 							const auto &cf_c = cf.center;
 							const auto &cf_S = curCell.S.at(j);
-							const auto w = dot_product(cf_c, cf_S);
+							const auto w = cf_c.dot(cf_S);
 							curCell.volume += w;
 							for (int k = 1; k <= dimension(); ++k)
 								curCell.center(k) += w * cf_c(k);
@@ -860,7 +986,7 @@ namespace GridTool
 				curZone.name = curObj->name();
 				curZone.type = curObj->type();
 			}
-			}
+		}
 
 		void MESH::derived2raw()
 		{
@@ -1917,5 +2043,5 @@ namespace GridTool
 			quad.includedNode.at(2) = n2;
 			quad.includedNode.at(3) = n3;
 		}
-		}
 	}
+}

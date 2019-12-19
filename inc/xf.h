@@ -29,8 +29,8 @@ namespace GridTool
 	namespace XF
 	{
 		using COMMON::Vector;
-		using COMMON::Array1D;
 		using COMMON::DIM;
+		using COMMON::wrong_index;
 
 		class SECTION
 		{
@@ -373,8 +373,72 @@ namespace GridTool
 		class MESH : public DIM
 		{
 		protected:
-			/// Index of node, face, and cell starts from 1 and increase continuously.
-			/// But zone is different.
+			template <typename T>
+			class Array1D : public std::vector<T>
+			{
+			protected:
+				class not_1_based : public wrong_index
+				{
+				public:
+					not_1_based(size_t x) : wrong_index(x)
+					{
+						m_msg += "is not a valid 1-based index.";
+					}
+				};
+
+			public:
+				Array1D(size_t n = 0) : std::vector<T>(n) {}
+				Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
+				Array1D(const Array1D &obj) = default;
+				~Array1D() = default;
+
+				// 1-based indexing
+				T &operator()(size_t i)
+				{
+					if (1 <= i && i <= this->size())
+						return this->at(i - 1);
+					else
+						throw not_1_based(i);
+				}
+				const T &operator()(size_t i) const
+				{
+					if (1 <= i && i <= this->size())
+						return this->at(i - 1);
+					else
+						throw not_1_based(i);
+				}
+
+				// Check includances
+				bool contains(const T &x) const
+				{
+					const size_t N = this->size();
+					for (size_t i = 0; i < N; ++i)
+						if (x == this->at(i))
+							return true;
+
+					return false;
+				}
+				bool contains(const T &a, const T &b) const
+				{
+					bool flag_a = false, flag_b = false;
+					const size_t N = this->size();
+					for (size_t i = 0; i < N; ++i)
+					{
+						const T &x = this->at(i);
+						if (!flag_a && a == x)
+							flag_a = true;
+						if (!flag_b && b == x)
+							flag_b = true;
+
+						if (flag_a && flag_b)
+							return true;
+					}
+					return false;
+				}
+			};
+
+			/// Index of node, face, and cell starts from 1 
+			/// and increase continuously. But zone is different.
 			struct NODE_ELEM
 			{
 				Vector coordinate;

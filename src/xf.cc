@@ -1,13 +1,20 @@
 #include "../inc/xf.h"
 
-// Convert a boundary condition string literal to unified form within the scope of this code.
-// Outcome will be composed of LOWER case lettes and '-' only!
+/// Convert a boundary condition string literal to unified form within the scope of this code.
+/// Outcome will be composed of LOWER case lettes and '-' only!
 static void formalize(std::string &s)
 {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 	for (auto &e : s)
 		if (e == '_')
 			e = '-';
+}
+
+static std::string formalize(const std::string &s)
+{
+	std::string ret(s);
+	formalize(ret);
+	return ret;
 }
 
 static void eat(std::istream &in, char c)
@@ -69,15 +76,16 @@ static void line_center(double *na, double *nb, double *dst)
 		dst[i] = 0.5*(na[i] + nb[i]);
 }
 
+/// dst: unit normal vector from left cell to right cell.
+/// dst_r: unit normal vector from right cell to left cell.
 static void line_normal(double *na, double *nb, double *dst, double *dst_r)
 {
-	// dst: unit normal vector from left cell to right cell.
-	// dst_r: unit normal vector from right cell to left cell.
-
 	delta(na, nb, dst);
+
 	// Rotate 90 deg in clockwise direction
 	std::swap(dst[0], dst[1]);
 	dst[1] = -dst[1];
+
 	normalize(dst, dst);
 
 	for (size_t i = 0; i < 3; ++i)
@@ -99,12 +107,11 @@ static double triangle_area(double *na, double *nb, double *nc)
 	return std::sqrt(p*(p - a)*(p - b)*(p - c)); // Heron's formula
 }
 
+/// dst: unit normal vector from left cell to right cell.
+/// dst_r: unit normal vector from right cell to left cell.
+/// Order of "na, nb, nc" follows the right-hand convention.
 static void triangle_normal(double *na, double *nb, double *nc, double *dst, double *dst_r)
 {
-	// dst: unit normal vector from left cell to right cell.
-	// dst_r: unit normal vector from right cell to left cell.
-	// Order of "na, nb, nc" follows the right-hand convention.
-
 	double rab[3], rac[3];
 	delta(na, nb, rab);
 	delta(na, nc, rac);
@@ -115,9 +122,9 @@ static void triangle_normal(double *na, double *nb, double *nc, double *dst, dou
 		dst_r[i] = -dst[i];
 }
 
+/// Order of "n1, n2, n3, n4" follows the right-hand convention.
 static void quadrilateral_center(double *n1, double *n2, double *n3, double *n4, double *dst)
 {
-	// Order of "n1, n2, n3, n4" follows the right-hand convention.
 	const double S123 = triangle_area(n1, n2, n3);
 	const double S134 = triangle_area(n1, n3, n4);
 
@@ -132,20 +139,19 @@ static void quadrilateral_center(double *n1, double *n2, double *n3, double *n4,
 		dst[i] = alpha * rc123[i] + beta * rc134[i];
 }
 
+/// Order of "n1, n2, n3, n4" follows the right-hand convention.
 static double quadrilateral_area(double *n1, double *n2, double *n3, double *n4)
 {
-	// Order of "n1, n2, n3, n4" follows the right-hand convention.
 	const double S123 = triangle_area(n1, n2, n3);
 	const double S134 = triangle_area(n1, n3, n4);
 	return S123 + S134;
 }
 
+/// dst: unit normal vector from left cell to right cell.
+/// dst_r: unit normal vector from right cell to left cell.
+/// Order of "n1, n2, n3, n4" follows the right-hand convention.
 static void quadrilateral_normal(double *n1, double *n2, double *n3, double *n4, double *dst, double *dst_r)
 {
-	// dst: unit normal vector from left cell to right cell.
-	// dst_r: unit normal vector from right cell to left cell.
-	// Order of "n1, n2, n3, n4" follows the right-hand convention.
-
 	double ra[3] = { 0 }, rb[3] = { 0 };
 	delta(n2, n4, ra);
 	delta(n1, n3, rb);
@@ -357,7 +363,7 @@ namespace GridTool
 			m_type(tp)
 		{
 			if (!isValidTypeIdx(type()))
-				throw std::invalid_argument("Invalid description of node type!");
+				throw std::invalid_argument("Invalid description of node type in constructor.");
 		}
 
 		NODE::NODE(const NODE &rhs) :
@@ -367,7 +373,7 @@ namespace GridTool
 			m_type(rhs.type())
 		{
 			if (!isValidTypeIdx(type()))
-				throw std::invalid_argument("Invalid description of node type!");
+				throw std::invalid_argument("Invalid description of node type in copy-constructor.");
 		}
 
 		void NODE::repr(std::ostream &out)
@@ -415,9 +421,9 @@ namespace GridTool
 		const std::string &CELL::idx2str_type(int x)
 		{
 			static const std::map<int, std::string> mapping_set{
-				std::pair<int, std::string>(CELL::FLUID, "fluid"),
-				std::pair<int, std::string>(CELL::SOLID, "solid"),
-				std::pair<int, std::string>(CELL::DEAD, "dead")
+				std::pair<int, std::string>(FLUID, "fluid"),
+				std::pair<int, std::string>(SOLID, "solid"),
+				std::pair<int, std::string>(DEAD, "dead")
 			};
 
 			auto it = mapping_set.find(x);
@@ -430,9 +436,9 @@ namespace GridTool
 		int CELL::str2idx_type(const std::string &x)
 		{
 			static const std::map<std::string, int> mapping_set{
-				std::pair<std::string, int>("fluid", CELL::FLUID),
-				std::pair<std::string, int>("solid", CELL::SOLID),
-				std::pair<std::string, int>("dead", CELL::DEAD),
+				std::pair<std::string, int>("fluid", FLUID),
+				std::pair<std::string, int>("solid", SOLID),
+				std::pair<std::string, int>("dead", DEAD),
 			};
 
 			auto it = mapping_set.find(x);
@@ -480,14 +486,14 @@ namespace GridTool
 		const std::string &CELL::idx2str_elem(int x)
 		{
 			static const std::map<int, std::string> mapping_set{
-				std::pair<int, std::string>(CELL::MIXED, "mixed"),
-				std::pair<int, std::string>(CELL::TRIANGULAR, "triangular"),
-				std::pair<int, std::string>(CELL::TETRAHEDRAL, "tetrahedral"),
-				std::pair<int, std::string>(CELL::QUADRILATERAL, "quadrilateral"),
-				std::pair<int, std::string>(CELL::HEXAHEDRAL, "hexahedral"),
-				std::pair<int, std::string>(CELL::PYRAMID, "pyramid"),
-				std::pair<int, std::string>(CELL::WEDGE, "wedge"),
-				std::pair<int, std::string>(CELL::POLYHEDRAL, "polyhedral")
+				std::pair<int, std::string>(MIXED, "mixed"),
+				std::pair<int, std::string>(TRIANGULAR, "triangular"),
+				std::pair<int, std::string>(TETRAHEDRAL, "tetrahedral"),
+				std::pair<int, std::string>(QUADRILATERAL, "quadrilateral"),
+				std::pair<int, std::string>(HEXAHEDRAL, "hexahedral"),
+				std::pair<int, std::string>(PYRAMID, "pyramid"),
+				std::pair<int, std::string>(WEDGE, "wedge"),
+				std::pair<int, std::string>(POLYHEDRAL, "polyhedral")
 			};
 
 			auto it = mapping_set.find(x);
@@ -500,19 +506,19 @@ namespace GridTool
 		int CELL::str2idx_elem(const std::string &x)
 		{
 			static const std::map<std::string, int> mapping_set{
-				std::pair<std::string, int>("mixed", CELL::MIXED),
-				std::pair<std::string, int>("triangular", CELL::TRIANGULAR),
-				std::pair<std::string, int>("tri", CELL::TRIANGULAR),
-				std::pair<std::string, int>("tetrahedral", CELL::TETRAHEDRAL),
-				std::pair<std::string, int>("tet", CELL::TETRAHEDRAL),
-				std::pair<std::string, int>("quadrilateral", CELL::QUADRILATERAL),
-				std::pair<std::string, int>("quad", CELL::QUADRILATERAL),
-				std::pair<std::string, int>("hexahedral", CELL::HEXAHEDRAL),
-				std::pair<std::string, int>("hex", CELL::HEXAHEDRAL),
-				std::pair<std::string, int>("pyramid", CELL::PYRAMID),
-				std::pair<std::string, int>("wedge", CELL::WEDGE),
-				std::pair<std::string, int>("prism", CELL::WEDGE),
-				std::pair<std::string, int>("polyhedral", CELL::POLYHEDRAL)
+				std::pair<std::string, int>("mixed", MIXED),
+				std::pair<std::string, int>("triangular", TRIANGULAR),
+				std::pair<std::string, int>("tri", TRIANGULAR),
+				std::pair<std::string, int>("tetrahedral", TETRAHEDRAL),
+				std::pair<std::string, int>("tet", TETRAHEDRAL),
+				std::pair<std::string, int>("quadrilateral", QUADRILATERAL),
+				std::pair<std::string, int>("quad", QUADRILATERAL),
+				std::pair<std::string, int>("hexahedral", HEXAHEDRAL),
+				std::pair<std::string, int>("hex", HEXAHEDRAL),
+				std::pair<std::string, int>("pyramid", PYRAMID),
+				std::pair<std::string, int>("wedge", WEDGE),
+				std::pair<std::string, int>("prism", WEDGE),
+				std::pair<std::string, int>("polyhedral", POLYHEDRAL)
 			};
 
 			auto it = mapping_set.find(x);
@@ -599,11 +605,11 @@ namespace GridTool
 		const std::string &FACE::idx2str(int x)
 		{
 			static const std::map<int, std::string> mapping_set{
-				std::pair<int, std::string>(FACE::MIXED, "mixed"),
-				std::pair<int, std::string>(FACE::LINEAR, "linear"),
-				std::pair<int, std::string>(FACE::TRIANGULAR, "triangular"),
-				std::pair<int, std::string>(FACE::QUADRILATERAL, "quadrilateral"),
-				std::pair<int, std::string>(FACE::POLYGONAL, "polygonal")
+				std::pair<int, std::string>(MIXED, "mixed"),
+				std::pair<int, std::string>(LINEAR, "linear"),
+				std::pair<int, std::string>(TRIANGULAR, "triangular"),
+				std::pair<int, std::string>(QUADRILATERAL, "quadrilateral"),
+				std::pair<int, std::string>(POLYGONAL, "polygonal")
 			};
 
 			auto it = mapping_set.find(x);
@@ -616,14 +622,14 @@ namespace GridTool
 		int FACE::str2idx(const std::string &x)
 		{
 			static const std::map<std::string, int> mapping_set{
-				std::pair<std::string, int>("mixed", FACE::MIXED),
-				std::pair<std::string, int>("linear", FACE::LINEAR),
-				std::pair<std::string, int>("line", FACE::LINEAR),
-				std::pair<std::string, int>("triangular", FACE::TRIANGULAR),
-				std::pair<std::string, int>("tri", FACE::TRIANGULAR),
-				std::pair<std::string, int>("quadrilateral", FACE::QUADRILATERAL),
-				std::pair<std::string, int>("quad", FACE::QUADRILATERAL),
-				std::pair<std::string, int>("polygonal", FACE::POLYGONAL)
+				std::pair<std::string, int>("mixed", MIXED),
+				std::pair<std::string, int>("linear", LINEAR),
+				std::pair<std::string, int>("line", LINEAR),
+				std::pair<std::string, int>("triangular", TRIANGULAR),
+				std::pair<std::string, int>("tri", TRIANGULAR),
+				std::pair<std::string, int>("quadrilateral", QUADRILATERAL),
+				std::pair<std::string, int>("quad", QUADRILATERAL),
+				std::pair<std::string, int>("polygonal", POLYGONAL)
 			};
 
 			auto it = mapping_set.find(x);
@@ -639,14 +645,27 @@ namespace GridTool
 			m_bc(bc),
 			m_face(face)
 		{
-			// Check B.C. before assign.
 			if (!BC::isValidIdx(bc))
-				throw std::runtime_error("Invalid B.C. type: " + std::to_string(bc));
+				throw std::invalid_argument("Invalid B.C. type: " + std::to_string(bc));
 
-			// Check face type before assign.
 			if (!isValidIdx(face))
-				throw std::runtime_error("Invalid face type: " + std::to_string(face));
+				throw std::invalid_argument("Invalid face type: " + std::to_string(face));
 			if (face == POLYGONAL)
+				throw std::invalid_argument("Polygonal face is not supported currently.");
+		}
+
+		FACE::FACE(const FACE &rhs) :
+			RANGE(SECTION::FACE, rhs.zone(), rhs.first_index(), rhs.last_index()),
+			std::vector<CONNECTIVITY>(rhs.begin(), rhs.end()),
+			m_bc(rhs.bc_type()),
+			m_face(rhs.face_type())
+		{
+			if (!BC::isValidIdx(bc_type()))
+				throw std::runtime_error("Invalid B.C. not detected in previous construction.");
+
+			if (!isValidIdx(face_type()))
+				throw std::runtime_error("Invalid FACE-TYPE not detected in previous construction.");
+			if (face_type() == POLYGONAL)
 				throw std::runtime_error("Polygonal face is not supported currently.");
 		}
 
@@ -658,7 +677,7 @@ namespace GridTool
 			out << bc_type() << " " << face_type() << ")(" << std::endl;
 
 			const size_t N = num();
-			if (m_face == FACE::MIXED)
+			if (m_face == MIXED)
 			{
 				for (size_t i = 0; i < N; ++i)
 				{
@@ -681,6 +700,17 @@ namespace GridTool
 			}
 
 			out << "))" << std::endl;
+		}
+
+		ZONE::ZONE(int zone, const std::string &z_type, const std::string &name) :
+			SECTION(SECTION::ZONE),
+			m_zoneID(zone),
+			m_zoneType(formalize(z_type)),
+			m_zoneName(name),
+			m_domainID(0)
+		{
+			if (!BC::isValidStr(type()) && !CELL::isValidTypeStr(type()))
+				throw std::invalid_argument("B.C. specification is invalid.");
 		}
 
 		void ZONE::repr(std::ostream &out)

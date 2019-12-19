@@ -323,13 +323,14 @@ namespace GridTool
 
 			FACE() = delete;
 			FACE(size_t zone, size_t first, size_t last, int bc, int face);
+			FACE(const FACE &rhs);
 			~FACE() = default;
 
-			// The B.C. of this group of faces.
+			/* B.C. of this group of faces */
 			int bc_type() const { return m_bc; }
 			int &bc_type() { return m_bc; }
 
-			// The shape of this group of faces.
+			/* Shape of this group of faces */
 			int face_type() const { return m_face; }
 			int &face_type() { return m_face; }
 
@@ -345,20 +346,26 @@ namespace GridTool
 
 		public:
 			ZONE() = delete;
-			ZONE(int zone, const std::string &type, const std::string &name) : SECTION(SECTION::ZONE), m_zoneID(zone), m_zoneType(type), m_zoneName(name), m_domainID(0) {}
+			ZONE(int zone, const std::string &bc_type, const std::string &name);
+			ZONE(const ZONE &rhs) = default;
 			~ZONE() = default;
 
-			// The index of this zone, may be any non-consecutive positive integer.
+			// The index of this zone, 
+			// may be any non-consecutive positive integer.
 			size_t zone() const { return m_zoneID; }
+			size_t &zone() { return m_zoneID; }
 
 			// The B.C. string literal.
 			const std::string &type() const { return m_zoneType; }
+			std::string &type() { return m_zoneType; }
 
 			// The name of this zone.
 			const std::string &name() const { return m_zoneName; }
+			std::string &name() { return m_zoneName; }
 
-			// NOT used.
+			// Domain ID, NOT used.
 			int domain() const { return m_domainID; }
+			int &domain() { return m_domainID; }
 
 			void repr(std::ostream &out);
 		};

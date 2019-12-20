@@ -246,9 +246,15 @@ namespace GridTool
 
 		struct CONNECTIVITY
 		{
-			int x; // Num of nodes.
-			size_t n[4]; // At most 4 nodes within a single face, polygon faces are not supported currently.
-			size_t c[2]; // Adjacent cells.
+			/// Num of nodes.
+			int x;
+
+			/// At most 4 nodes within a single face, 
+			/// polygon faces are not supported currently.
+			size_t n[4];
+
+			/// Adjacent cells.
+			size_t c[2];
 
 			CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
 			CONNECTIVITY(const CONNECTIVITY &rhs) = default;
@@ -260,44 +266,11 @@ namespace GridTool
 			size_t c0() const { return c[0]; }
 			size_t c1() const { return c[1]; }
 
-			void set(int x_, size_t *n_, size_t *c_)
-			{
-				if (x_ > 4)
-					throw std::invalid_argument("Too many nodes within a face, polygon face are not supported currently.");
-				if (x_ < 1)
-					throw std::invalid_argument("Invalid num of nodes within a face.");
+			void set(int x_, size_t *n_, size_t *c_);
 
-				x = x_;
-				c[0] = c_[0];
-				c[1] = c_[1];
-
-				int i = 0;
-				for (; i < x_; ++i)
-					n[i] = n_[i];
-				while (i < 4)
-				{
-					n[i] = 0;
-					++i;
-				}
-			}
-
-			// Index of its left-hand side node.
-			size_t leftAdj(int loc_idx) const
-			{
-				if (loc_idx == 0)
-					return n[x - 1];
-				else
-					return n[loc_idx - 1];
-			}
-
-			// Index of its right-hand side node.
-			size_t rightAdj(int loc_idx) const
-			{
-				if (loc_idx == x - 1)
-					return n[0];
-				else
-					return n[loc_idx + 1];
-			}
+			// Index of adjacent node.
+			size_t leftAdj(int loc_idx) const;
+			size_t rightAdj(int loc_idx) const;
 		};
 
 		class FACE : public RANGE, public std::vector<CONNECTIVITY>

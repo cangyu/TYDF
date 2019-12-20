@@ -576,6 +576,43 @@ namespace GridTool
 			}
 		}
 
+		void CONNECTIVITY::set(int x_, size_t *n_, size_t *c_)
+		{
+			if (x_ > 4)
+				throw std::invalid_argument("Too many nodes within a face, polygon face are not supported currently.");
+			if (x_ < 1)
+				throw std::invalid_argument("Invalid num of nodes within a face.");
+
+			x = x_;
+			c[0] = c_[0];
+			c[1] = c_[1];
+
+			int i = 0;
+			for (; i < x_; ++i)
+				n[i] = n_[i];
+			while (i < 4)
+			{
+				n[i] = 0;
+				++i;
+			}
+		}
+
+		size_t CONNECTIVITY::leftAdj(int loc_idx) const
+		{
+			if (loc_idx == 0)
+				return n[x - 1];
+			else
+				return n[loc_idx - 1];
+		}
+
+		size_t CONNECTIVITY::rightAdj(int loc_idx) const
+		{
+			if (loc_idx == x - 1)
+				return n[0];
+			else
+				return n[loc_idx + 1];
+		}
+
 		bool FACE::isValidIdx(int x)
 		{
 			static const std::set<int> candidate_set{

@@ -718,6 +718,36 @@ namespace GridTool
 			out << std::dec << "(" << identity() << " (" << zone() << " " << type() << " " << name() << ")())" << std::endl;
 		}
 
+		template <typename T>
+		bool MESH::Array1D<T>::contains(const T &x) const
+		{
+			const size_t N = this->size();
+			for (size_t i = 0; i < N; ++i)
+				if (x == this->at(i))
+					return true;
+
+			return false;
+		}
+
+		template <typename T>
+		bool MESH::Array1D<T>::contains(const T &a, const T &b) const
+		{
+			bool flag_a = false, flag_b = false;
+			const size_t N = this->size();
+			for (size_t i = 0; i < N; ++i)
+			{
+				const T &x = this->at(i);
+				if (!flag_a && a == x)
+					flag_a = true;
+				if (!flag_b && b == x)
+					flag_b = true;
+
+				if (flag_a && flag_b)
+					return true;
+			}
+			return false;
+		}
+
 		MESH::MESH(const std::string &inp, std::ostream &fout) :
 			DIM(3),
 			m_totalNodeNum(0),

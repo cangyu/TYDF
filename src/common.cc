@@ -1,4 +1,3 @@
-#include <stdexcept>
 #include "../inc/common.h"
 
 namespace GridTool
@@ -20,6 +19,109 @@ namespace GridTool
 
 			if (dim == 3 && !is3d)
 				throw std::invalid_argument("Inconsistent dimensions.");
+		}
+
+		const Scalar &Vector::operator()(short idx) const
+		{
+			switch (idx)
+			{
+			case 1:
+				return x();
+			case 2:
+				return y();
+			case 3:
+				return z();
+			default:
+				throw not_vector_component(idx);
+			}
+		}
+
+		Scalar &Vector::operator()(short idx)
+		{
+			switch (idx)
+			{
+			case 1:
+				return x();
+			case 2:
+				return y();
+			case 3:
+				return z();
+			default:
+				throw not_vector_component(idx);
+			}
+		}
+
+		Vector &Vector::operator=(const Vector &rhs)
+		{
+			x() = rhs.x();
+			y() = rhs.y();
+			z() = rhs.z();
+			return *this;
+		}
+
+		Vector &Vector::operator+=(const Vector &rhs)
+		{
+			x() += rhs.x();
+			y() += rhs.y();
+			z() += rhs.z();
+			return *this;
+		}
+
+		Vector &Vector::operator-=(const Vector &rhs)
+		{
+			x() -= rhs.x();
+			y() -= rhs.y();
+			z() -= rhs.z();
+			return *this;
+		}
+
+		Vector &Vector::operator*=(Scalar a)
+		{
+			x() *= a;
+			y() *= a;
+			z() *= a;
+			return *this;
+		}
+
+		Vector &Vector::operator/=(Scalar a)
+		{
+			x() /= a;
+			y() /= a;
+			z() /= a;
+			return *this;
+		}
+
+		Scalar Vector::dot(const Vector &b) const
+		{
+			Scalar ret = 0.0;
+			ret += x() * b.x();
+			ret += y() * b.y();
+			ret += z() * b.z();
+			return ret;
+		}
+
+		Vector Vector::cross(const Vector &b) const
+		{
+			Vector ret;
+			ret.x() = y() * b.z() - z() * b.y();
+			ret.y() = z() * b.x() - x() * b.z();
+			ret.z() = x() * b.y() - y() * b.x();
+			return ret;
+		}
+
+		Scalar Vector::norm() const
+		{
+			Scalar ret = 0.0;
+			ret += std::pow(x(), 2);
+			ret += std::pow(y(), 2);
+			ret += std::pow(z(), 2);
+			return std::sqrt(ret);
+		}
+
+		void Vector::normalize()
+		{
+			const Scalar L = norm();
+			this->operator/=(L);
 		}
 	}
 }

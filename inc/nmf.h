@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <vector>
 #include <utility>
-#include <stdexcept>
 #include <regex>
 #include "common.h"
 
@@ -340,32 +339,17 @@ namespace GridTool
 			};
 
 		protected:
-			class not_a_surface : public wrong_index
+			struct not_a_surface : public wrong_index
 			{
-			public:
-				not_a_surface(short x) :
-					wrong_index(x)
-				{
-					m_msg += "is not a valid surface index of a 3D block.";
-				}
+				not_a_surface(short x) : wrong_index(x, "is not a valid surface index of a 3D block") {}
 			};
-			class not_a_frame : public wrong_index
+			struct not_a_frame : public wrong_index
 			{
-			public:
-				not_a_frame(short x) :
-					wrong_index(x)
-				{
-					m_msg += "is not a valid frame index of a 3D block.";
-				}
+				not_a_frame(short x) : wrong_index(x, "is not a valid frame index of a 3D block") {}
 			};
-			class not_a_vertex : public wrong_index
+			struct not_a_vertex : public wrong_index
 			{
-			public:
-				not_a_vertex(short x) :
-					wrong_index(x)
-				{
-					m_msg += "is not a valid vertex index of a 3D block.";
-				}
+				not_a_vertex(short x) : wrong_index(x, "is not a valid vertex index of a 3D block") {}
 			};
 
 		private:
@@ -379,33 +363,9 @@ namespace GridTool
 
 		public:
 			Block3D() = delete;
-
-			Block3D(int nI, int nJ, int nK) :
-				BLOCK(nI, nJ, nK),
-				m_cell(cell_num(), nullptr),
-				m_vertex(NumOfVertex),
-				m_frame(NumOfFrame),
-				m_surf(NumOfSurf)
-			{
-				setup_dependence();
-				establish_connections();
-			}
-
-			Block3D(const Block3D &rhs) :
-				BLOCK(rhs.IDIM(), rhs.JDIM(), rhs.KDIM()), // Only copy dimensions
-				m_cell(cell_num(), nullptr),
-				m_vertex(NumOfVertex),
-				m_frame(NumOfFrame),
-				m_surf(NumOfSurf)
-			{
-				setup_dependence();
-				establish_connections();
-			}
-
-			~Block3D()
-			{
-				release_cell_storage();
-			}
+			Block3D(int nI, int nJ, int nK);
+			Block3D(const Block3D &rhs);
+			~Block3D() { release_cell_storage(); }
 
 			void release_cell_storage()
 			{
@@ -582,13 +542,9 @@ namespace GridTool
 		class Mapping3D
 		{
 		protected:
-			class not_a_block : public wrong_index
+			struct not_a_block : public wrong_index
 			{
-			public:
-				not_a_block(size_t x) : wrong_index(x)
-				{
-					m_msg += "is not a valid 1-based block index.";
-				}
+				not_a_block(size_t x) : wrong_index(x, "is not a valid 1-based block index") {}
 			};
 
 			class ENTRY

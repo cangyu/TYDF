@@ -358,7 +358,7 @@ namespace GridTool
 
 		NODE::NODE(size_t zone, size_t first, size_t last, int tp, int ND) :
 			RANGE(SECTION::NODE, zone, first, last),
-			DIM(ND),
+			DIM(ND, ND == 3),
 			std::vector<Vector>(num()),
 			m_type(tp)
 		{
@@ -755,36 +755,6 @@ namespace GridTool
 			out << std::dec << "(" << identity() << " (" << zone() << " " << type() << " " << name() << ")())" << std::endl;
 		}
 
-		template <typename T>
-		bool MESH::Array1D<T>::contains(const T &x) const
-		{
-			const size_t N = this->size();
-			for (size_t i = 0; i < N; ++i)
-				if (x == this->at(i))
-					return true;
-
-			return false;
-		}
-
-		template <typename T>
-		bool MESH::Array1D<T>::contains(const T &a, const T &b) const
-		{
-			bool flag_a = false, flag_b = false;
-			const size_t N = this->size();
-			for (size_t i = 0; i < N; ++i)
-			{
-				const T &x = this->at(i);
-				if (!flag_a && a == x)
-					flag_a = true;
-				if (!flag_b && b == x)
-					flag_b = true;
-
-				if (flag_a && flag_b)
-					return true;
-			}
-			return false;
-		}
-
 		MESH::MESH(const std::string &inp, std::ostream &fout) :
 			DIM(3),
 			m_totalNodeNum(0),
@@ -1083,11 +1053,6 @@ namespace GridTool
 				curZone.name = curObj->name();
 				curZone.type = curObj->type();
 			}
-		}
-
-		void MESH::derived2raw()
-		{
-			// TODO
 		}
 
 		void MESH::add_entry(SECTION *e)

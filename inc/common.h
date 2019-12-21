@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <exception>
+#include <stdexcept>
 
 namespace GridTool
 {
@@ -13,26 +14,18 @@ namespace GridTool
 	{
 		double relaxation(double a, double b, double x);
 
-		class wrong_index : public std::exception
+		struct wrong_index : public std::logic_error
 		{
-		protected:
-			std::string m_msg;
-
-		public:
-			wrong_index(long long idx) : std::exception(), m_msg("\"" + std::to_string(idx) + "\" ") {}
+			wrong_index(long long idx, const std::string &reason) : std::logic_error("\"" + std::to_string(idx) + "\" " + reason + ".") {}
 			virtual ~wrong_index() = default;
 		};
 
 		class DIM
 		{
 		private:
-			class wrong_dimension : public wrong_index
+			struct wrong_dimension : public wrong_index
 			{
-			public:
-				wrong_dimension(int dim) : wrong_index(dim)
-				{
-					m_msg += "is not a valid dimension.";
-				}
+				wrong_dimension(int dim) : wrong_index(dim, "is not a valid dimension") {}
 			};
 
 		protected:
@@ -54,13 +47,9 @@ namespace GridTool
 		class Vector : public std::array<Scalar, 3>
 		{
 		protected:
-			class not_vector_component : public wrong_index
+			struct not_vector_component : public wrong_index
 			{
-			public:
-				not_vector_component(short x) : wrong_index(x)
-				{
-					m_msg += "is not a valid index of certain vector component.";
-				}
+				not_vector_component(short x) : wrong_index(x, "is not a valid index of certain vector component") {}
 			};
 
 		public:
@@ -71,34 +60,8 @@ namespace GridTool
 			~Vector() = default;
 
 			// 1-based indexing
-			const Scalar &operator()(short idx) const
-			{
-				switch (idx)
-				{
-				case 1:
-					return x();
-				case 2:
-					return y();
-				case 3:
-					return z();
-				default:
-					throw not_vector_component(idx);
-				}
-			}
-			Scalar &operator()(short idx)
-			{
-				switch (idx)
-				{
-				case 1:
-					return x();
-				case 2:
-					return y();
-				case 3:
-					return z();
-				default:
-					throw not_vector_component(idx);
-				}
-			}
+			const Scalar &operator()(short idx) const;
+			Scalar &operator()(short idx);
 
 			// Access through component
 			const Scalar &x() const { return at(0); }
@@ -109,71 +72,58 @@ namespace GridTool
 			Scalar &z() { return at(2); }
 
 			// Operators
-			Vector &operator=(const Vector &rhs)
-			{
-				x() = rhs.x();
-				y() = rhs.y();
-				z() = rhs.z();
-				return *this;
-			}
-			Vector &operator+=(const Vector &rhs)
-			{
-				x() += rhs.x();
-				y() += rhs.y();
-				z() += rhs.z();
-				return *this;
-			}
-			Vector &operator-=(const Vector &rhs)
-			{
-				x() -= rhs.x();
-				y() -= rhs.y();
-				z() -= rhs.z();
-				return *this;
-			}
-			Vector &operator*=(Scalar a)
-			{
-				x() *= a;
-				y() *= a;
-				z() *= a;
-				return *this;
-			}
-			Vector &operator/=(Scalar a)
-			{
-				x() /= a;
-				y() /= a;
-				z() /= a;
-				return *this;
-			}
+			Vector &operator=(const Vector &rhs);
+			Vector &operator+=(const Vector &rhs);
+			Vector &operator-=(const Vector &rhs);
+			Vector &operator*=(Scalar a);
+			Vector &operator/=(Scalar a);
 
 			// Mathematical operations
-			Scalar dot(const Vector &b) const
+			Scalar dot(const Vector &b) const;
+			Vector cross(const Vector &b) const;
+			Scalar norm() const;
+			void normalize();
+		};
+
+		template <typename T>
+		class Array1D : public std::vector<T>
+		{
+		public:
+			Array1D(size_t n = 0) : std::vector<T>(n) {}
+			Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
+			Array1D(const Array1D &obj) = default;
+			~Array1D() = default;
+
+			// 1-based indexing
+			T &operator()(size_t i) { return this->at(i - 1); }
+			const T &operator()(size_t i) const { return this->at(i - 1); }
+
+			// Check includances
+			bool contains(const T &x) const
 			{
-				Scalar ret = 0.0;
-				ret += x() * b.x();
-				ret += y() * b.y();
-				ret += z() * b.z();
-				return ret;
+				const size_t N = this->size();
+				for (size_t i = 0; i < N; ++i)
+					if (x == this->at(i))
+						return true;
+
+				return false;
 			}
-			Vector cross(const Vector &b) const
+			bool contains(const T &a, const T &b) const
 			{
-				Vector ret;
-				ret.x() = y() * b.z() - z() * b.y();
-				ret.y() = z() * b.x() - x() * b.z();
-				ret.z() = x() * b.y() - y() * b.x();
-				return ret;
-			}
-			Scalar norm() const
-			{
-				Scalar ret = 0.0;
-				ret += std::pow(x(), 2);
-				ret += std::pow(y(), 2);
-				ret += std::pow(z(), 2);
-				return std::sqrt(ret);
-			}
-			void normalize()
-			{
-				const Scalar L = norm();
-				this->operator/=(L);
+				bool flag_a = false, flag_b = false;
+				const size_t N = this->size();
+				for (size_t i = 0; i < N; ++i)
+				{
+					const T &x = this->at(i);
+					if (!flag_a && a == x)
+						flag_a = true;
+					if (!flag_b && b == x)
+						flag_b = true;
+
+					if (flag_a && flag_b)
+						return true;
+				}
+				return false;
 			}
 		};
 
@@ -186,6 +136,7 @@ namespace GridTool
 			size_t m_NXY;
 
 		public:
+			ArrayND() = delete;
 			ArrayND(size_t nx, const T &val) :
 				m_Nx(nx),
 				m_Ny(1),
@@ -193,10 +144,9 @@ namespace GridTool
 				m_data(nx, val),
 				m_NXY(nx)
 			{
-				if (nx == 0)
-					throw std::runtime_error("Invalid size: nx=" + std::to_string(nx) + ".");
+				if (nI() == 0)
+					throw std::invalid_argument("0 in I-dim.");
 			}
-
 			ArrayND(size_t nx, size_t ny, const T &val) :
 				m_Nx(nx),
 				m_Ny(ny),
@@ -204,12 +154,11 @@ namespace GridTool
 				m_data(nx*ny, val),
 				m_NXY(nx*ny)
 			{
-				if (nx == 0)
-					throw std::runtime_error("Invalid size: nx=" + std::to_string(nx) + ".");
-				if (ny == 0)
-					throw std::runtime_error("Invalid size: ny=" + std::to_string(ny) + ".");
+				if (nI() == 0)
+					throw std::invalid_argument("0 in I-dim.");
+				if (nJ() == 0)
+					throw std::invalid_argument("0 in J-dim.");
 			}
-
 			ArrayND(size_t nx, size_t ny, size_t nz, const T &val) :
 				m_Nx(nx),
 				m_Ny(ny),
@@ -217,14 +166,27 @@ namespace GridTool
 				m_data(nx*ny*nz, val),
 				m_NXY(nx*ny)
 			{
-				if (nx == 0)
-					throw std::runtime_error("Invalid size: nx=" + std::to_string(nx) + ".");
-				if (ny == 0)
-					throw std::runtime_error("Invalid size: ny=" + std::to_string(ny) + ".");
-				if (nz == 0)
-					throw std::runtime_error("Invalid size: nz=" + std::to_string(nz) + ".");
+				if (nI() == 0)
+					throw std::invalid_argument("0 in I-dim.");
+				if (nJ() == 0)
+					throw std::invalid_argument("0 in J-dim.");
+				if (nK() == 0)
+					throw std::invalid_argument("0 in K-dim.");
 			}
-
+			ArrayND(const ArrayND &rhs) :
+				m_Nx(rhs.m_Nx),
+				m_Ny(rhs.m_Ny),
+				m_Nz(rhs.m_Nz),
+				m_data(rhs.m_data.begin(), rhs.m_data.end()),
+				m_NXY(rhs.m_NXY)
+			{
+				if (nI() == 0)
+					throw std::runtime_error("0 in I-dim.");
+				if (nJ() == 0)
+					throw std::runtime_error("0 in J-dim.");
+				if (nK() == 0)
+					throw std::runtime_error("0 in K-dim.");
+			}
 			virtual ~ArrayND() = default;
 
 			size_t nI() const { return m_Nx; }

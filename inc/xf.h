@@ -15,7 +15,6 @@
 #include <utility>
 #include <algorithm>
 #include <cmath>
-#include <stdexcept>
 #include "common.h"
 
 /**
@@ -30,6 +29,7 @@ namespace GridTool
 	{
 		using COMMON::Vector;
 		using COMMON::DIM;
+		using COMMON::Array1D;
 
 		class SECTION
 		{
@@ -322,20 +322,20 @@ namespace GridTool
 			ZONE(const ZONE &rhs) = default;
 			~ZONE() = default;
 
-			// The index of this zone, 
-			// may be any non-consecutive positive integer.
+			/// Index of this zone, may be any 
+			/// non-consecutive positive integer.
 			size_t zone() const { return m_zoneID; }
 			size_t &zone() { return m_zoneID; }
 
-			// The B.C. string literal.
+			/// B.C. string literal.
 			const std::string &type() const { return m_zoneType; }
 			std::string &type() { return m_zoneType; }
 
-			// The name of this zone.
+			/// Name of this zone.
 			const std::string &name() const { return m_zoneName; }
 			std::string &name() { return m_zoneName; }
 
-			// Domain ID, NOT used.
+			/// Domain ID, NOT used.
 			int domain() const { return m_domainID; }
 			int &domain() { return m_domainID; }
 
@@ -345,24 +345,6 @@ namespace GridTool
 		class MESH : public DIM
 		{
 		protected:
-			template <typename T>
-			class Array1D : public std::vector<T>
-			{
-			public:
-				Array1D(size_t n = 0) : std::vector<T>(n) {}
-				Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
-				Array1D(const Array1D &obj) = default;
-				~Array1D() = default;
-
-				// 1-based indexing
-				T &operator()(size_t i) { return this->at(i - 1); }
-				const T &operator()(size_t i) const { return this->at(i - 1); }
-
-				// Check includances
-				bool contains(const T &x) const;
-				bool contains(const T &a, const T &b) const;
-			};
-
 			/// Index of node, face, and cell starts from 1 
 			/// and increase continuously. But zone is different.
 			struct NODE_ELEM
@@ -383,8 +365,7 @@ namespace GridTool
 				Array1D<size_t> includedNode;
 				size_t leftCell, rightCell;
 				bool atBdry;
-				Vector n_LR; // Surface unit normal
-				Vector n_RL;
+				Vector n_LR, n_RL; // Surface unit normal
 			};
 			struct CELL_ELEM
 			{
@@ -393,7 +374,7 @@ namespace GridTool
 				double volume;
 				Array1D<size_t> includedFace;
 				Array1D<size_t> includedNode;
-				Array1D<size_t> adjacentCell; // The size is equal to that of "includedFace", set to 0 if the adjacent cell is boundary.
+				Array1D<size_t> adjacentCell; // The size is equal to that of "includedFace", set to 0 if adjacent cell is boundary.
 				Array1D<Vector> n;
 				Array1D<Vector> S;
 			};

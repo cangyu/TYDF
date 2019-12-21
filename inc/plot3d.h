@@ -5,7 +5,6 @@
 #include <sstream>
 #include <vector>
 #include <string>
-#include <stdexcept>
 #include "common.h"
 
 namespace GridTool

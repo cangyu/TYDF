@@ -137,6 +137,28 @@ namespace GridTool
 				throw std::invalid_argument("Invalid dimension.");
 		}
 
+		Block3D::Block3D(int nI, int nJ, int nK) :
+			BLOCK(nI, nJ, nK),
+			m_cell(cell_num(), nullptr),
+			m_vertex(NumOfVertex),
+			m_frame(NumOfFrame),
+			m_surf(NumOfSurf)
+		{
+			setup_dependence();
+			establish_connections();
+		}
+
+		Block3D::Block3D(const Block3D &rhs) :
+			BLOCK(rhs.IDIM(), rhs.JDIM(), rhs.KDIM()), // Only copy dimensions
+			m_cell(cell_num(), nullptr),
+			m_vertex(NumOfVertex),
+			m_frame(NumOfFrame),
+			m_surf(NumOfSurf)
+		{
+			setup_dependence();
+			establish_connections();
+		}
+
 		void Block3D::setup_dependence()
 		{
 			for (short i = 0; i < NumOfVertex; ++i)

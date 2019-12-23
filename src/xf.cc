@@ -2,7 +2,7 @@
 
 /// Convert a boundary condition string literal to unified form within the scope of this code.
 /// Outcome will be composed of LOWER case lettes and '-' only!
-static void formalize(std::string &s)
+static void formalize_inplace(std::string &s)
 {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 	for (auto &e : s)
@@ -13,7 +13,7 @@ static void formalize(std::string &s)
 static std::string formalize(const std::string &s)
 {
 	std::string ret(s);
-	formalize(ret);
+	formalize_inplace(ret);
 	return ret;
 }
 
@@ -208,9 +208,7 @@ namespace GridTool
 				"axis"
 			};
 
-			std::string x_(x);
-			formalize(x_);
-			return candidate_set.find(x_) != candidate_set.end();
+			return candidate_set.find(formalize(x)) != candidate_set.end();
 		}
 
 		const std::string &BC::idx2str(int x)
@@ -266,9 +264,7 @@ namespace GridTool
 				std::pair<std::string, int>("axis", AXIS)
 			};
 
-			std::string x_(x);
-			formalize(x_);
-			auto it = mapping_set.find(x_);
+			auto it = mapping_set.find(formalize(x));
 			if (it == mapping_set.end())
 				throw std::invalid_argument("\"" + x + "\" is not a valid B.C. string.");
 			else
@@ -318,10 +314,7 @@ namespace GridTool
 				"boundary"
 			};
 
-			std::string x_(x);
-			formalize(x_);
-			auto it = candidate_set.find(x_);
-			return it != candidate_set.end();
+			return candidate_set.find(formalize(x)) != candidate_set.end();
 		}
 
 		const std::string &NODE::idx2str(int x)
@@ -347,9 +340,7 @@ namespace GridTool
 				std::pair<std::string, int>("boundary", BOUNDARY),
 			};
 
-			std::string x_(x);
-			formalize(x_);
-			auto it = mapping_set.find(x_);
+			auto it = mapping_set.find(formalize(x));
 			if (it == mapping_set.end())
 				throw std::invalid_argument("\"" + x + "\" is not a valid NODE-TYPE string.");
 			else
@@ -413,9 +404,7 @@ namespace GridTool
 				"solid"
 			};
 
-			std::string x_(x);
-			formalize(x_);
-			return candidate_set.find(x_) != candidate_set.end();
+			return candidate_set.find(formalize(x)) != candidate_set.end();
 		}
 
 		const std::string &CELL::idx2str_type(int x)
@@ -478,9 +467,7 @@ namespace GridTool
 				"polyhedral"
 			};
 
-			std::string x_(x);
-			formalize(x_);
-			return candidate_set.find(x_) == candidate_set.end();
+			return candidate_set.find(formalize(x)) != candidate_set.end();
 		}
 
 		const std::string &CELL::idx2str_elem(int x)

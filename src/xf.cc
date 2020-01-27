@@ -795,7 +795,6 @@ namespace GridTool
 					// 1-based global node index
 					const size_t cur_first = curObj->first_index();
 					const size_t cur_last = curObj->last_index();
-
 					for (size_t i = cur_first; i <= cur_last; ++i)
 					{
 						node(i).coordinate = curObj->at(i - cur_first); // Node Coordinates

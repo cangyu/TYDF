@@ -88,6 +88,12 @@ namespace GridTool
 		template <typename T>
 		class Array1D : public std::vector<T>
 		{
+		private:
+			struct index_is_zero : public std::invalid_argument
+			{
+				index_is_zero() : std::invalid_argument("0 is invalid when using 1-based index.") {}
+			};
+
 		public:
 			Array1D(size_t n = 0) : std::vector<T>(n) {}
 			Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
@@ -95,8 +101,24 @@ namespace GridTool
 			~Array1D() = default;
 
 			// 1-based indexing
-			T &operator()(size_t i) { return this->at(i - 1); }
-			const T &operator()(size_t i) const { return this->at(i - 1); }
+			T &operator()(long long i)
+			{
+				if (i >= 1)
+					return std::vector<T>::at(i - 1);
+				else if (i <= -1)
+					return std::vector<T>::at(std::vector<T>::size() + i);
+				else
+					throw index_is_zero();
+			}
+			const T &operator()(long long i) const
+			{
+				if (i >= 1)
+					return std::vector<T>::at(i - 1);
+				else if (i <= -1)
+					return std::vector<T>::at(std::vector<T>::size() + i);
+				else
+					throw index_is_zero();
+			}
 
 			// Check includances
 			bool contains(const T &x) const

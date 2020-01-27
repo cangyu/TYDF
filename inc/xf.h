@@ -419,20 +419,20 @@ namespace GridTool
 			size_t numOfZone() const { return m_totalZoneNum; }
 
 			/* 1-based access */
-			const NODE_ELEM &node(int id) const { return m_node(id); }
-			NODE_ELEM &node(int id) { return m_node(id); }
+			const NODE_ELEM &node(size_t id) const { return m_node(id); }
+			NODE_ELEM &node(size_t id) { return m_node(id); }
 
-			const FACE_ELEM &face(int id) const { return m_face(id); }
-			FACE_ELEM &face(int id) { return m_face(id); }
+			const FACE_ELEM &face(size_t id) const { return m_face(id); }
+			FACE_ELEM &face(size_t id) { return m_face(id); }
 
-			const CELL_ELEM &cell(int id) const { return m_cell(id); }
-			CELL_ELEM &cell(int id) { return m_cell(id); }
+			const CELL_ELEM &cell(size_t id) const { return m_cell(id); }
+			CELL_ELEM &cell(size_t id) { return m_cell(id); }
 
 			/// If "isRealZoneID" is "true", then "id" is the real zone index,
 			/// otherwise, "id" is the internal storage index.
 			/// Whatever "isRealZoneID" is, "id" is always 1-based for consistency.
-			const ZONE_ELEM &zone(int id, bool isRealZoneID = false) const { return  isRealZoneID ? m_zone.at(m_zoneMapping.at(id)) : m_zone(id); }
-			ZONE_ELEM &zone(int id, bool isRealZoneID = false) { return  isRealZoneID ? m_zone.at(m_zoneMapping.at(id)) : m_zone(id); }
+			const ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) const { return  isRealZoneID ? m_zone.at(m_zoneMapping.at(id)) : m_zone(id); }
+			ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) { return  isRealZoneID ? m_zone.at(m_zoneMapping.at(id)) : m_zone(id); }
 
 		private:
 			void add_entry(SECTION *e);

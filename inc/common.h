@@ -95,7 +95,8 @@ namespace GridTool
 			};
 
 		public:
-			Array1D(size_t n = 0) : std::vector<T>(n) {}
+			Array1D() : std::vector<T>() {}
+			explicit Array1D(size_t n) : std::vector<T>(n) {}
 			Array1D(size_t n, const T &val) : std::vector<T>(n, val) {}
 			Array1D(const Array1D &obj) = default;
 			~Array1D() = default;

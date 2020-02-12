@@ -12,7 +12,7 @@ void test(const std::string &dir_name)
 
 int main(int argc, char *argv[])
 {
-	std::cout << "Testing utilities of \"PLOT3D\" grid ..." << std::endl;
+	std::cout << "Testing I/O of \"PLOT3D\" grid ..." << std::endl;
 
 	test("Planar1"); // 2D grid in 2D form
 	test("Shell1"); // 2D grid in 3D form

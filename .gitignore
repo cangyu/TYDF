@@ -6,9 +6,17 @@ report.txt
 .vscode/
 
 .vs/
+*.vcxproj
+*.filters
+*.sln
 
 .idea/
 cmake-build-debug/
 
+CMakeFiles/
+*.cmake
+CMakeCache.txt
+
 *.o
+*.exe
 *.out

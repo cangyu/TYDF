@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(FluentMesh)
+project(FluentMeshIO)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(sources main.cc ../../src/xf.cc ../../src/common.cc)
-
-add_executable(${PROJECT_NAME} ${sources})
+add_executable(${PROJECT_NAME} main.cc ../../src/xf.cc ../../src/common.cc)

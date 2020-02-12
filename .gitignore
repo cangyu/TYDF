@@ -1,11 +1,12 @@
 ICEM/
 
-report.txt
+*report.txt
 *blessed*
 
 .vscode/
 
 .vs/
+*.user
 *.vcxproj
 *.filters
 *.sln

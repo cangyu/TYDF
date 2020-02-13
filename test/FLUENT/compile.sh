@@ -1,1 +1,1 @@
-g++ main.cc ../../src/xf.cc ../../src/common.cc -std=c++11 -O3
+g++ main.cc ../../src/xf.cc ../../src/common.cc -std=c++17 -O3

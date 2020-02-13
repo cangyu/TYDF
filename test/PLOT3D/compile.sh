@@ -1,0 +1,1 @@
+g++ main.cc ../../src/plot3d.cc ../../src/common.cc -std=c++17 -O3

@@ -1,0 +1,1 @@
+g++ main.cc ../../src/spacing.cc ../../src/common.cc -std=c++17 -O3

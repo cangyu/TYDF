@@ -1,0 +1,1 @@
+g++ main.cc ../../src/nmf.cc ../../src/common.cc -std=c++11 -O3

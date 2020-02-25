@@ -127,10 +127,71 @@ namespace GridTool
                             const auto &curCell = b.cell(i, j, k);
                             const auto &adjCell = b.cell(i - 1, j, k);
 
-                            // TODO
                             const auto faceIndex = curCell.FaceSeq(1);
+                            auto &curFace = face(faceIndex);
 
+                            curFace.atBdry = false;
                             
+                            curFace.type = FACE::QUADRILATERAL;
+                            
+                            curFace.includedNode.resize(4);
+                            curFace.includedNode(1) = curCell.NodeSeq(1);
+                            curFace.includedNode(2) = curCell.NodeSeq(4);
+                            curFace.includedNode(3) = curCell.NodeSeq(8);
+                            curFace.includedNode(4) = curCell.NodeSeq(5);
+                            
+                            curFace.leftCell = adjCell.CellSeq();
+                            curFace.rightCell = curCell.CellSeq();
+                        }
+                
+                // Internal J direction
+                for (size_t k = 1; k < nK; ++k)
+                    for (size_t i = 1; i < nI; ++i)
+                        for (size_t j = 2; j < nJ; ++j)
+                        {
+                            const auto &curCell = b.cell(i, j, k);
+                            const auto &adjCell = b.cell(i, j - 1, k);
+
+                            const auto faceIndex = curCell.FaceSeq(3);
+                            auto &curFace = face(faceIndex);
+
+                            curFace.atBdry = false;
+
+                            curFace.type = FACE::QUADRILATERAL;
+
+                            curFace.includedNode.resize(4);
+                            curFace.includedNode(1) = curCell.NodeSeq(1);
+                            curFace.includedNode(2) = curCell.NodeSeq(5);
+                            curFace.includedNode(3) = curCell.NodeSeq(6);
+                            curFace.includedNode(4) = curCell.NodeSeq(2);
+
+                            curFace.leftCell = adjCell.CellSeq();
+                            curFace.rightCell = curCell.CellSeq();
+                        }
+
+                // Internal k direction
+                for (size_t i = 1; i < nI; ++i)
+                    for (size_t j = 1; j < nJ; ++j)
+                        for (size_t k = 2; k < nK; ++k)          
+                        {
+                            const auto &curCell = b.cell(i, j, k);
+                            const auto &adjCell = b.cell(i, j, k - 1);
+
+                            const auto faceIndex = curCell.FaceSeq(5);
+                            auto &curFace = face(faceIndex);
+
+                            curFace.atBdry = false;
+
+                            curFace.type = FACE::QUADRILATERAL;
+
+                            curFace.includedNode.resize(4);
+                            curFace.includedNode(1) = curCell.NodeSeq(1);
+                            curFace.includedNode(2) = curCell.NodeSeq(2);
+                            curFace.includedNode(3) = curCell.NodeSeq(3);
+                            curFace.includedNode(4) = curCell.NodeSeq(4);
+
+                            curFace.leftCell = adjCell.CellSeq();
+                            curFace.rightCell = curCell.CellSeq();
                         }
             }
 

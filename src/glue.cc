@@ -2,13 +2,13 @@
 #include "../inc/plot3d.h"
 #include "../inc/xf.h"
 
-static const size_t major = 2;
-static const size_t minor = 0;
-static const size_t patch = 0;
-
 static std::string version()
 {
-    return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch);
+    static const size_t major = 2;
+    static const size_t minor = 0;
+    static const size_t patch = 0;
+
+    return "V" + std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch);
 }
 
 namespace GridTool
@@ -136,9 +136,9 @@ namespace GridTool
 
                             curFace.includedNode.resize(4);
                             curFace.includedNode(1) = curCell.NodeSeq(1);
-                            curFace.includedNode(2) = curCell.NodeSeq(4);
+                            curFace.includedNode(2) = curCell.NodeSeq(5);
                             curFace.includedNode(3) = curCell.NodeSeq(8);
-                            curFace.includedNode(4) = curCell.NodeSeq(5);
+                            curFace.includedNode(4) = curCell.NodeSeq(4);
 
                             curFace.leftCell = adjCell.CellSeq();
                             curFace.rightCell = curCell.CellSeq();
@@ -160,9 +160,9 @@ namespace GridTool
                             curFace.type = FACE::QUADRILATERAL;
 
                             curFace.includedNode.resize(4);
-                            curFace.includedNode(1) = curCell.NodeSeq(1);
+                            curFace.includedNode(1) = curCell.NodeSeq(6);
                             curFace.includedNode(2) = curCell.NodeSeq(5);
-                            curFace.includedNode(3) = curCell.NodeSeq(6);
+                            curFace.includedNode(3) = curCell.NodeSeq(1);
                             curFace.includedNode(4) = curCell.NodeSeq(2);
 
                             curFace.leftCell = adjCell.CellSeq();
@@ -185,14 +185,25 @@ namespace GridTool
                             curFace.type = FACE::QUADRILATERAL;
 
                             curFace.includedNode.resize(4);
-                            curFace.includedNode(1) = curCell.NodeSeq(1);
-                            curFace.includedNode(2) = curCell.NodeSeq(2);
-                            curFace.includedNode(3) = curCell.NodeSeq(3);
-                            curFace.includedNode(4) = curCell.NodeSeq(4);
+                            curFace.includedNode(1) = curCell.NodeSeq(4);
+                            curFace.includedNode(2) = curCell.NodeSeq(3);
+                            curFace.includedNode(3) = curCell.NodeSeq(2);
+                            curFace.includedNode(4) = curCell.NodeSeq(1);
 
                             curFace.leftCell = adjCell.CellSeq();
                             curFace.rightCell = curCell.CellSeq();
                         }
+
+                // I-MIN
+                for (size_t k = 1; k < nK; ++k)
+                    for (size_t j = 1; j < nJ; ++j)
+                    {
+                        const auto &curCell = b.cell(1, j, k);
+                        const auto faceIndex = curCell.FaceSeq(1);
+                        auto &curFace = face(faceIndex);
+
+                        // TODO
+                    }
             }
 
             // Convert to primary form.
@@ -207,7 +218,7 @@ namespace GridTool
         {
             clear_entry();
 
-            add_entry(new HEADER("Block-Glue V" + version()));
+            add_entry(new HEADER("Block-Glue " + version()));
             add_entry(new DIMENSION(3));
 
             auto pnt = new NODE(1, 1, numOfNode(), NODE::ANY, 3);

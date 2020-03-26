@@ -824,7 +824,12 @@ namespace GridTool
 				auto e = new SingleSideEntry(x);
 				m_entry.push_back(e);
 			}
-			void add_entry(const std::string &_bc, size_t b1, short f1, size_t s11, size_t e11, size_t s12, size_t e12, size_t b2, short f2, size_t s21, size_t e21, size_t s22, size_t e22, bool swp)
+			void add_entry(
+			        const std::string &_bc,
+			        size_t b1, short f1, size_t s11, size_t e11, size_t s12, size_t e12,
+			        size_t b2, short f2, size_t s21, size_t e21, size_t s22, size_t e22,
+			        bool swp
+            )
 			{
 				auto e = new DoubleSideEntry(_bc, b1, f1, s11, e11, s12, e12, b2, f2, s21, e21, s22, e22, swp);
 				m_entry.push_back(e);

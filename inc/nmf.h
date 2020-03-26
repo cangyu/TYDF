@@ -358,9 +358,6 @@ namespace GridTool
 			Array1D<FRAME> m_frame;
 			Array1D<SURF> m_surf;
 
-			void setup_dependence();
-			void establish_connections();
-
 		public:
 			Block3D() = delete;
 			Block3D(int nI, int nJ, int nK);
@@ -524,6 +521,10 @@ namespace GridTool
 			size_t node_index(size_t i, size_t j, size_t k);
 
 		private:
+            void setup_dependence();
+
+            void establish_connections();
+
 			short isVertexNode(size_t i, size_t j, size_t k) const;
 
 			void isFrameInternalNode(size_t i, size_t j, size_t k, short &f, size_t &idx) const;

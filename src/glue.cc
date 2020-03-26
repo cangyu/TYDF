@@ -2,7 +2,7 @@
 #include "../inc/plot3d.h"
 #include "../inc/xf.h"
 
-static std::string version()
+static std::string version_str()
 {
     static const size_t major = 2;
     static const size_t minor = 0;
@@ -13,6 +13,11 @@ static std::string version()
 
 namespace GridTool
 {
+    namespace NMF
+    {
+        // TODO
+    }
+
     namespace XF
     {
         MESH::MESH(const std::string &f_nmf, const std::string &f_p3d, std::ostream &fout) :
@@ -142,6 +147,8 @@ namespace GridTool
 
                             curFace.leftCell = adjCell.CellSeq();
                             curFace.rightCell = curCell.CellSeq();
+
+                            visited[faceIndex-1] = true;
                         }
 
                 // Internal J direction
@@ -167,6 +174,8 @@ namespace GridTool
 
                             curFace.leftCell = adjCell.CellSeq();
                             curFace.rightCell = curCell.CellSeq();
+
+                            visited[faceIndex-1] = true;
                         }
 
                 // Internal k direction
@@ -192,6 +201,8 @@ namespace GridTool
 
                             curFace.leftCell = adjCell.CellSeq();
                             curFace.rightCell = curCell.CellSeq();
+
+                            visited[faceIndex-1] = true;
                         }
 
                 // I-MIN
@@ -201,9 +212,99 @@ namespace GridTool
                         const auto &curCell = b.cell(1, j, k);
                         const auto faceIndex = curCell.FaceSeq(1);
                         auto &curFace = face(faceIndex);
+                        const auto &curSurf = b.surf(1);
 
-                        // TODO
+                        if(visited[faceIndex-1])
+                        {
+                            if(!curFace.atBdry)
+                            {
+                                /// Second-Round of Double-Sided Case
+                                /// Update undetermined cell index.
+                                if(curFace.leftCell == 0)
+                                    curFace.leftCell = curCell.CellSeq();
+                                else if(curFace.rightCell == 0)
+                                    curFace.rightCell = curCell.CellSeq();
+                                else
+                                    throw std::runtime_error("Double-Sided face should not appear more than twice!");
+                            }
+                            else
+                                throw std::runtime_error("Boundary face shouldn't appear twice!");
+                        }
+                        else
+                        {
+                            curFace.type = FACE::QUADRILATERAL;
+
+                            curFace.atBdry = !curSurf.neighbourSurf;
+
+                            curFace.includedNode.resize(4);
+                            curFace.includedNode(1) = curCell.NodeSeq(1);
+                            curFace.includedNode(2) = curCell.NodeSeq(5);
+                            curFace.includedNode(3) = curCell.NodeSeq(8);
+                            curFace.includedNode(4) = curCell.NodeSeq(4);
+
+                            /// On I-MIN Surface, if current face is Single-Sided,
+                            /// then index of left cell is set to 0 according to
+                            /// right-hand convention; If current face is Double-Sided,
+                            /// it is also set to 0 at this stage, and will be
+                            /// updated further by loops of other blocks.
+                            curFace.leftCell = 0;
+                            curFace.rightCell = curCell.CellSeq();
+
+                            visited[faceIndex-1] = true;
+                        }
                     }
+
+                // I-MAX
+                for (size_t k = 1; k < nK; ++k)
+                    for (size_t j = 1; j < nJ; ++j)
+                    {
+                        const auto &curCell = b.cell(1, j, k);
+                        const auto faceIndex = curCell.FaceSeq(1);
+                        auto &curFace = face(faceIndex);
+                        const auto &curSurf = b.surf(1);
+
+                        if(visited[faceIndex-1])
+                        {
+                            if(!curFace.atBdry)
+                            {
+                                /// Second-Round of Double-Sided Case
+                                /// Update undetermined cell index.
+                                if(curFace.leftCell == 0)
+                                    curFace.leftCell = curCell.CellSeq();
+                                else if(curFace.rightCell == 0)
+                                    curFace.rightCell = curCell.CellSeq();
+                                else
+                                    throw std::runtime_error("Double-Sided face should not appear more than twice!");
+                            }
+                            else
+                                throw std::runtime_error("Boundary face shouldn't appear twice!");
+                        }
+                        else
+                        {
+                            curFace.type = FACE::QUADRILATERAL;
+
+                            curFace.atBdry = !curSurf.neighbourSurf;
+
+                            curFace.includedNode.resize(4);
+                            curFace.includedNode(1) = curCell.NodeSeq(1);
+                            curFace.includedNode(2) = curCell.NodeSeq(5);
+                            curFace.includedNode(3) = curCell.NodeSeq(8);
+                            curFace.includedNode(4) = curCell.NodeSeq(4);
+
+                            /// On I-MIN Surface, if current face is Single-Sided,
+                            /// then index of left cell is set to 0 according to
+                            /// right-hand convention; If current face is Double-Sided,
+                            /// it is also set to 0 at this stage, and will be
+                            /// updated further by loops of other blocks.
+                            curFace.leftCell = 0;
+                            curFace.rightCell = curCell.CellSeq();
+
+                            visited[faceIndex-1] = true;
+                        }
+                    }
+
+                /// I-MAX
+                // TODO
             }
 
             // Convert to primary form.
@@ -218,7 +319,7 @@ namespace GridTool
         {
             clear_entry();
 
-            add_entry(new HEADER("Block-Glue " + version()));
+            add_entry(new HEADER("Block-Glue " + version_str()));
             add_entry(new DIMENSION(3));
 
             auto pnt = new NODE(1, 1, numOfNode(), NODE::ANY, 3);

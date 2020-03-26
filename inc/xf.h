@@ -233,11 +233,11 @@ namespace GridTool
 			CELL(const CELL &rhs);
 			~CELL() = default;
 
-			// Type of cells within this section: DEAD cell, FLUID cell or SOLID cell.
+			/// Type of cells within this section: DEAD cell, FLUID cell or SOLID cell.
 			int type() const { return m_type; }
 			int &type() { return m_type; }
 
-			// General description of ALL cell elements within this section.
+			/// General description of ALL cell elements within this section.
 			int element_type() const { return  m_elem; }
 			int &element_type() { return m_elem; }
 
@@ -268,7 +268,7 @@ namespace GridTool
 
 			void set(int x_, size_t *n_, size_t *c_);
 
-			// Index of adjacent node.
+			/// Index of adjacent node.
 			size_t leftAdj(int loc_idx) const;
 			size_t rightAdj(int loc_idx) const;
 		};
@@ -298,11 +298,11 @@ namespace GridTool
 			FACE(const FACE &rhs);
 			~FACE() = default;
 
-			/* B.C. of this group of faces */
+			/// B.C. of this group of faces.
 			int bc_type() const { return m_bc; }
 			int &bc_type() { return m_bc; }
 
-			/* Shape of this group of faces */
+			/// Shape of this group of faces.
 			int face_type() const { return m_face; }
 			int &face_type() { return m_face; }
 
@@ -365,7 +365,9 @@ namespace GridTool
 				Array1D<size_t> includedNode;
 				size_t leftCell, rightCell;
 				bool atBdry;
-				Vector n_LR, n_RL; // Surface unit normal
+
+                /// Surface unit normal.
+				Vector n_LR, n_RL;
 			};
 			struct CELL_ELEM
 			{
@@ -374,26 +376,31 @@ namespace GridTool
 				double volume;
 				Array1D<size_t> includedFace;
 				Array1D<size_t> includedNode;
-				Array1D<size_t> adjacentCell; // The size is equal to that of "includedFace", set to 0 if adjacent cell is boundary.
+
+                /// The size is equal to that of "includedFace", set to 0 if adjacent cell is boundary.
+				Array1D<size_t> adjacentCell;
+
 				Array1D<Vector> n;
 				Array1D<Vector> S;
 			};
 			struct ZONE_ELEM
 			{
-				size_t ID; // May not start from 1, and may be given arbitrarily.
+                /// May not start from 1, and may be given arbitrarily.
+				size_t ID;
+
 				std::string type;
 				std::string name;
 				RANGE *obj;
 			};
 
 		private:
-			// Raw
+			/// Raw
 			std::vector<SECTION*> m_content;
 			size_t m_totalNodeNum;
 			size_t m_totalCellNum;
 			size_t m_totalFaceNum;
 
-			// Derived
+			/// Derived
 			Array1D<NODE_ELEM> m_node;
 			Array1D<FACE_ELEM> m_face;
 			Array1D<CELL_ELEM> m_cell;
@@ -402,23 +409,23 @@ namespace GridTool
 			Array1D<ZONE_ELEM> m_zone;
 
 		public:
-			MESH() : DIM(3), m_totalNodeNum(0), m_totalCellNum(0), m_totalFaceNum(0), m_totalZoneNum(0) {} // 3D by default
+			MESH();
 			MESH(const std::string &inp, std::ostream &fout = std::cout);
 			MESH(const std::string &f_nmf, const std::string &f_p3d, std::ostream &fout = std::cout);
 			MESH(const MESH &rhs) = delete;
 			~MESH() { clear_entry(); }
 
-			/* IO */
+			/// IO
 			void readFromFile(const std::string &src, std::ostream &fout);
 			void writeToFile(const std::string &dst) const;
 
-			/* Num of elements */
+			/// Num of elements
 			size_t numOfNode() const { return m_totalNodeNum; }
 			size_t numOfFace() const { return m_totalFaceNum; }
 			size_t numOfCell() const { return m_totalCellNum; }
 			size_t numOfZone() const { return m_totalZoneNum; }
 
-			/* 1-based access */
+			/// 1-based access
 			const NODE_ELEM &node(size_t id) const { return m_node(id); }
 			NODE_ELEM &node(size_t id) { return m_node(id); }
 

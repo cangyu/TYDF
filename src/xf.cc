@@ -1,7 +1,7 @@
 #include "../inc/xf.h"
 
 /// Convert a boundary condition string literal to unified form within the scope of this code.
-/// Outcome will be composed of LOWER case lettes and '-' only!
+/// Outcome will be composed of LOWER case letters and '-' only!
 static void formalize_inplace(std::string &s)
 {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -385,7 +385,7 @@ namespace GridTool
 			out << "))" << std::endl;
 		}
 
-		bool  CELL::isValidTypeIdx(int x)
+		bool CELL::isValidTypeIdx(int x)
 		{
 			static const std::set<int> candidate_set{
 				DEAD,
@@ -742,7 +742,14 @@ namespace GridTool
 			out << std::dec << "(" << identity() << " (" << zone() << " " << type() << " " << name() << ")())" << std::endl;
 		}
 
-		MESH::MESH(const std::string &inp, std::ostream &fout) :
+        MESH::MESH() :
+            DIM(3), /// 3D by default.
+            m_totalNodeNum(0),
+            m_totalCellNum(0),
+            m_totalFaceNum(0),
+            m_totalZoneNum(0) {}
+
+        MESH::MESH(const std::string &inp, std::ostream &fout) :
 			DIM(3),
 			m_totalNodeNum(0),
 			m_totalCellNum(0),
@@ -752,7 +759,7 @@ namespace GridTool
 			readFromFile(inp, fout);
 		}
 
-		void MESH::raw2derived()
+        void MESH::raw2derived()
 		{
 			/************************* Allocate storage ***************************/
 			m_node.resize(numOfNode());

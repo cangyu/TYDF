@@ -771,11 +771,9 @@ namespace GridTool
 			{
 				e.coordinate.z() = 0.0;
 				e.atBdry = false;
-#ifdef XF_EXTRACT_NODE_CONNECTIVITY
 				e.adjacentNode.clear();
 				e.dependentFace.clear();
 				e.dependentCell.clear();
-#endif // XF_EXTRACT_NODE_CONNECTIVITY
 			}
 			for (auto &e : m_face)
 			{
@@ -882,7 +880,7 @@ namespace GridTool
 					}
 				}
 			}
-#ifdef XF_EXTRACT_NODE_CONNECTIVITY
+
 			// Adjacent nodes, dependent faces, and dependent cells of each node
 			for (auto curPtr : m_content) // Count all occurance
 			{
@@ -935,7 +933,6 @@ namespace GridTool
 				const std::set<size_t> st2(curNode.dependentCell.begin(), curNode.dependentCell.end());
 				curNode.dependentCell.assign(st2.begin(), st2.end());
 			}
-#endif  // XF_EXTRACT_NODE_CONNECTIVITY
 
 			/*********************** Parse records of cell ************************/
 			for (auto curPtr : m_content)

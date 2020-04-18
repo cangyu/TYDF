@@ -17,12 +17,6 @@
 #include <cmath>
 #include "common.h"
 
-/**
-	If connectivity info concerning each node is required, uncomment the following
-	line or define the marco somewhere else in the compiling environment.
- */
- // #define XF_EXTRACT_NODE_CONNECTIVITY
-
 namespace GridTool
 {
 	namespace XF
@@ -351,11 +345,9 @@ namespace GridTool
 			{
 				Vector coordinate;
 				bool atBdry;
-#ifdef XF_EXTRACT_NODE_CONNECTIVITY
 				Array1D<size_t> adjacentNode;
 				Array1D<size_t> dependentFace;
 				Array1D<size_t> dependentCell;
-#endif // XF_EXTRACT_NODE_CONNECTIVITY
 			};
 			struct FACE_ELEM
 			{

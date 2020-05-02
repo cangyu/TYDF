@@ -39,12 +39,12 @@ namespace GridTool::COMMON
             return y();
         case 3:
             return z();
-        case -1:
-            return z();
-        case -2:
-            return y();
         case -3:
             return x();
+        case -2:
+            return y();
+        case -1:
+            return z();
         default:
             throw not_vector_component(idx);
         }
@@ -60,12 +60,12 @@ namespace GridTool::COMMON
             return y();
         case 3:
             return z();
-        case -1:
-            return z();
-        case -2:
-            return y();
         case -3:
             return x();
+        case -2:
+            return y();
+        case -1:
+            return z();
         default:
             throw not_vector_component(idx);
         }

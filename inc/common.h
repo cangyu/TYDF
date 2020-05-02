@@ -17,13 +17,24 @@ namespace GridTool::COMMON
     struct wrong_index : public std::logic_error
     {
         wrong_index(long long idx, const std::string &reason) : std::logic_error("\"" + std::to_string(idx) + "\" " + reason + ".") {}
+
         virtual ~wrong_index() = default;
+    };
+
+    struct wrong_string : public std::logic_error
+    {
+        wrong_string(const std::string & str, const std::string &reason) : std::logic_error("\"" + str + "\" " + reason + ".") {}
+
+        virtual ~wrong_string() = default;
     };
 
     class DIM
     {
     private:
-        struct wrong_dimension : public wrong_index { wrong_dimension(int dim) : wrong_index(dim, "is not a valid dimension") {} };
+        struct wrong_dimension : public wrong_index
+        {
+            wrong_dimension(int dim) : wrong_index(dim, "is not a valid dimension") {}
+        };
 
     protected:
         bool m_is3D;
@@ -46,7 +57,10 @@ namespace GridTool::COMMON
     class Vector : public std::array<Scalar, 3>
     {
     protected:
-        struct not_vector_component : public wrong_index { not_vector_component(short x) : wrong_index(x, "is not a valid index of certain vector component") {} };
+        struct not_vector_component : public wrong_index
+        {
+            not_vector_component(short x) : wrong_index(x, "is not a valid index of certain vector component") {}
+        };
 
     public:
         Vector() : std::array<Scalar, 3>{0.0, 0.0, 0.0} {}
@@ -102,7 +116,10 @@ namespace GridTool::COMMON
     class Array1D : public std::vector<T>
     {
     private:
-        struct index_is_zero : public std::invalid_argument { index_is_zero() : std::invalid_argument("0 is invalid when using 1-based index.") {} };
+        struct index_is_zero : public wrong_index
+        {
+            index_is_zero() : wrong_index(0, "is invalid when using 1-based index") {}
+        };
 
     public:
         Array1D() : std::vector<T>() {}
@@ -146,6 +163,7 @@ namespace GridTool::COMMON
 
             return false;
         }
+
         bool contains(const T &a, const T &b) const
         {
             bool flag_a = false, flag_b = false;

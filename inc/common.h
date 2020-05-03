@@ -43,15 +43,31 @@ namespace GridTool::COMMON
     public:
         DIM() = delete;
 
-        DIM(int dim, bool is3d = true);
+        DIM(int dim, bool is3d = true) :
+            m_is3D(is3d)
+        {
+            if (dim == 2 || dim == 3)
+                m_dim = dim;
+            else
+                throw wrong_dimension(dim);
+
+            if (dim == 3 && !is3d)
+                throw std::invalid_argument("Inconsistent dimensions.");
+        }
 
         DIM(const DIM &rhs) = default;
 
         virtual ~DIM() = default;
 
-        bool is3D() const;
+        bool is3D() const
+        {
+            return m_is3D;
+        }
 
-        int dimension() const;
+        int dimension() const
+        {
+            return m_dim;
+        }
     };
 
     class Vector : public std::array<Scalar, 3>
@@ -74,42 +90,153 @@ namespace GridTool::COMMON
         ~Vector() = default;
 
         /// 1-based indexing
-        const Scalar &operator()(short idx) const;
+        const Scalar &operator()(short idx) const
+        {
+            switch (idx)
+            {
+                case 1:
+                    return x();
+                case 2:
+                    return y();
+                case 3:
+                    return z();
+                case -3:
+                    return x();
+                case -2:
+                    return y();
+                case -1:
+                    return z();
+                default:
+                    throw not_vector_component(idx);
+            }
+        }
 
-        Scalar &operator()(short idx);
+        Scalar &operator()(short idx)
+        {
+            switch (idx)
+            {
+                case 1:
+                    return x();
+                case 2:
+                    return y();
+                case 3:
+                    return z();
+                case -3:
+                    return x();
+                case -2:
+                    return y();
+                case -1:
+                    return z();
+                default:
+                    throw not_vector_component(idx);
+            }
+        }
 
         /// Access through component
-        const Scalar &x() const;
+        const Scalar &x() const
+        {
+            return at(0);
+        }
 
-        const Scalar &y() const;
+        const Scalar &y() const
+        {
+            return at(1);
+        }
 
-        const Scalar &z() const;
+        const Scalar &z() const
+        {
+            return at(2);
+        }
 
-        Scalar &x();
+        Scalar &x()
+        {
+            return at(0);
+        }
 
-        Scalar &y();
+        Scalar &y()
+        {
+            return at(1);
+        }
 
-        Scalar &z();
+        Scalar &z()
+        {
+            return at(2);
+        }
 
         /// Operators
-        Vector &operator=(const Vector &rhs);
+        Vector &operator=(const Vector &rhs)
+        {
+            x() = rhs.x();
+            y() = rhs.y();
+            z() = rhs.z();
+            return *this;
+        }
 
-        Vector &operator+=(const Vector &rhs);
+        Vector &operator+=(const Vector &rhs)
+        {
+            x() += rhs.x();
+            y() += rhs.y();
+            z() += rhs.z();
+            return *this;
+        }
 
-        Vector &operator-=(const Vector &rhs);
+        Vector &operator-=(const Vector &rhs)
+        {
+            x() -= rhs.x();
+            y() -= rhs.y();
+            z() -= rhs.z();
+            return *this;
+        }
 
-        Vector &operator*=(Scalar a);
+        Vector &operator*=(Scalar a)
+        {
+            x() *= a;
+            y() *= a;
+            z() *= a;
+            return *this;
+        }
 
-        Vector &operator/=(Scalar a);
+        Vector &operator/=(Scalar a)
+        {
+            x() /= a;
+            y() /= a;
+            z() /= a;
+            return *this;
+        }
 
         /// Mathematical operations
-        Scalar dot(const Vector &b) const;
+        Scalar dot(const Vector &b) const
+        {
+            Scalar ret = 0.0;
+            ret += x() * b.x();
+            ret += y() * b.y();
+            ret += z() * b.z();
+            return ret;
+        }
 
-        Vector cross(const Vector &b) const;
+        Vector cross(const Vector &b) const
+        {
+            Vector ret;
+            ret.x() = y() * b.z() - z() * b.y();
+            ret.y() = z() * b.x() - x() * b.z();
+            ret.z() = x() * b.y() - y() * b.x();
+            return ret;
+        }
 
-        Scalar norm() const;
+        Scalar norm() const
+        {
+            Scalar ret = 0.0;
+            ret += std::pow(x(), 2);
+            ret += std::pow(y(), 2);
+            ret += std::pow(z(), 2);
+            return std::sqrt(ret);
+        }
 
-        void normalize();
+        void normalize()
+        {
+            const Scalar L = norm();
+            this->operator/=(L);
+        }
     };
 
     template <typename T>
@@ -153,7 +280,7 @@ namespace GridTool::COMMON
                 throw index_is_zero();
         }
 
-        /// Check includances
+        /// Check inclusion
         bool contains(const T &x) const
         {
             const size_t N = this->size();
@@ -202,7 +329,7 @@ namespace GridTool::COMMON
             m_NXY(nx)
         {
             if (nI() == 0)
-                throw std::invalid_argument("0 in I-dim.");
+                throw wrong_index(0, "in I-dim");
         }
 
         ArrayND(size_t nx, size_t ny, const T &val) :
@@ -213,9 +340,9 @@ namespace GridTool::COMMON
             m_NXY(nx*ny)
         {
             if (nI() == 0)
-                throw std::invalid_argument("0 in I-dim.");
+                throw wrong_index(0, "in I-dim");
             if (nJ() == 0)
-                throw std::invalid_argument("0 in J-dim.");
+                throw wrong_index(0, "in J-dim");
         }
 
         ArrayND(size_t nx, size_t ny, size_t nz, const T &val) :
@@ -226,11 +353,11 @@ namespace GridTool::COMMON
             m_NXY(nx*ny)
         {
             if (nI() == 0)
-                throw std::invalid_argument("0 in I-dim.");
+                throw wrong_index(0, "in I-dim");
             if (nJ() == 0)
-                throw std::invalid_argument("0 in J-dim.");
+                throw wrong_index(0, "in J-dim");
             if (nK() == 0)
-                throw std::invalid_argument("0 in K-dim.");
+                throw wrong_index(0, "in K-dim");
         }
 
         ArrayND(const ArrayND &rhs) :
@@ -241,11 +368,11 @@ namespace GridTool::COMMON
             m_NXY(rhs.m_NXY)
         {
             if (nI() == 0)
-                throw std::runtime_error("0 in I-dim.");
+                throw wrong_index(0, "in I-dim");
             if (nJ() == 0)
-                throw std::runtime_error("0 in J-dim.");
+                throw wrong_index(0, "in J-dim");
             if (nK() == 0)
-                throw std::runtime_error("0 in K-dim.");
+                throw wrong_index(0, "in K-dim");
         }
 
         virtual ~ArrayND() = default;

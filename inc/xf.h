@@ -246,6 +246,27 @@ namespace GridTool::XF
 
     class CELL : public RANGE, public std::vector<int>
     {
+    private:
+        struct invalid_cell_type_idx : public wrong_index
+        {
+            invalid_cell_type_idx(int x) : wrong_index(x, "is not a valid CELL-TYPE index") {}
+        };
+
+        struct invalid_cell_type_str : public wrong_string
+        {
+            invalid_cell_type_str(const std::string &s) : wrong_string(s, "is not a valid CELL-TYPE string") {}
+        };
+
+        struct invalid_elem_type_idx : public wrong_index
+        {
+            invalid_elem_type_idx(int x) : wrong_index(x, "is not a valid CELL-ELEM-TYPE index") {}
+        };
+
+        struct invalid_elem_type_str : public wrong_string
+        {
+            invalid_elem_type_str(const std::string &s) : wrong_string(s, "is not a valid CELL-ELEM-TYPE string") {}
+        };
+
     public:
         enum {
             DEAD = 0,

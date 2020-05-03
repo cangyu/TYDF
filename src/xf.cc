@@ -544,7 +544,7 @@ namespace GridTool::XF
 
         auto it = mapping_set.find(x);
         if (it == mapping_set.end())
-            throw std::invalid_argument("\"" + std::to_string(x) + "\" is not a valid CELL-TYPE index.");
+            throw invalid_cell_type_idx(x);
         else
             return it->second;
     }
@@ -559,7 +559,7 @@ namespace GridTool::XF
 
         auto it = mapping_set.find(x);
         if (it == mapping_set.end())
-            throw std::invalid_argument("\"" + x + "\" is not a valid CELL-TYPE string.");
+            throw invalid_cell_type_str(x);
         else
             return it->second;
     }
@@ -612,7 +612,7 @@ namespace GridTool::XF
 
         auto it = mapping_set.find(x);
         if (it == mapping_set.end())
-            throw std::invalid_argument("\"" + std::to_string(x) + "\" is not a valid CELL-ELEM-TYPE index.");
+            throw invalid_elem_type_idx(x);
         else
             return it->second;
     }
@@ -637,7 +637,7 @@ namespace GridTool::XF
 
         auto it = mapping_set.find(x);
         if (it == mapping_set.end())
-            throw std::invalid_argument("\"" + x + "\" is not a valid CELL-ELEM-TYPE string.");
+            throw invalid_elem_type_str(x);
         else
             return it->second;
     }
@@ -649,10 +649,10 @@ namespace GridTool::XF
         m_elem(elem_type)
     {
         if (!isValidTypeIdx(type))
-            throw std::invalid_argument("Invalid cell type: " + std::to_string(type));
+            throw invalid_cell_type_idx(type);
 
         if (!isValidElemIdx(elem_type))
-            throw std::invalid_argument("Invalid cell element type: " + std::to_string(elem_type));
+            throw invalid_elem_type_idx(elem_type);
     }
 
     CELL::CELL(const CELL &rhs) :

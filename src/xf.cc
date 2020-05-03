@@ -1064,16 +1064,44 @@ namespace GridTool::XF
         m_totalNodeNum(0),
         m_totalCellNum(0),
         m_totalFaceNum(0),
-        m_totalZoneNum(0) {}
+        m_totalZoneNum(0)
+    {
+        /// Empty body.
+    }
 
     MESH::MESH(const std::string &inp, std::ostream &fout) :
-        DIM(3),
+        DIM(3), /// 3D by default, may be modified when input mesh is loaded.
         m_totalNodeNum(0),
         m_totalCellNum(0),
         m_totalFaceNum(0),
         m_totalZoneNum(0)
     {
         readFromFile(inp, fout);
+    }
+
+    MESH::~MESH()
+    {
+        clear_entry();
+    }
+
+    size_t MESH::numOfNode() const
+    {
+        return m_totalNodeNum;
+    }
+
+    size_t MESH::numOfFace() const
+    {
+        return m_totalFaceNum;
+    }
+
+    size_t MESH::numOfCell() const
+    {
+        return m_totalCellNum;
+    }
+
+    size_t MESH::numOfZone() const
+    {
+        return m_totalZoneNum;
     }
 
     void MESH::raw2derived()

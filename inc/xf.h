@@ -513,6 +513,7 @@ namespace GridTool::XF
             Array1D<size_t> dependentFace;
             Array1D<size_t> dependentCell;
         };
+
         struct FACE_ELEM
         {
             int type;
@@ -521,10 +522,9 @@ namespace GridTool::XF
             Array1D<size_t> includedNode;
             size_t leftCell, rightCell;
             bool atBdry;
-
-            /// Surface unit normal.
-            Vector n_LR, n_RL;
+            Vector n_LR, n_RL; /// Surface unit normal.
         };
+
         struct CELL_ELEM
         {
             int type;
@@ -533,17 +533,17 @@ namespace GridTool::XF
             Array1D<size_t> includedFace;
             Array1D<size_t> includedNode;
 
-            /// The size is equal to that of "includedFace", set to 0 if adjacent cell is boundary.
+            /// The size is equal to that of "includedFace", 
+            /// will be set to 0 if adjacent cell is boundary.
             Array1D<size_t> adjacentCell;
 
             Array1D<Vector> n;
             Array1D<Vector> S;
         };
+
         struct ZONE_ELEM
         {
-            /// May not start from 1, and may be given arbitrarily.
-            size_t ID;
-
+            size_t ID; /// May not start from 1, usually given arbitrarily.
             std::string type;
             std::string name;
             RANGE *obj;
@@ -566,50 +566,106 @@ namespace GridTool::XF
 
     public:
         MESH();
+
         MESH(const std::string &inp, std::ostream &fout = std::cout);
+
         MESH(const std::string &f_nmf, const std::string &f_p3d, std::ostream &fout = std::cout);
+
         MESH(const MESH &rhs) = delete;
-        ~MESH() { clear_entry(); }
+
+        ~MESH();
 
         /// IO
         void readFromFile(const std::string &src, std::ostream &fout);
+
         void writeToFile(const std::string &dst) const;
 
         /// Num of elements
-        size_t numOfNode() const { return m_totalNodeNum; }
-        size_t numOfFace() const { return m_totalFaceNum; }
-        size_t numOfCell() const { return m_totalCellNum; }
-        size_t numOfZone() const { return m_totalZoneNum; }
+        size_t numOfNode() const;
+
+        size_t numOfFace() const;
+
+        size_t numOfCell() const;
+
+        size_t numOfZone() const;
 
         /// 1-based access
-        const NODE_ELEM &node(size_t id) const { return m_node(id); }
-        NODE_ELEM &node(size_t id) { return m_node(id); }
+        const NODE_ELEM &node(size_t id) const
+        {
+            return m_node(id);
+        }
 
-        const FACE_ELEM &face(size_t id) const { return m_face(id); }
-        FACE_ELEM &face(size_t id) { return m_face(id); }
+        NODE_ELEM &node(size_t id)
+        {
+            return m_node(id);
+        }
 
-        const CELL_ELEM &cell(size_t id) const { return m_cell(id); }
-        CELL_ELEM &cell(size_t id) { return m_cell(id); }
+        const FACE_ELEM &face(size_t id) const
+        {
+            return m_face(id);
+        }
+
+        FACE_ELEM &face(size_t id)
+        {
+            return m_face(id);
+        }
+
+        const CELL_ELEM &cell(size_t id) const
+        {
+            return m_cell(id);
+        }
+
+        CELL_ELEM &cell(size_t id)
+        {
+            return m_cell(id);
+        }
 
         /// If "isRealZoneID" is "true", then "id" is the real zone index,
         /// otherwise, "id" is the internal storage index.
         /// Whatever "isRealZoneID" is, "id" is always 1-based for consistency.
-        const ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) const { return  isRealZoneID ? m_zone.at(m_zoneMapping.at(id)) : m_zone(id); }
-        ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) { return  isRealZoneID ? m_zone.at(m_zoneMapping.at(id)) : m_zone(id); }
+        const ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) const
+        {
+            if (isRealZoneID)
+            {
+                const auto real_idx = m_zoneMapping.at(id);
+                return m_zone.at(real_idx);
+            }
+            else
+                return m_zone(id);
+        }
+
+        ZONE_ELEM &zone(size_t id, bool isRealZoneID = false)
+        {
+            if (isRealZoneID)
+            {
+                const auto real_idx = m_zoneMapping.at(id);
+                return m_zone.at(real_idx);
+            }
+            else
+                return m_zone(id);
+        }
 
     private:
         void add_entry(SECTION *e);
+
         void clear_entry();
 
         void raw2derived();
+
         void derived2raw();
 
         void cell_standardization(CELL_ELEM &c);
+
         void tet_standardization(CELL_ELEM &tet);
+
         void pyramid_standardization(CELL_ELEM &pyramid);
+
         void prism_standardization(CELL_ELEM &prism);
+
         void hex_standardization(CELL_ELEM &hex);
+
         void triangle_standardization(CELL_ELEM &tri);
+
         void quad_standardization(CELL_ELEM &quad);
     };
 }

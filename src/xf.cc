@@ -785,7 +785,7 @@ namespace GridTool::XF
 
         auto it = mapping_set.find(x);
         if (it == mapping_set.end())
-            throw std::invalid_argument("\"" + std::to_string(x) + "\" is not a valid FACE-TYPE index.");
+            throw invalid_face_type_idx(x);
         else
             return it->second;
     }
@@ -805,7 +805,7 @@ namespace GridTool::XF
 
         auto it = mapping_set.find(x);
         if (it == mapping_set.end())
-            throw std::invalid_argument("\"" + x + "\" is not a valid FACE-TYPE string.");
+            throw invalid_face_type_str(x);
         else
             return it->second;
     }
@@ -820,7 +820,7 @@ namespace GridTool::XF
             throw std::invalid_argument("Invalid B.C. type: " + std::to_string(bc));
 
         if (!isValidIdx(face))
-            throw std::invalid_argument("Invalid face type: " + std::to_string(face));
+            throw invalid_face_type_idx(face);
         if (face == POLYGONAL)
             throw std::invalid_argument("Polygonal face is not supported currently.");
     }
@@ -838,6 +838,26 @@ namespace GridTool::XF
             throw std::runtime_error("Invalid FACE-TYPE not detected in previous construction.");
         if (face_type() == POLYGONAL)
             throw std::runtime_error("Polygonal face is not supported currently.");
+    }
+
+    int FACE::bc_type() const
+    {
+        return m_bc;
+    }
+
+    int &FACE::bc_type()
+    {
+        return m_bc;
+    }
+
+    int FACE::face_type() const
+    {
+        return m_face;
+    }
+
+    int &FACE::face_type()
+    {
+        return m_face;
     }
 
     void FACE::repr(std::ostream &out)
@@ -882,6 +902,46 @@ namespace GridTool::XF
     {
         if (!BC::isValidStr(type()) && !CELL::isValidTypeStr(type()))
             throw std::invalid_argument("B.C. specification is invalid.");
+    }
+
+    size_t ZONE::zone() const
+    {
+        return m_zoneID;
+    }
+
+    size_t &ZONE::zone()
+    {
+        return m_zoneID;
+    }
+
+    const std::string &ZONE::type() const
+    {
+        return m_zoneType;
+    }
+
+    std::string &ZONE::type()
+    {
+        return m_zoneType;
+    }
+
+    const std::string &ZONE::name() const
+    {
+        return m_zoneName;
+    }
+
+    std::string &ZONE::name()
+    {
+        return m_zoneName;
+    }
+
+    int ZONE::domain() const
+    {
+        return m_domainID;
+    }
+
+    int &ZONE::domain()
+    {
+        return m_domainID;
     }
 
     void ZONE::repr(std::ostream &out)

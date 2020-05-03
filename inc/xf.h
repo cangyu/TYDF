@@ -359,8 +359,15 @@ namespace GridTool::XF
     class FACE : public RANGE, public std::vector<CONNECTIVITY>
     {
     private:
-        int m_bc;
-        int m_face;
+        struct invalid_face_type_idx : public wrong_index
+        {
+            invalid_face_type_idx(int x) : wrong_index(x, "is not a valid FACE-TYPE index") {}
+        };
+
+        struct invalid_face_type_str : public wrong_string
+        {
+            invalid_face_type_str(const std::string &s) : wrong_string(s, "is not a valid FACE-TYPE string") {}
+        };
 
     public:
         enum {
@@ -372,22 +379,35 @@ namespace GridTool::XF
         };
 
         static bool isValidIdx(int x);
+
         static bool isValidStr(const std::string &x);
+
         static const std::string &idx2str(int x);
+
         static int str2idx(const std::string &x);
 
+    private:
+        int m_bc;
+        int m_face;
+
+    public:
         FACE() = delete;
+
         FACE(size_t zone, size_t first, size_t last, int bc, int face);
+
         FACE(const FACE &rhs);
+
         ~FACE() = default;
 
         /// B.C. of this group of faces.
-        int bc_type() const { return m_bc; }
-        int &bc_type() { return m_bc; }
+        int bc_type() const;
+
+        int &bc_type();
 
         /// Shape of this group of faces.
-        int face_type() const { return m_face; }
-        int &face_type() { return m_face; }
+        int face_type() const;
+
+        int &face_type();
 
         void repr(std::ostream &out);
     };
@@ -401,26 +421,33 @@ namespace GridTool::XF
 
     public:
         ZONE() = delete;
+
         ZONE(int zone, const std::string &bc_type, const std::string &name);
+
         ZONE(const ZONE &rhs) = default;
+
         ~ZONE() = default;
 
         /// Index of this zone, may be any 
         /// non-consecutive positive integer.
-        size_t zone() const { return m_zoneID; }
-        size_t &zone() { return m_zoneID; }
+        size_t zone() const;
+
+        size_t &zone();
 
         /// B.C. string literal.
-        const std::string &type() const { return m_zoneType; }
-        std::string &type() { return m_zoneType; }
+        const std::string &type() const;
+
+        std::string &type();
 
         /// Name of this zone.
-        const std::string &name() const { return m_zoneName; }
-        std::string &name() { return m_zoneName; }
+        const std::string &name() const;
+
+        std::string &name();
 
         /// Domain ID, NOT used.
-        int domain() const { return m_domainID; }
-        int &domain() { return m_domainID; }
+        int domain() const;
+
+        int &domain();
 
         void repr(std::ostream &out);
     };

@@ -62,13 +62,13 @@ namespace GridTool::XF
     public:
         struct invalid_bc_idx : public wrong_index
         {
-            invalid_bc_idx(int bc) : wrong_index(bc, "is not a valid B.C. index") {}
+            invalid_bc_idx(int x) : wrong_index(x, "is not a valid B.C. index") {}
         };
 
     private:
         struct invalid_bc_str : public wrong_string
         {
-            invalid_bc_str(const std::string &bc) : wrong_string(bc, "is not a valid B.C. string") {}
+            invalid_bc_str(const std::string &s) : wrong_string(s, "is not a valid B.C. string") {}
         };
 
     public:
@@ -427,7 +427,7 @@ namespace GridTool::XF
         };
 
     public:
-        enum{
+        enum {
             DEGASSING,
             EXHAUST_FAN,
             FAN,
@@ -470,7 +470,7 @@ namespace GridTool::XF
     public:
         ZONE() = delete;
 
-        ZONE(int zone, const std::string &zt, const std::string &name, int id=0);
+        ZONE(int zone, const std::string &zt, const std::string &name, int id = 0);
 
         ZONE(const ZONE &rhs) = default;
 

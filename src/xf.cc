@@ -970,30 +970,30 @@ namespace GridTool::XF
     int ZONE::str2idx(const std::string &x)
     {
         static const std::map<std::string, int> mapping_set{
-                std::pair<std::string, int>("degassing", DEGASSING),
-                std::pair<std::string, int>("exhaust_fan", EXHAUST_FAN),
-                std::pair<std::string, int>("fan", FAN),
-                std::pair<std::string, int>("fluid", FLUID),
-                std::pair<std::string, int>("geometry", GEOMETRY),
-                std::pair<std::string, int>("inlet_vent", INLET_VENT),
-                std::pair<std::string, int>("intake_fan", INTAKE_FAN),
-                std::pair<std::string, int>("interface", INTERFACE),
-                std::pair<std::string, int>("interior", INTERIOR),
-                std::pair<std::string, int>("internal", INTERNAL),
-                std::pair<std::string, int>("mass_flow_inlet", MASS_FLOW_INLET),
-                std::pair<std::string, int>("outflow", OUTFLOW),
-                std::pair<std::string, int>("outlet_vent", OUTLET_VENT),
-                std::pair<std::string, int>("parent_face", PARENT_FACE),
-                std::pair<std::string, int>("porous_jump", POROUS_JUMP),
-                std::pair<std::string, int>("pressure_par_field", PRESSURE_PAR_FIELD),
-                std::pair<std::string, int>("pressure_inlet", PRESSURE_INLET),
-                std::pair<std::string, int>("pressure_outlet", PRESSURE_OUTLET),
-                std::pair<std::string, int>("radiator", RADIATOR),
-                std::pair<std::string, int>("solid", SOLID),
-                std::pair<std::string, int>("symmetry", SYMMETRY),
-                std::pair<std::string, int>("velocity_inlet", VELOCITY_INLET),
-                std::pair<std::string, int>("wall", WALL),
-                std::pair<std::string, int>("wrapper", WRAPPER)
+            std::pair<std::string, int>("degassing", DEGASSING),
+            std::pair<std::string, int>("exhaust_fan", EXHAUST_FAN),
+            std::pair<std::string, int>("fan", FAN),
+            std::pair<std::string, int>("fluid", FLUID),
+            std::pair<std::string, int>("geometry", GEOMETRY),
+            std::pair<std::string, int>("inlet_vent", INLET_VENT),
+            std::pair<std::string, int>("intake_fan", INTAKE_FAN),
+            std::pair<std::string, int>("interface", INTERFACE),
+            std::pair<std::string, int>("interior", INTERIOR),
+            std::pair<std::string, int>("internal", INTERNAL),
+            std::pair<std::string, int>("mass_flow_inlet", MASS_FLOW_INLET),
+            std::pair<std::string, int>("outflow", OUTFLOW),
+            std::pair<std::string, int>("outlet_vent", OUTLET_VENT),
+            std::pair<std::string, int>("parent_face", PARENT_FACE),
+            std::pair<std::string, int>("porous_jump", POROUS_JUMP),
+            std::pair<std::string, int>("pressure_par_field", PRESSURE_PAR_FIELD),
+            std::pair<std::string, int>("pressure_inlet", PRESSURE_INLET),
+            std::pair<std::string, int>("pressure_outlet", PRESSURE_OUTLET),
+            std::pair<std::string, int>("radiator", RADIATOR),
+            std::pair<std::string, int>("solid", SOLID),
+            std::pair<std::string, int>("symmetry", SYMMETRY),
+            std::pair<std::string, int>("velocity_inlet", VELOCITY_INLET),
+            std::pair<std::string, int>("wall", WALL),
+            std::pair<std::string, int>("wrapper", WRAPPER)
         };
 
         auto it = mapping_set.find(x);
@@ -1010,7 +1010,7 @@ namespace GridTool::XF
         m_zoneName(name),
         m_domainID(id)
     {
-        if(!isValidStr(zt))
+        if (!isValidStr(zt))
             throw invalid_zone_type_str(zt);
     }
 

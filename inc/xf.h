@@ -59,12 +59,13 @@ namespace GridTool::XF
 
     class BC
     {
-    private:
+    public:
         struct invalid_bc_idx : public wrong_index
         {
             invalid_bc_idx(int bc) : wrong_index(bc, "is not a valid B.C. index") {}
         };
 
+    private:
         struct invalid_bc_str : public wrong_string
         {
             invalid_bc_str(const std::string &bc) : wrong_string(bc, "is not a valid B.C. string") {}
@@ -399,12 +400,12 @@ namespace GridTool::XF
 
         ~FACE() = default;
 
-        /// B.C. of this group of faces.
+        /// B.C. of faces within this group.
         int bc_type() const;
 
         int &bc_type();
 
-        /// Shape of this group of faces.
+        /// Shape of faces within this group.
         int face_type() const;
 
         int &face_type();
@@ -415,6 +416,53 @@ namespace GridTool::XF
     class ZONE :public SECTION
     {
     private:
+        struct invalid_zone_type_idx : public wrong_index
+        {
+            invalid_zone_type_idx(int x) : wrong_index(x, "is not a valid ZONE-TYPE index") {}
+        };
+
+        struct invalid_zone_type_str : public wrong_string
+        {
+            invalid_zone_type_str(const std::string &s) : wrong_string(s, "is not a valid specification of ZONE-TYPE") {}
+        };
+
+    public:
+        enum{
+            DEGASSING,
+            EXHAUST_FAN,
+            FAN,
+            FLUID,
+            GEOMETRY,
+            INLET_VENT,
+            INTAKE_FAN,
+            INTERFACE,
+            INTERIOR,
+            INTERNAL,
+            MASS_FLOW_INLET,
+            OUTFLOW,
+            OUTLET_VENT,
+            PARENT_FACE,
+            POROUS_JUMP,
+            PRESSURE_PAR_FIELD,
+            PRESSURE_INLET,
+            PRESSURE_OUTLET,
+            RADIATOR,
+            SOLID,
+            SYMMETRY,
+            VELOCITY_INLET,
+            WALL,
+            WRAPPER
+        };
+
+        static bool isValidIdx(int x);
+
+        static bool isValidStr(const std::string &x);
+
+        static const std::string &idx2str(int x);
+
+        static int str2idx(const std::string &x);
+
+    private:
         size_t m_zoneID;
         std::string m_zoneType, m_zoneName;
         int m_domainID;
@@ -422,7 +470,7 @@ namespace GridTool::XF
     public:
         ZONE() = delete;
 
-        ZONE(int zone, const std::string &bc_type, const std::string &name);
+        ZONE(int zone, const std::string &zt, const std::string &name, int id=0);
 
         ZONE(const ZONE &rhs) = default;
 

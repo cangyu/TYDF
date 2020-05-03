@@ -817,7 +817,7 @@ namespace GridTool::XF
         m_face(face)
     {
         if (!BC::isValidIdx(bc))
-            throw std::invalid_argument("Invalid B.C. type: " + std::to_string(bc));
+            throw BC::invalid_bc_idx(bc);
 
         if (!isValidIdx(face))
             throw invalid_face_type_idx(face);
@@ -893,15 +893,125 @@ namespace GridTool::XF
         out << "))" << std::endl;
     }
 
-    ZONE::ZONE(int zone, const std::string &z_type, const std::string &name) :
+    bool ZONE::isValidIdx(int x)
+    {
+        const bool ret = ZONE::DEGASSING <= x && x <= ZONE::WRAPPER;
+        return ret;
+    }
+
+    bool ZONE::isValidStr(const std::string &x)
+    {
+        static const std::set<std::string> candidate_set{
+            "degassing",
+            "exhaust-fan",
+            "fan",
+            "fluid",
+            "geometry",
+            "inlet-vent",
+            "intake-fan",
+            "interface",
+            "interior",
+            "internal",
+            "mass-flow-inlet",
+            "outflow",
+            "outlet-vent",
+            "parent-face",
+            "porous-jump",
+            "pressure-far-field",
+            "pressure-inlet",
+            "pressure-outlet",
+            "radiator",
+            "solid",
+            "symmetry",
+            "velocity-inlet",
+            "wall",
+            "wrapper"
+        };
+
+        return candidate_set.find(formalize(x)) != candidate_set.end();
+    }
+
+    const std::string &ZONE::idx2str(int x)
+    {
+        static const std::map<int, std::string> mapping_set{
+            std::pair<int, std::string>(DEGASSING, "degassing"),
+            std::pair<int, std::string>(EXHAUST_FAN, "exhaust-fan"),
+            std::pair<int, std::string>(FAN, "fan"),
+            std::pair<int, std::string>(FLUID, "fluid"),
+            std::pair<int, std::string>(GEOMETRY, "geometry"),
+            std::pair<int, std::string>(INLET_VENT, "inlet_vent"),
+            std::pair<int, std::string>(INTAKE_FAN, "intake_fan"),
+            std::pair<int, std::string>(INTERFACE, "interface"),
+            std::pair<int, std::string>(INTERIOR, "interior"),
+            std::pair<int, std::string>(INTERNAL, "internal"),
+            std::pair<int, std::string>(MASS_FLOW_INLET, "mass_flow_inlet"),
+            std::pair<int, std::string>(OUTFLOW, "outflow"),
+            std::pair<int, std::string>(OUTLET_VENT, "outlet_vent"),
+            std::pair<int, std::string>(PARENT_FACE, "parent_face"),
+            std::pair<int, std::string>(POROUS_JUMP, "porous_jump"),
+            std::pair<int, std::string>(PRESSURE_PAR_FIELD, "pressure_par_field"),
+            std::pair<int, std::string>(PRESSURE_INLET, "pressure_inlet"),
+            std::pair<int, std::string>(PRESSURE_OUTLET, "pressure_outlet"),
+            std::pair<int, std::string>(RADIATOR, "radiator"),
+            std::pair<int, std::string>(SOLID, "solid"),
+            std::pair<int, std::string>(SYMMETRY, "symmetry"),
+            std::pair<int, std::string>(VELOCITY_INLET, "velocity_inlet"),
+            std::pair<int, std::string>(WALL, "wall"),
+            std::pair<int, std::string>(WRAPPER, "wrapper"),
+        };
+
+        auto it = mapping_set.find(x);
+        if (it == mapping_set.end())
+            throw invalid_zone_type_idx(x);
+        else
+            return it->second;
+    }
+
+    int ZONE::str2idx(const std::string &x)
+    {
+        static const std::map<std::string, int> mapping_set{
+                std::pair<std::string, int>("degassing", DEGASSING),
+                std::pair<std::string, int>("exhaust_fan", EXHAUST_FAN),
+                std::pair<std::string, int>("fan", FAN),
+                std::pair<std::string, int>("fluid", FLUID),
+                std::pair<std::string, int>("geometry", GEOMETRY),
+                std::pair<std::string, int>("inlet_vent", INLET_VENT),
+                std::pair<std::string, int>("intake_fan", INTAKE_FAN),
+                std::pair<std::string, int>("interface", INTERFACE),
+                std::pair<std::string, int>("interior", INTERIOR),
+                std::pair<std::string, int>("internal", INTERNAL),
+                std::pair<std::string, int>("mass_flow_inlet", MASS_FLOW_INLET),
+                std::pair<std::string, int>("outflow", OUTFLOW),
+                std::pair<std::string, int>("outlet_vent", OUTLET_VENT),
+                std::pair<std::string, int>("parent_face", PARENT_FACE),
+                std::pair<std::string, int>("porous_jump", POROUS_JUMP),
+                std::pair<std::string, int>("pressure_par_field", PRESSURE_PAR_FIELD),
+                std::pair<std::string, int>("pressure_inlet", PRESSURE_INLET),
+                std::pair<std::string, int>("pressure_outlet", PRESSURE_OUTLET),
+                std::pair<std::string, int>("radiator", RADIATOR),
+                std::pair<std::string, int>("solid", SOLID),
+                std::pair<std::string, int>("symmetry", SYMMETRY),
+                std::pair<std::string, int>("velocity_inlet", VELOCITY_INLET),
+                std::pair<std::string, int>("wall", WALL),
+                std::pair<std::string, int>("wrapper", WRAPPER)
+        };
+
+        auto it = mapping_set.find(x);
+        if (it == mapping_set.end())
+            throw invalid_zone_type_str(x);
+        else
+            return it->second;
+    }
+
+    ZONE::ZONE(int zone, const std::string &zt, const std::string &name, int id) :
         SECTION(SECTION::ZONE),
         m_zoneID(zone),
-        m_zoneType(formalize(z_type)),
+        m_zoneType(formalize(zt)),
         m_zoneName(name),
-        m_domainID(0)
+        m_domainID(id)
     {
-        if (!BC::isValidStr(type()) && !CELL::isValidTypeStr(type()))
-            throw std::invalid_argument("B.C. specification is invalid.");
+        if(!isValidStr(zt))
+            throw invalid_zone_type_str(zt);
     }
 
     size_t ZONE::zone() const

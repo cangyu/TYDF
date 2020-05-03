@@ -710,10 +710,10 @@ namespace GridTool::XF
         }
     }
 
-    void CONNECTIVITY::set(int x_, size_t *n_, size_t *c_)
+    void CONNECTIVITY::set(int x_, const size_t *n_, const size_t *c_)
     {
         if (x_ > 4)
-            throw std::invalid_argument("Too many nodes within a face, polygon face are not supported currently.");
+            throw std::invalid_argument("Too many nodes within a face, polygon faces are not supported currently.");
         if (x_ < 1)
             throw std::invalid_argument("Invalid num of nodes within a face.");
 

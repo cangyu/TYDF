@@ -328,32 +328,39 @@ namespace GridTool::XF
         void repr(std::ostream &out);
     };
 
-    struct CONNECTIVITY
+    class CONNECTIVITY
     {
-        /// Num of nodes.
-        int x;
+    public:
+        int x; /// Num of nodes.
 
-        /// At most 4 nodes within a single face, 
-        /// polygon faces are not supported currently.
+        /// Nodes within this face, ordered according to right-hand convention.
+        /// At most 4 nodes within a single face, polygon faces are not supported currently.
         size_t n[4];
 
-        /// Adjacent cells.
-        size_t c[2];
+        size_t c[2]; /// Adjacent cells.
 
+    public:
         CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
+
         CONNECTIVITY(const CONNECTIVITY &rhs) = default;
+
         ~CONNECTIVITY() = default;
 
+        /// Legacy notation of cell connectivity.
         size_t cl() const { return c[0]; }
+
         size_t cr() const { return c[1]; }
 
+        /// Current notation of cell connectivity.
         size_t c0() const { return c[0]; }
+
         size_t c1() const { return c[1]; }
 
-        void set(int x_, size_t *n_, size_t *c_);
+        void set(int x_, const size_t *n_, const size_t *c_);
 
         /// Index of adjacent node.
         size_t leftAdj(int loc_idx) const;
+
         size_t rightAdj(int loc_idx) const;
     };
 

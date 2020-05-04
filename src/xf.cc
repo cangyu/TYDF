@@ -1197,6 +1197,27 @@ namespace GridTool::XF
         out << std::dec << "(" << identity() << " (" << zone() << " " << type() << " " << name() << ")())" << std::endl;
     }
 
+    struct MESH::internal_error : public std::runtime_error
+    {
+        internal_error(int err) :
+            std::runtime_error("Internal error occurred with error code: " + std::to_string(err) + ".")
+        {
+            /// Empty body.
+        }
+
+        internal_error(const std::string &msg) :
+            std::runtime_error("Internal error occurred with error message: \"" + msg + "\".")
+        {
+            /// Empty body.
+        }
+
+        internal_error(int err, const std::string &msg) :
+            std::runtime_error("Internal error occurred with error code: " + std::to_string(err) + " and error message: \"" + msg + "\".")
+        {
+            /// Empty body.
+        }
+    };
+
     MESH::MESH() :
         DIM(3), /// 3D by default.
         m_totalNodeNum(0),

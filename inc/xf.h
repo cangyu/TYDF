@@ -478,6 +478,9 @@ namespace GridTool::XF
 
     class MESH : public DIM
     {
+    private:
+        struct internal_error;
+
     protected:
         /// Index of node, face, and cell starts from 1 
         /// and increase continuously. But zone is different.
@@ -485,36 +488,57 @@ namespace GridTool::XF
         {
             Vector coordinate;
             bool atBdry;
+
+            /// Nodal connectivity
             Array1D<size_t> adjacentNode;
+
+            /// Facial connectivity
             Array1D<size_t> dependentFace;
+
+            /// Cell connectivity
             Array1D<size_t> dependentCell;
         };
 
         struct FACE_ELEM
         {
-            int type;
+            int type; /// Shape
             Vector center;
             double area;
-            Array1D<size_t> includedNode;
-            size_t leftCell, rightCell;
             bool atBdry;
-            Vector n_LR, n_RL; /// Surface unit normal.
+
+            /// Nodal connectivity
+            Array1D<size_t> includedNode;
+
+            /// Cell connectivity
+            size_t leftCell, rightCell; /// Legacy notation
+            size_t cell1, cell0; /// Current notation
+
+            /// Surface unit normal
+            Vector n_LR, n_RL; /// Legacy notation
+            Vector n_10, n_01; /// Current notation
         };
 
         struct CELL_ELEM
         {
-            int type;
+            int type; /// Shape
             Vector center;
             double volume;
-            Array1D<size_t> includedFace;
+
+            /// Nodal connectivity
             Array1D<size_t> includedNode;
 
-            /// The size is equal to that of "includedFace", 
-            /// will be set to 0 if adjacent cell is boundary.
+            /// Facial connectivity
+            Array1D<size_t> includedFace;
+
+            /// Cell connectivity
+            /// Size is equal to that of "includedFace".
+            /// If adjacent cell is boundary, corresponding value will be set to 0.
             Array1D<size_t> adjacentCell;
 
-            Array1D<Vector> n;
-            Array1D<Vector> S;
+            /// Surface outward normal vector
+            /// Size is equal to that of "includedFace".
+            Array1D<Vector> n; /// Unit
+            Array1D<Vector> S; /// Norm equals to area of corresponding face
         };
 
         struct ZONE_ELEM

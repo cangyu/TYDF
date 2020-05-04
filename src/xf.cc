@@ -786,15 +786,14 @@ namespace GridTool::XF
 
     size_t CONNECTIVITY::cl() const
     {
-        return c[0];
+        return c1();
     }
 
     size_t CONNECTIVITY::cr() const
     {
-        return c[1];
+        return c0();
     }
 
-    /// Current notation of cell connectivity.
     size_t CONNECTIVITY::c0() const
     {
         return c[0];
@@ -1428,7 +1427,7 @@ namespace GridTool::XF
 
                         face(i).area = distance(p1, p2);
                         line_center(p1, p2, face(i).center.data());
-                        line_normal(p1, p2, face(i).n_LR.data(), face(i).n_RL.data());
+                        line_normal(p1, p2, face(i).n_RL.data(), face(i).n_LR.data());
                     }
                     else if (cnct.x == FACE::TRIANGULAR)
                     {
@@ -1437,7 +1436,7 @@ namespace GridTool::XF
 
                         face(i).area = triangle_area(p1, p2, p3);
                         triangle_center(p1, p2, p3, face(i).center.data());
-                        triangle_normal(p1, p2, p3, face(i).n_LR.data(), face(i).n_RL.data());
+                        triangle_normal(p1, p2, p3, face(i).n_RL.data(), face(i).n_LR.data());
                     }
                     else if (cnct.x == FACE::QUADRILATERAL)
                     {
@@ -1446,7 +1445,7 @@ namespace GridTool::XF
 
                         face(i).area = quadrilateral_area(p1, p2, p3, p4);
                         quadrilateral_center(p1, p2, p3, p4, face(i).center.data());
-                        quadrilateral_normal(p1, p2, p3, p4, face(i).n_LR.data(), face(i).n_RL.data());
+                        quadrilateral_normal(p1, p2, p3, p4, face(i).n_RL.data(), face(i).n_LR.data());
                     }
                     else if (cnct.x == FACE::POLYGONAL)
                         throw FACE::polygon_not_supported();

@@ -416,6 +416,24 @@ namespace GridTool::XF
         return ret;
     }
 
+    struct NODE::invalid_node_type_idx : public wrong_index
+    {
+        invalid_node_type_idx(int x) :
+            wrong_index(x, "is not a valid NODE-TYPE index")
+        {
+            /// Empty body.
+        }
+    };
+
+    struct NODE::invalid_node_type_str : public wrong_string
+    {
+        invalid_node_type_str(const std::string &s) :
+            wrong_string(s, "is not a valid NODE-TYPE string")
+        {
+            /// Empty body.
+        }
+    };
+
     bool NODE::isValidTypeIdx(int x)
     {
         return x == VIRTUAL || x == ANY || x == BOUNDARY;
@@ -529,6 +547,42 @@ namespace GridTool::XF
         }
         out << "))" << std::endl;
     }
+
+    struct CELL::invalid_cell_type_idx : public wrong_index
+    {
+        invalid_cell_type_idx(int x) :
+            wrong_index(x, "is not a valid CELL-TYPE index")
+        {
+            /// Empty body.
+        }
+    };
+
+    struct CELL::invalid_cell_type_str : public wrong_string
+    {
+        invalid_cell_type_str(const std::string &s) :
+            wrong_string(s, "is not a valid CELL-TYPE string")
+        {
+            /// Empty body.
+        }
+    };
+
+    struct CELL::invalid_elem_type_idx : public wrong_index
+    {
+        invalid_elem_type_idx(int x) :
+            wrong_index(x, "is not a valid CELL-ELEM-TYPE index")
+        {
+            /// Empty body.
+        }
+    };
+
+    struct CELL::invalid_elem_type_str : public wrong_string
+    {
+        invalid_elem_type_str(const std::string &s) :
+            wrong_string(s, "is not a valid CELL-ELEM-TYPE string")
+        {
+            /// Empty body.
+        }
+    };
 
     bool CELL::isValidTypeIdx(int x)
     {
@@ -728,10 +782,33 @@ namespace GridTool::XF
         }
     }
 
+    CONNECTIVITY::CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
+
+    size_t CONNECTIVITY::cl() const
+    {
+        return c[0];
+    }
+
+    size_t CONNECTIVITY::cr() const
+    {
+        return c[1];
+    }
+
+    /// Current notation of cell connectivity.
+    size_t CONNECTIVITY::c0() const
+    {
+        return c[0];
+    }
+
+    size_t CONNECTIVITY::c1() const
+    {
+        return c[1];
+    }
+
     void CONNECTIVITY::set(int x_, const size_t *n_, const size_t *c_)
     {
         if (x_ > 4)
-            throw std::invalid_argument("Too many nodes within a face, polygon faces are not supported currently.");
+            throw FACE::polygon_not_supported();
         if (x_ < 1)
             throw std::invalid_argument("Invalid num of nodes within a face.");
 
@@ -764,6 +841,33 @@ namespace GridTool::XF
         else
             return n[loc_idx + 1];
     }
+
+    struct FACE::polygon_not_supported : public std::invalid_argument
+    {
+        polygon_not_supported() :
+            std::invalid_argument("Polygonal faces are NOT supported currently!")
+        {
+            /// Empty body.
+        }
+    };
+
+    struct FACE::invalid_face_type_idx : public wrong_index
+    {
+        invalid_face_type_idx(int x) :
+            wrong_index(x, "is not a valid FACE-TYPE index")
+        {
+            /// Empty body.
+        }
+    };
+
+    struct FACE::invalid_face_type_str : public wrong_string
+    {
+        invalid_face_type_str(const std::string &s) :
+            wrong_string(s, "is not a valid FACE-TYPE string")
+        {
+            /// Empty body.
+        }
+    };
 
     bool FACE::isValidIdx(int x)
     {
@@ -840,7 +944,7 @@ namespace GridTool::XF
         if (!isValidIdx(face))
             throw invalid_face_type_idx(face);
         if (face == POLYGONAL)
-            throw std::invalid_argument("Polygonal face is not supported currently.");
+            throw FACE::polygon_not_supported();
     }
 
     FACE::FACE(const FACE &rhs) :
@@ -855,7 +959,7 @@ namespace GridTool::XF
         if (!isValidIdx(face_type()))
             throw std::runtime_error("Invalid FACE-TYPE not detected in previous construction.");
         if (face_type() == POLYGONAL)
-            throw std::runtime_error("Polygonal face is not supported currently.");
+            throw FACE::polygon_not_supported();
     }
 
     int FACE::bc_type() const
@@ -910,6 +1014,24 @@ namespace GridTool::XF
 
         out << "))" << std::endl;
     }
+
+    struct ZONE::invalid_zone_type_idx : public wrong_index
+    {
+        invalid_zone_type_idx(int x) :
+            wrong_index(x, "is not a valid ZONE-TYPE index")
+        {
+            /// Empty body.
+        }
+    };
+
+    struct ZONE::invalid_zone_type_str : public wrong_string
+    {
+        invalid_zone_type_str(const std::string &s) :
+            wrong_string(s, "is not a valid specification of ZONE-TYPE")
+        {
+            /// Empty body.
+        }
+    };
 
     bool ZONE::isValidIdx(int x)
     {

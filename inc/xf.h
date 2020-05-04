@@ -187,15 +187,9 @@ namespace GridTool::XF
     class NODE : public RANGE, public DIM, public std::vector<Vector>
     {
     private:
-        struct invalid_node_type_idx : public wrong_index
-        {
-            invalid_node_type_idx(int x) : wrong_index(x, "is not a valid NODE-TYPE index") {}
-        };
+        struct invalid_node_type_idx;
 
-        struct invalid_node_type_str : public wrong_string
-        {
-            invalid_node_type_str(const std::string &s) : wrong_string(s, "is not a valid NODE-TYPE string") {}
-        };
+        struct invalid_node_type_str;
 
     public:
         enum {
@@ -242,25 +236,13 @@ namespace GridTool::XF
     class CELL : public RANGE, public std::vector<int>
     {
     private:
-        struct invalid_cell_type_idx : public wrong_index
-        {
-            invalid_cell_type_idx(int x) : wrong_index(x, "is not a valid CELL-TYPE index") {}
-        };
+        struct invalid_cell_type_idx;
 
-        struct invalid_cell_type_str : public wrong_string
-        {
-            invalid_cell_type_str(const std::string &s) : wrong_string(s, "is not a valid CELL-TYPE string") {}
-        };
+        struct invalid_cell_type_str;
 
-        struct invalid_elem_type_idx : public wrong_index
-        {
-            invalid_elem_type_idx(int x) : wrong_index(x, "is not a valid CELL-ELEM-TYPE index") {}
-        };
+        struct invalid_elem_type_idx;
 
-        struct invalid_elem_type_str : public wrong_string
-        {
-            invalid_elem_type_str(const std::string &s) : wrong_string(s, "is not a valid CELL-ELEM-TYPE string") {}
-        };
+        struct invalid_elem_type_str;
 
     public:
         enum {
@@ -327,28 +309,30 @@ namespace GridTool::XF
     public:
         int x; /// Num of nodes.
 
-        /// Nodes within this face, ordered according to right-hand convention.
-        /// At most 4 nodes within a single face, polygon faces are not supported currently.
+        /// Nodes within this face.
+        /// Ordered according to right-hand convention.
+        /// At most 4 nodes within a single face.
+        /// Polygonal faces are not supported currently.
         size_t n[4];
 
         size_t c[2]; /// Adjacent cells.
 
     public:
-        CONNECTIVITY() : x(1), n{ 0, 0, 0, 0 }, c{ 0, 0 } {}
+        CONNECTIVITY();
 
         CONNECTIVITY(const CONNECTIVITY &rhs) = default;
 
         ~CONNECTIVITY() = default;
 
         /// Legacy notation of cell connectivity.
-        size_t cl() const { return c[0]; }
+        size_t cl() const;
 
-        size_t cr() const { return c[1]; }
+        size_t cr() const;
 
         /// Current notation of cell connectivity.
-        size_t c0() const { return c[0]; }
+        size_t c0() const;
 
-        size_t c1() const { return c[1]; }
+        size_t c1() const;
 
         void set(int x_, const size_t *n_, const size_t *c_);
 
@@ -360,16 +344,13 @@ namespace GridTool::XF
 
     class FACE : public RANGE, public std::vector<CONNECTIVITY>
     {
-    private:
-        struct invalid_face_type_idx : public wrong_index
-        {
-            invalid_face_type_idx(int x) : wrong_index(x, "is not a valid FACE-TYPE index") {}
-        };
+    public:
+        struct polygon_not_supported;
 
-        struct invalid_face_type_str : public wrong_string
-        {
-            invalid_face_type_str(const std::string &s) : wrong_string(s, "is not a valid FACE-TYPE string") {}
-        };
+    private:
+        struct invalid_face_type_idx;
+
+        struct invalid_face_type_str;
 
     public:
         enum {
@@ -417,15 +398,9 @@ namespace GridTool::XF
     class ZONE :public SECTION
     {
     private:
-        struct invalid_zone_type_idx : public wrong_index
-        {
-            invalid_zone_type_idx(int x) : wrong_index(x, "is not a valid ZONE-TYPE index") {}
-        };
+        struct invalid_zone_type_idx;
 
-        struct invalid_zone_type_str : public wrong_string
-        {
-            invalid_zone_type_str(const std::string &s) : wrong_string(s, "is not a valid specification of ZONE-TYPE") {}
-        };
+        struct invalid_zone_type_str;
 
     public:
         enum {

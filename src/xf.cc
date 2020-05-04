@@ -1242,6 +1242,58 @@ namespace GridTool::XF
         return m_totalZoneNum;
     }
 
+    const MESH::NODE_ELEM &MESH::node(size_t id) const
+    {
+        return m_node(id);
+    }
+
+    MESH::NODE_ELEM &MESH::node(size_t id)
+    {
+        return m_node(id);
+    }
+
+    const MESH::FACE_ELEM &MESH::face(size_t id) const
+    {
+        return m_face(id);
+    }
+
+    MESH::FACE_ELEM &MESH::face(size_t id)
+    {
+        return m_face(id);
+    }
+
+    const MESH::CELL_ELEM &MESH::cell(size_t id) const
+    {
+        return m_cell(id);
+    }
+
+    MESH::CELL_ELEM &MESH::cell(size_t id)
+    {
+        return m_cell(id);
+    }
+
+    const MESH::ZONE_ELEM &MESH::zone(size_t id, bool isRealZoneID) const
+    {
+        if (isRealZoneID)
+        {
+            const auto real_idx = m_zoneMapping.at(id);
+            return m_zone.at(real_idx);
+        }
+        else
+            return m_zone(id);
+    }
+
+    MESH::ZONE_ELEM &MESH::zone(size_t id, bool isRealZoneID)
+    {
+        if (isRealZoneID)
+        {
+            const auto real_idx = m_zoneMapping.at(id);
+            return m_zone.at(real_idx);
+        }
+        else
+            return m_zone(id);
+    }
+
     void MESH::raw2derived()
     {
         /************************* Allocate storage ***************************/

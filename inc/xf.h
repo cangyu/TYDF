@@ -519,9 +519,14 @@ namespace GridTool::XF
 
         struct ZONE_ELEM
         {
-            size_t ID; /// May not start from 1, usually given arbitrarily.
+            /// Index of this zone.
+            /// May not start from 1, usually given arbitrarily.
+            size_t ID;
+
             std::string type;
             std::string name;
+
+            /// Related raw record entry.
             RANGE *obj;
         };
 
@@ -566,60 +571,24 @@ namespace GridTool::XF
         size_t numOfZone() const;
 
         /// 1-based access
-        const NODE_ELEM &node(size_t id) const
-        {
-            return m_node(id);
-        }
+        const NODE_ELEM &node(size_t id) const;
 
-        NODE_ELEM &node(size_t id)
-        {
-            return m_node(id);
-        }
+        NODE_ELEM &node(size_t id);
 
-        const FACE_ELEM &face(size_t id) const
-        {
-            return m_face(id);
-        }
+        const FACE_ELEM &face(size_t id) const;
 
-        FACE_ELEM &face(size_t id)
-        {
-            return m_face(id);
-        }
+        FACE_ELEM &face(size_t id);
 
-        const CELL_ELEM &cell(size_t id) const
-        {
-            return m_cell(id);
-        }
+        const CELL_ELEM &cell(size_t id) const;
 
-        CELL_ELEM &cell(size_t id)
-        {
-            return m_cell(id);
-        }
+        CELL_ELEM &cell(size_t id);
 
         /// If "isRealZoneID" is "true", then "id" is the real zone index,
         /// otherwise, "id" is the internal storage index.
         /// Whatever "isRealZoneID" is, "id" is always 1-based for consistency.
-        const ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) const
-        {
-            if (isRealZoneID)
-            {
-                const auto real_idx = m_zoneMapping.at(id);
-                return m_zone.at(real_idx);
-            }
-            else
-                return m_zone(id);
-        }
+        const ZONE_ELEM &zone(size_t id, bool isRealZoneID = false) const;
 
-        ZONE_ELEM &zone(size_t id, bool isRealZoneID = false)
-        {
-            if (isRealZoneID)
-            {
-                const auto real_idx = m_zoneMapping.at(id);
-                return m_zone.at(real_idx);
-            }
-            else
-                return m_zone(id);
-        }
+        ZONE_ELEM &zone(size_t id, bool isRealZoneID = false);
 
     private:
         void add_entry(SECTION *e);

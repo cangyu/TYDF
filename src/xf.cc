@@ -807,9 +807,7 @@ namespace GridTool::XF
 
     void CONNECTIVITY::set(int x_, const size_t *n_, const size_t *c_)
     {
-        if (x_ > 4)
-            throw FACE::polygon_not_supported();
-        if (x_ < 1)
+        if (x_ > 4 || x_ < 1)
             throw std::invalid_argument("Invalid num of nodes within a face.");
 
         x = x_;

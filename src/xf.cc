@@ -1466,7 +1466,7 @@ namespace GridTool::XF
                 if (curObj == nullptr)
                     throw internal_error(-3);
 
-                // 1-based index
+                /// 1-based index
                 const size_t cur_first = curObj->first_index();
                 const size_t cur_last = curObj->last_index();
 
@@ -1484,15 +1484,15 @@ namespace GridTool::XF
                         const size_t loc_leftNode = cnct.leftAdj(j);
                         const size_t loc_rightNode = cnct.rightAdj(j);
 
-                        // Adjacent nodes
+                        /// Adjacent nodes
                         curNode.adjacentNode.push_back(loc_leftNode);
                         if (cnct.x > 2)
                             curNode.adjacentNode.push_back(loc_rightNode);
 
-                        // Dependent faces
+                        /// Dependent faces
                         curNode.dependentFace.push_back(i);
 
-                        // Dependent cells
+                        /// Dependent cells
                         if (loc_leftCell != 0)
                             curNode.dependentCell.push_back(loc_leftCell);
                         if (loc_rightCell != 0)
@@ -1501,6 +1501,7 @@ namespace GridTool::XF
                 }
             }
         }
+
         /// Step2: Remove duplication
         for (size_t i = 1; i <= numOfNode(); ++i)
         {
@@ -1635,12 +1636,11 @@ namespace GridTool::XF
 
     void MESH::clear_entry()
     {
-        // Release previous contents.
+        /// Release previous contents.
         for (auto ptr : m_content)
-            if (ptr)
-                delete ptr;
+            delete ptr; /// NO side-effect when deleting a nullptr.
 
-        // Clear container.
+        /// Clear container.
         m_content.clear();
     }
 
@@ -1936,12 +1936,12 @@ namespace GridTool::XF
         if (m_content.empty())
             throw std::runtime_error("Invalid num of contents.");
 
-        // Open grid file
+        /// Open grid file
         std::ofstream fout(dst);
         if (fout.fail())
             throw std::runtime_error("Failed to open output grid file: " + dst);
 
-        // Write until dimension declaration
+        /// Write until dimension declaration
         size_t i = 0;
         while (true)
         {
@@ -1952,7 +1952,7 @@ namespace GridTool::XF
                 break;
         }
 
-        // Declaration of NODE, FACE, CELL
+        /// Declaration of NODE, FACE, CELL
         fout << "(" << std::dec << SECTION::NODE << " (";
         fout << std::hex << 0 << " " << 1 << " " << m_totalNodeNum << " ";
         fout << std::dec << 0 << " " << (m_is3D ? 3 : 2) << "))" << std::endl;
@@ -1963,11 +1963,11 @@ namespace GridTool::XF
         fout << std::hex << 0 << " " << 1 << " " << m_totalFaceNum << " ";
         fout << std::dec << 0 << " " << 0 << "))" << std::endl;
 
-        // Contents
+        /// Contents
         for (; i < m_content.size(); ++i)
             m_content[i]->repr(fout);
 
-        // Close grid file
+        /// Close grid file
         fout.close();
     }
 
@@ -1994,7 +1994,7 @@ namespace GridTool::XF
             quad_standardization(c);
             break;
         default:
-            throw std::runtime_error("Invalid cell element type: " + std::to_string(c.type) + ", maybe caused by internal error.");
+            throw CELL::invalid_cell_type_idx(c.type); /// May caused by internal error.
         }
     }
 

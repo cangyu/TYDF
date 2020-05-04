@@ -61,7 +61,6 @@ namespace GridTool::XF
     public:
         struct invalid_bc_idx;
 
-    private:
         struct invalid_bc_str;
 
     public:
@@ -185,7 +184,7 @@ namespace GridTool::XF
 
     class NODE : public RANGE, public DIM, public std::vector<Vector>
     {
-    private:
+    public:
         struct invalid_node_type_idx;
 
         struct invalid_node_type_str;
@@ -234,7 +233,7 @@ namespace GridTool::XF
 
     class CELL : public RANGE, public std::vector<int>
     {
-    private:
+    public:
         struct invalid_cell_type_idx;
 
         struct invalid_cell_type_str;
@@ -346,7 +345,6 @@ namespace GridTool::XF
     public:
         struct polygon_not_supported;
 
-    private:
         struct invalid_face_type_idx;
 
         struct invalid_face_type_str;
@@ -396,7 +394,7 @@ namespace GridTool::XF
 
     class ZONE :public SECTION
     {
-    private:
+    public:
         struct invalid_zone_type_idx;
 
         struct invalid_zone_type_str;

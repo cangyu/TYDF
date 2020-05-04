@@ -1331,66 +1331,85 @@ namespace GridTool::XF
             e.dependentFace.clear();
             e.dependentCell.clear();
         }
+
         for (auto &e : m_face)
         {
             e.center.z() = 0.0;
+            e.includedNode.clear();
             e.n_LR.z() = 0.0;
             e.n_RL.z() = 0.0;
         }
+
         for (auto &e : m_cell)
         {
             e.center.z() = 0.0;
+            e.includedFace.clear();
+            e.includedNode.clear();
+            e.adjacentCell.clear();
+            e.n.clear();
+            e.S.clear();
         }
 
         /************************* Parse node and face ************************/
-        // Basic records
+        /// Basic records
         for (auto curPtr : m_content)
         {
             if (curPtr->identity() == SECTION::NODE)
             {
                 auto curObj = dynamic_cast<NODE*>(curPtr);
+                if (curObj == nullptr)
+                    throw internal_error(-1);
 
-                // Node type within this zone
+                /// Node type within this zone
                 const bool flag = curObj->is_boundary_node();
 
-                // 1-based global node index
+                /// 1-based global node index
                 const size_t cur_first = curObj->first_index();
                 const size_t cur_last = curObj->last_index();
                 for (size_t i = cur_first; i <= cur_last; ++i)
                 {
-                    node(i).coordinate = curObj->at(i - cur_first); // Node Coordinates
-                    node(i).atBdry = flag; // Node on boundary or not
+                    /// Node Coordinates
+                    node(i).coordinate = curObj->at(i - cur_first);
+
+                    /// Node on boundary or not
+                    node(i).atBdry = flag;
                 }
             }
 
             if (curPtr->identity() == SECTION::FACE)
             {
                 auto curObj = dynamic_cast<FACE*>(curPtr);
+                if (curObj == nullptr)
+                    throw internal_error(-2);
 
-                // 1-based global face index
+                /// 1-based global face index
                 const size_t cur_first = curObj->first_index();
                 const size_t cur_last = curObj->last_index();
 
-                // Face type of this zone
+                /// Face type of this zone
                 const int ft = curObj->face_type();
 
                 for (size_t i = cur_first; i <= cur_last; ++i)
                 {
                     const auto &cnct = curObj->at(i - cur_first);
 
-                    // Check consistency of face-type
+                    /// Check consistency of face-type
                     if (ft == 0)
                         face(i).type = cnct.x;
                     else if (cnct.x != ft)
-                        throw std::runtime_error("Internal error!");
+                        throw internal_error("local face shape is inconsistent with global specification");
                     else
                         face(i).type = ft;
 
-                    // Nodes within this face, 1-based node index are stored, right-hand convention is preserved.
+                    /// Nodes within this face.
+                    /// 1-based node index are stored.
+                    /// Right-hand convention is preserved.
                     face(i).includedNode.assign(cnct.n, cnct.n + cnct.x);
 
-                    // Adjacent cells, 1-based cell index are stored, 0 stands for boundary, right-hand convention is preserved.
-                    size_t lc = cnct.cl(), rc = cnct.cr();
+                    /// Adjacent cells.
+                    /// 1-based cell index are stored, 0 stands for boundary.
+                    /// Right-hand convention is preserved.
+                    const size_t lc = cnct.cl(), rc = cnct.cr();
                     face(i).leftCell = lc;
                     face(i).rightCell = rc;
                     if (lc != 0)
@@ -1398,10 +1417,10 @@ namespace GridTool::XF
                     if (rc != 0)
                         cell(rc).includedFace.push_back(i);
 
-                    // Face on boundary or not
+                    /// Face on boundary or not
                     face(i).atBdry = (cnct.c0() == 0 || cnct.c1() == 0);
 
-                    //Face area & center
+                    /// Face area and center
                     if (cnct.x == FACE::LINEAR)
                     {
                         auto na = cnct.n[0], nb = cnct.n[1];
@@ -1430,37 +1449,40 @@ namespace GridTool::XF
                         quadrilateral_normal(p1, p2, p3, p4, face(i).n_LR.data(), face(i).n_RL.data());
                     }
                     else if (cnct.x == FACE::POLYGONAL)
-                        throw std::runtime_error("Not supported currently!");
+                        throw FACE::polygon_not_supported();
                     else
-                        throw std::runtime_error("Internal error!");
+                        throw internal_error("face shape not recognized");
                 }
             }
         }
 
-        // Adjacent nodes, dependent faces, and dependent cells of each node
-        for (auto curPtr : m_content) // Count all occurance
+        /// Adjacent nodes, dependent faces, and dependent cells of each node.
+        /// Step1: Count all occurance
+        for (auto curPtr : m_content)
         {
             if (curPtr->identity() == SECTION::FACE)
             {
                 auto curObj = dynamic_cast<FACE*>(curPtr);
+                if (curObj == nullptr)
+                    throw internal_error(-3);
 
                 // 1-based index
-                const auto cur_first = curObj->first_index();
-                const auto cur_last = curObj->last_index();
+                const size_t cur_first = curObj->first_index();
+                const size_t cur_last = curObj->last_index();
 
-                for (auto i = cur_first; i <= cur_last; ++i)
+                for (size_t i = cur_first; i <= cur_last; ++i)
                 {
                     const auto &cnct = curObj->at(i - cur_first);
-                    const auto loc_leftCell = cnct.cl();
-                    const auto loc_rightCell = cnct.cr();
+                    const size_t loc_leftCell = cnct.cl();
+                    const size_t loc_rightCell = cnct.cr();
 
                     for (int j = 0; j < cnct.x; ++j)
                     {
-                        const auto idx_ = cnct.n[j];
+                        const size_t idx_ = cnct.n[j];
                         auto &curNode = node(idx_);
 
-                        const auto loc_leftNode = cnct.leftAdj(j);
-                        const auto loc_rightNode = cnct.rightAdj(j);
+                        const size_t loc_leftNode = cnct.leftAdj(j);
+                        const size_t loc_rightNode = cnct.rightAdj(j);
 
                         // Adjacent nodes
                         curNode.adjacentNode.push_back(loc_leftNode);
@@ -1479,7 +1501,8 @@ namespace GridTool::XF
                 }
             }
         }
-        for (size_t i = 1; i <= numOfNode(); ++i) // Remove duplication
+        /// Step2: Remove duplication
+        for (size_t i = 1; i <= numOfNode(); ++i)
         {
             auto &curNode = node(i);
 
@@ -1496,8 +1519,10 @@ namespace GridTool::XF
             if (curPtr->identity() == SECTION::CELL)
             {
                 auto curObj = dynamic_cast<CELL*>(curPtr);
+                if (curObj == nullptr)
+                    throw internal_error(-4);
 
-                // 1-based global face index
+                /// 1-based global face index
                 const size_t cur_first = curObj->first_index();
                 const size_t cur_last = curObj->last_index();
 
@@ -1505,19 +1530,21 @@ namespace GridTool::XF
                 {
                     auto &curCell = cell(i);
 
-                    // Element type of cells in this zone
+                    /// Element type of cells in this zone
                     curCell.type = curObj->at(i - cur_first);
 
-                    // Organize order of included nodes and faces
+                    /// Organize order of included nodes and faces
                     cell_standardization(curCell);
 
-                    // Adjacent cells and normal
+                    /// Adjacent cells and normal
+                    /// Allocate storage.
                     curCell.adjacentCell.resize(curCell.includedFace.size());
                     curCell.n.resize(curCell.includedFace.size());
                     curCell.S.resize(curCell.includedFace.size());
+
                     for (size_t j = 0; j < curCell.includedFace.size(); ++j)
                     {
-                        const auto f_idx = curCell.includedFace[j];
+                        const size_t f_idx = curCell.includedFace[j];
                         const auto &f = face(f_idx);
                         const auto c0 = f.leftCell, c1 = f.rightCell;
                         if (c0 == i)
@@ -1531,14 +1558,14 @@ namespace GridTool::XF
                             curCell.n[j] = f.n_RL;
                         }
                         else
-                            throw std::runtime_error("Internal error.");
+                            throw internal_error(-5);
 
                         for (int k = 1; k <= dimension(); ++k)
                             curCell.S[j](k) = f.area * curCell.n[j](k);
                     }
 
-                    // Volume and Centroid. 
-                    // Based on the divergence theorem. See (5.15) and (5.17) of Jiri Blazek's CFD book.
+                    /// Volume and Centroid.
+                    /// Based on the divergence theorem. See (5.15) and (5.17) of Jiri Blazek's CFD book.
                     curCell.volume = 0.0;
                     curCell.center.x() = 0.0; curCell.center.y() = 0.0; curCell.center.z() = 0.0;
                     for (size_t j = 0; j < curCell.includedFace.size(); ++j)
@@ -1573,7 +1600,7 @@ namespace GridTool::XF
             if (m_zoneMapping.find(curZone) == m_zoneMapping.end())
                 m_zoneMapping[curZone] = m_totalZoneNum++;
             else
-                throw std::runtime_error("Duplicated zone detected.");
+                throw internal_error("Duplicated zone detected.");
         }
         m_zone.clear();
         m_zone.resize(numOfZone());

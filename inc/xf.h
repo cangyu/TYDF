@@ -19,7 +19,6 @@
 
 namespace GridTool::XF
 {
-    using GridTool::COMMON::Scalar;
     using GridTool::COMMON::Vector;
     using GridTool::COMMON::DIM;
     using GridTool::COMMON::Array1D;
@@ -510,12 +509,16 @@ namespace GridTool::XF
             Array1D<size_t> includedNode;
 
             /// Cell connectivity
-            size_t leftCell, rightCell; /// Legacy notation
-            size_t cell1, cell0; /// Current notation
+            /// Legacy notation is adopted.
+            /// Should keep in mind that "rightCell" is the cell pointed by thumb when
+            /// curling fingers of right hand in the order of nodes within "includedNode".
+            size_t leftCell, rightCell;
 
             /// Surface unit normal
-            Vector n_LR, n_RL; /// Legacy notation
-            Vector n_10, n_01; /// Current notation
+            /// Legacy notation is adopted.
+            /// "LR" means from "leftCell" to "rightCell"
+            /// "RL" means from "rightCell" to "leftCell"
+            Vector n_LR, n_RL;
         };
 
         struct CELL_ELEM

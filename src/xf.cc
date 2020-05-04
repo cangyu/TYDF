@@ -174,6 +174,24 @@ namespace GridTool::XF
         return m_identity;
     }
 
+    struct BC::invalid_bc_idx : public wrong_index
+    {
+        invalid_bc_idx(int x) :
+            wrong_index(x, "is not a valid B.C. index")
+        {
+            /// Empty body.
+        }
+    };
+
+    struct BC::invalid_bc_str : public wrong_string
+    {
+        invalid_bc_str(const std::string &s) :
+            wrong_string(s, "is not a valid B.C. string")
+        {
+            /// Empty body.
+        }
+    };
+
     bool BC::isValidIdx(int x)
     {
         static const std::set<int> candidate_set{

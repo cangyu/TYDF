@@ -60,16 +60,10 @@ namespace GridTool::XF
     class BC
     {
     public:
-        struct invalid_bc_idx : public wrong_index
-        {
-            invalid_bc_idx(int x) : wrong_index(x, "is not a valid B.C. index") {}
-        };
+        struct invalid_bc_idx;
 
     private:
-        struct invalid_bc_str : public wrong_string
-        {
-            invalid_bc_str(const std::string &s) : wrong_string(s, "is not a valid B.C. string") {}
-        };
+        struct invalid_bc_str;
 
     public:
         enum {

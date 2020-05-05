@@ -496,25 +496,173 @@ namespace GridTool::XF
         }
 
         /// Assign ZONE info.
-        /// TODO
+        /// Here, only possible choice for cell is hex;
+        /// only possible choice for face is quad.
+        /// Index assignment convention:
+        ///   1 : Nodal coordinates.
+        ///   2 : Cell specification.
+        ///   3 : Internal faces.
+        ///   4 - N : Boundary faces. 
+
+        /// Count total zones.
+        m_totalZoneNum = 0;
+        for (size_t i = 1; i <= NBLK; ++i)
+        {
+            const auto &b = nmf->block(i);
+            for (short j = 1; j <= NMF::Block3D::NumOfSurf; ++j)
+            {
+                const auto &s = b.surf(j);
+                if (s.neighbourSurf == nullptr)
+                    ++m_totalZoneNum;
+            }
+        }
+        m_totalZoneNum += 3;
+
+        /// Allocate storage.
+        m_zone.resize(m_totalZoneNum);
+
+        /// Assign default index.
+        for (size_t i = 1; i <= m_totalZoneNum; ++i)
+        {
+            auto &z = zone(i);
+            z.ID = i;
+            z.obj = nullptr;
+        }
+
+        /// ZONE-1
+        auto &zone1 = zone(1);
+        zone1.type = "";
+        zone1.name = "NODE";
+
+        /// ZONE-2
+        auto &zone2 = zone(2);
+        zone2.type = "fluid";
+        zone2.name = "FLUID";
+
+        /// ZONE-3
+        auto &zone3 = zone(3);
+        zone3.type = "interior";
+        zone3.name = "int_FLUID";
+
+        /// ZONE-4 and later
+        size_t patch_idx = 4;
+        for (size_t i = 1; i <= NBLK; ++i)
+        {
+            const auto &b = nmf->block(i);
+            for (short j = 1; j <= NMF::Block3D::NumOfSurf; ++j)
+            {
+                const auto &s = b.surf(j);
+                if (s.neighbourSurf == nullptr)
+                {
+                    auto &z = zone(patch_idx);
+                    ++patch_idx;
+
+                    /// Set to "wall" by default.
+                    /// Can be mapped according to NMF specification or assigned mannually in FLUENT.
+                    z.type = "wall";
+
+                    z.name = "B" + std::to_string(i) + "F" + std::to_string(j);
+                }
+            }
+        }
 
         /// Convert to primary form.
-        derived2raw();
-
-        /// Finalize.
-        delete nmf;
-        delete p3d;
-    }
-
-    void MESH::derived2raw()
-    {
         clear_entry();
 
         add_entry(new HEADER("Block-Glue " + version_str()));
         add_entry(new DIMENSION(3));
 
-        auto pnt = new NODE(1, 1, numOfNode(), NODE::ANY, 3);
+        /// Nodal coordinates
+        auto part1 = new NODE(1, 1, numOfNode(), NODE::ANY, 3);
+        for (size_t i = 0; i < numOfNode(); ++i)
+            part1->at(i) = node(i + 1).coordinate;
+        zone(1).obj = part1;
+        add_entry(part1);
 
-        /// TODO
+        /// Cell specifications
+        auto part2 = new CELL(2, 1, numOfCell(), CELL::FLUID, CELL::HEXAHEDRAL);
+        zone(2).obj = part2;
+        add_entry(part2);
+
+        /// Internal faces connectivity
+        size_t face_pos_L = 1;
+        size_t face_pos_R = face_pos_L + innerFaceNum - 1;
+        auto part3 = new FACE(3, face_pos_L, face_pos_R, BC::INTERIOR, FACE::QUADRILATERAL);
+        for (size_t i = 0; i < innerFaceNum; ++i)
+        {
+            auto &raw_f = part3->at(i);
+            const auto &derived_f = face(i + 1);
+
+            raw_f.x = 4;
+
+            raw_f.n[0] = derived_f.includedNode.at(0);
+            raw_f.n[1] = derived_f.includedNode.at(1);
+            raw_f.n[2] = derived_f.includedNode.at(2);
+            raw_f.n[3] = derived_f.includedNode.at(3);
+
+            raw_f.c[0] = derived_f.rightCell;
+            raw_f.c[1] = derived_f.leftCell;
+        }
+        zone(3).obj = part3;
+        add_entry(part3);
+
+        /// Boundary faces connectivity
+        patch_idx = 4;
+        for (size_t i = 1; i <= NBLK; ++i)
+        {
+            const auto &b = nmf->block(i);
+            for (short j = 1; j <= NMF::Block3D::NumOfSurf; ++j)
+            {
+                const auto &s = b.surf(j);
+                if (s.neighbourSurf == nullptr)
+                {
+                    const size_t cfn = b.surface_face_num(j);
+
+                    face_pos_L = face_pos_R + 1;
+                    face_pos_R = face_pos_L + cfn - 1;
+
+                    auto part_bfi = new FACE(patch_idx, face_pos_L, face_pos_R, BC::WALL, FACE::QUADRILATERAL);
+                    for (size_t k = 0; k < cfn; ++k)
+                    {
+                        auto &raw_f = part_bfi->at(k);
+                        const auto &derived_f = face(k + face_pos_L);
+
+                        raw_f.x = 4;
+
+                        raw_f.n[0] = derived_f.includedNode.at(0);
+                        raw_f.n[1] = derived_f.includedNode.at(1);
+                        raw_f.n[2] = derived_f.includedNode.at(2);
+                        raw_f.n[3] = derived_f.includedNode.at(3);
+
+                        raw_f.c[0] = derived_f.rightCell;
+                        raw_f.c[1] = derived_f.leftCell;
+                    }
+
+                    zone(patch_idx).obj = part_bfi;
+                    ++patch_idx;
+                    add_entry(part_bfi);
+                }
+            }
+        }
+
+        /// Zone mapping relations.
+        /// Here storage index is consistent with real index.
+        m_zoneMapping.clear();
+        for (size_t i = 1; i <= numOfZone(); ++i)
+            m_zoneMapping.emplace(i, i);
+
+        /// Zone specifications.
+        /// No need to show NODE zone.
+        add_entry(new COMMENT("Zone Sections"));
+        for (size_t i = 2; i <= numOfZone(); ++i)
+        {
+            const auto &derived_z = zone(i);
+            auto raw_z = new ZONE(i, derived_z.type, derived_z.name);
+            add_entry(raw_z);
+        }
+
+        /// Finalize.
+        delete nmf;
+        delete p3d;
     }
 }

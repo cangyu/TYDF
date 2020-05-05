@@ -622,8 +622,6 @@ namespace GridTool::XF
 
         void raw2derived();
 
-        void derived2raw();
-
         void cell_standardization(CELL_ELEM &c);
 
         void tet_standardization(CELL_ELEM &tet);

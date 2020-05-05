@@ -16,14 +16,22 @@ namespace GridTool::COMMON
 
     struct wrong_index : public std::logic_error
     {
-        wrong_index(long long idx, const std::string &reason) : std::logic_error("\"" + std::to_string(idx) + "\" " + reason + ".") {}
+        wrong_index(long long idx, const std::string &reason) :
+            std::logic_error("\"" + std::to_string(idx) + "\" " + reason + ".")
+        {
+            /// Empty body.
+        }
 
         virtual ~wrong_index() = default;
     };
 
     struct wrong_string : public std::logic_error
     {
-        wrong_string(const std::string & str, const std::string &reason) : std::logic_error("\"" + str + "\" " + reason + ".") {}
+        wrong_string(const std::string & str, const std::string &reason) :
+            std::logic_error("\"" + str + "\" " + reason + ".")
+        {
+            /// Empty body.
+        }
 
         virtual ~wrong_string() = default;
     };
@@ -33,7 +41,11 @@ namespace GridTool::COMMON
     private:
         struct wrong_dimension : public wrong_index
         {
-            wrong_dimension(int dim) : wrong_index(dim, "is not a valid dimension") {}
+            wrong_dimension(int dim) :
+                wrong_index(dim, "is not a valid dimension")
+            {
+                /// Empty body.
+            }
         };
 
     protected:
@@ -75,7 +87,11 @@ namespace GridTool::COMMON
     protected:
         struct not_vector_component : public wrong_index
         {
-            not_vector_component(short x) : wrong_index(x, "is not a valid index of certain vector component") {}
+            not_vector_component(short x) :
+                wrong_index(x, "is not a valid index of certain vector component")
+            {
+                /// Empty body.
+            }
         };
 
     public:
@@ -288,7 +304,11 @@ namespace GridTool::COMMON
     private:
         struct index_is_zero : public wrong_index
         {
-            index_is_zero() : wrong_index(0, "is invalid when using 1-based index") {}
+            index_is_zero() :
+                wrong_index(0, "is invalid when using 1-based index")
+            {
+                /// Empty body.
+            }
         };
 
     public:

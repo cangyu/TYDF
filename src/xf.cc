@@ -36,131 +36,6 @@ static void skip_white(std::istream &in)
         in.unget();
 }
 
-static void cross_product(const double *a, const double *b, double *dst)
-{
-    dst[0] = a[1] * b[2] - a[2] * b[1];
-    dst[1] = a[2] * b[0] - a[0] * b[2];
-    dst[2] = a[0] * b[1] - a[1] * b[0];
-}
-
-static void delta(double *na, double *nb, double *dst)
-{
-    for (size_t i = 0; i < 3; ++i)
-        dst[i] = nb[i] - na[i];
-}
-
-static void normalize(double *src, double *dst)
-{
-    double L = 0.0;
-    for (size_t i = 0; i < 3; ++i)
-        L += src[i] * src[i];
-    L = std::sqrt(L);
-    for (size_t i = 0; i < 3; ++i)
-        dst[i] = src[i] / L;
-}
-
-static double distance(double *na, double *nb)
-{
-    double L = 0.0;
-    for (size_t i = 0; i < 3; ++i)
-    {
-        double di = nb[i] - na[i];
-        L += di * di;
-    }
-    return std::sqrt(L);
-}
-
-static void line_center(double *na, double *nb, double *dst)
-{
-    for (size_t i = 0; i < 3; ++i)
-        dst[i] = 0.5*(na[i] + nb[i]);
-}
-
-/// dst: unit normal vector from left cell to right cell.
-/// dst_r: unit normal vector from right cell to left cell.
-static void line_normal(double *na, double *nb, double *dst, double *dst_r)
-{
-    delta(na, nb, dst);
-
-    // Rotate 90 deg in clockwise direction
-    std::swap(dst[0], dst[1]);
-    dst[1] = -dst[1];
-
-    normalize(dst, dst);
-
-    for (size_t i = 0; i < 3; ++i)
-        dst_r[i] = -dst[i];
-}
-
-static void triangle_center(double *na, double *nb, double *nc, double *dst)
-{
-    for (size_t i = 0; i < 3; ++i)
-        dst[i] = (na[i] + nb[i] + nc[i]) / 3.0;
-}
-
-static double triangle_area(double *na, double *nb, double *nc)
-{
-    const double c = distance(na, nb);
-    const double a = distance(nb, nc);
-    const double b = distance(nc, na);
-    const double p = 0.5*(a + b + c);
-    return std::sqrt(p*(p - a)*(p - b)*(p - c)); // Heron's formula
-}
-
-/// dst: unit normal vector from left cell to right cell.
-/// dst_r: unit normal vector from right cell to left cell.
-/// Order of "na, nb, nc" follows the right-hand convention.
-static void triangle_normal(double *na, double *nb, double *nc, double *dst, double *dst_r)
-{
-    double rab[3], rac[3];
-    delta(na, nb, rab);
-    delta(na, nc, rac);
-    cross_product(rac, rab, dst); // Take cross product to find normal direction
-    normalize(dst, dst); // Normalize
-
-    for (size_t i = 0; i < 3; ++i)
-        dst_r[i] = -dst[i];
-}
-
-/// Order of "n1, n2, n3, n4" follows the right-hand convention.
-static void quadrilateral_center(double *n1, double *n2, double *n3, double *n4, double *dst)
-{
-    const double S123 = triangle_area(n1, n2, n3);
-    const double S134 = triangle_area(n1, n3, n4);
-
-    double rc123[3], rc134[3];
-    triangle_center(n1, n2, n3, rc123);
-    triangle_center(n1, n3, n4, rc134);
-
-    const double alpha = S123 / (S123 + S134);
-    const double beta = 1.0 - alpha;
-
-    for (size_t i = 0; i < 3; ++i)
-        dst[i] = alpha * rc123[i] + beta * rc134[i];
-}
-
-/// Order of "n1, n2, n3, n4" follows the right-hand convention.
-static double quadrilateral_area(double *n1, double *n2, double *n3, double *n4)
-{
-    const double S123 = triangle_area(n1, n2, n3);
-    const double S134 = triangle_area(n1, n3, n4);
-    return S123 + S134;
-}
-
-/// dst: unit normal vector from left cell to right cell.
-/// dst_r: unit normal vector from right cell to left cell.
-/// Order of "n1, n2, n3, n4" follows the right-hand convention.
-static void quadrilateral_normal(double *n1, double *n2, double *n3, double *n4, double *dst, double *dst_r)
-{
-    double ra[3] = { 0 }, rb[3] = { 0 };
-    delta(n2, n4, ra);
-    delta(n1, n3, rb);
-    cross_product(ra, rb, dst);
-    normalize(dst, dst);
-    for (size_t i = 0; i < 3; ++i)
-        dst_r[i] = -dst[i];
-}
-
 namespace GridTool::XF
 {
     SECTION::SECTION(int id) :
@@ -1419,33 +1294,39 @@ namespace GridTool::XF
                     /// Face on boundary or not
                     face(i).atBdry = (cnct.c0() == 0 || cnct.c1() == 0);
 
-                    /// Face area and center
+                    /// Face area, center and unit normal vectors
                     if (cnct.x == FACE::LINEAR)
                     {
-                        auto na = cnct.n[0], nb = cnct.n[1];
-                        auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data();
+                        const size_t na = cnct.n[0], nb = cnct.n[1];
+                        const auto &p1 = node(na).coordinate;
+                        const auto &p2 = node(nb).coordinate;
 
-                        face(i).area = distance(p1, p2);
-                        line_center(p1, p2, face(i).center.data());
-                        line_normal(p1, p2, face(i).n_RL.data(), face(i).n_LR.data());
+                        face(i).area = GridTool::COMMON::line_length(p1, p2);
+                        GridTool::COMMON::line_center(p1, p2, face(i).center);
+                        GridTool::COMMON::line_normal(p1, p2, face(i).n_LR, face(i).n_RL);
                     }
                     else if (cnct.x == FACE::TRIANGULAR)
                     {
-                        auto na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2];
-                        auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data(), p3 = node(nc).coordinate.data();
+                        const size_t na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2];
+                        const auto &p1 = node(na).coordinate;
+                        const auto &p2 = node(nb).coordinate;
+                        const auto &p3 = node(nc).coordinate;
 
-                        face(i).area = triangle_area(p1, p2, p3);
-                        triangle_center(p1, p2, p3, face(i).center.data());
-                        triangle_normal(p1, p2, p3, face(i).n_RL.data(), face(i).n_LR.data());
+                        face(i).area = GridTool::COMMON::triangle_area(p1, p2, p3);
+                        GridTool::COMMON::triangle_center(p1, p2, p3, face(i).center);
+                        GridTool::COMMON::triangle_normal(p1, p2, p3, face(i).n_LR, face(i).n_RL);
                     }
                     else if (cnct.x == FACE::QUADRILATERAL)
                     {
-                        auto na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2], nd = cnct.n[3];
-                        auto p1 = node(na).coordinate.data(), p2 = node(nb).coordinate.data(), p3 = node(nc).coordinate.data(), p4 = node(nd).coordinate.data();
+                        const size_t na = cnct.n[0], nb = cnct.n[1], nc = cnct.n[2], nd = cnct.n[3];
+                        const auto &p1 = node(na).coordinate;
+                        const auto &p2 = node(nb).coordinate;
+                        const auto &p3 = node(nc).coordinate;
+                        const auto &p4 = node(nd).coordinate;
 
-                        face(i).area = quadrilateral_area(p1, p2, p3, p4);
-                        quadrilateral_center(p1, p2, p3, p4, face(i).center.data());
-                        quadrilateral_normal(p1, p2, p3, p4, face(i).n_RL.data(), face(i).n_LR.data());
+                        face(i).area = GridTool::COMMON::quadrilateral_area(p1, p2, p3, p4);
+                        GridTool::COMMON::quadrilateral_center(p1, p2, p3, p4, face(i).center);
+                        GridTool::COMMON::quadrilateral_normal(p1, p2, p3, p4, face(i).n_LR, face(i).n_RL);
                     }
                     else if (cnct.x == FACE::POLYGONAL)
                         throw FACE::polygon_not_supported();

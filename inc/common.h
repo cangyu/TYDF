@@ -239,6 +239,49 @@ namespace GridTool::COMMON
         }
     };
 
+    void delta(const Vector &na, const Vector &nb, Vector &dst);
+
+    Scalar line_length(const Vector &na, const Vector &nb);
+
+    void line_center(const Vector &na, const Vector &nb, Vector &dst);
+
+    /// Given coordinates of nodes, find surface unit normal vector of the line.
+    /// Order of "na, nb, nc" follows the right-hand convention.
+    /// ONLY applicable to 2D!!! Value in Z-DIM is assumed to be 0 and will NOT be changed.
+    /// In 2D grids, the $\vec{k}$ vector pointing outside the grid plane is used to determine
+    /// the right-hand-side cell(denoted as "cr" or "rightCell") from $\vec{k} \cross \vec{r}$.
+    /// dst_LR: Unit normal vector from "leftCell" to "rightCell".
+    /// dst_RL: Unit normal vector from "rightCell" to "leftCell".
+    void line_normal(const Vector &na, const Vector &nb, Vector &dst_LR, Vector &dst_RL);
+
+    /// Given coordinates of nodes, find surface area of the triangle.
+    /// Order of "na, nb, nc" follows the right-hand convention.
+    Scalar triangle_area(const Vector &na, const Vector &nb, const Vector &nc);
+
+    /// Given coordinates of nodes, find surface center of the triangle.
+    /// Order of "na, nb, nc" follows the right-hand convention.
+    void triangle_center(const Vector &na, const Vector &nb, const Vector &nc, Vector &dst);
+
+    /// Given coordinates of nodes, find surface unit normal vector of the triangle.
+    /// Order of "na, nb, nc" follows the right-hand convention.
+    /// dst_LR: Unit normal vector from "leftCell" to "rightCell".
+    /// dst_RL: Unit normal vector from "rightCell" to "leftCell".
+    void triangle_normal(const Vector &na, const Vector &nb, const Vector &nc, Vector &dst_LR, Vector &dst_RL);
+
+    /// Given coordinates of nodes, find surface area of the quadrilateral.
+    /// Order of "n1, n2, n3, n4" follows the right-hand convention.
+    Scalar quadrilateral_area(const Vector &n1, const Vector &n2, const Vector &n3, const Vector &n4);
+
+    /// Given coordinates of nodes, find surface center of the quadrilateral.
+    /// Order of "n1, n2, n3, n4" follows the right-hand convention.
+    void quadrilateral_center(const Vector &n1, const Vector &n2, const Vector &n3, const Vector &n4, Vector &dst);
+
+    /// Given coordinates of nodes, find surface unit normal vector of the quadrilateral.
+    /// Order of "n1, n2, n3, n4" follows the right-hand convention.
+    /// dst_LR: Unit normal vector from "leftCell" to "rightCell".
+    /// dst_RL: Unit normal vector from "rightCell" to "leftCell".
+    void quadrilateral_normal(const Vector &n1, const Vector &n2, const Vector &n3, const Vector &n4, Vector &dst_LR, Vector &dst_RL);
+
     template <typename T>
     class Array1D : public std::vector<T>
     {

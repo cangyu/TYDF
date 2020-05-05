@@ -16,13 +16,8 @@ struct invalid_node_num : public std::invalid_argument
 
 namespace GridTool::SPACING
 {
-    using COMMON::relaxation;
+    using GridTool::COMMON::relaxation;
 
-    /**
-     * Uniform distribution through [0,1].
-     * @param n Num of nodes.
-     * @param dst Target distribution.
-     */
     void uniform(int n, DIST_ARR &dst)
     {
         if (n < 2)
@@ -35,13 +30,6 @@ namespace GridTool::SPACING
             dst[i] = 1.0 * i / (n - 1);
     }
 
-    /**
-     * Uniform distribution through [a,b].
-     * @param a The starting position.
-     * @param b The ending position.
-     * @param n Num of nodes.
-     * @param dst Target distribution.
-     */
     void uniform(double a, double b, int n, DIST_ARR &dst)
     {
         uniform(n, dst);
@@ -50,13 +38,6 @@ namespace GridTool::SPACING
             e = relaxation(a, b, e);
     }
 
-    /**
-     * Chebshev distribution through [a,b].
-     * @param a The starting position.
-     * @param b The ending position.
-     * @param n Num of nodes.
-     * @param dst Target distribution.
-     */
     void chebshev(double a, double b, int n, DIST_ARR &dst)
     {
         static const double pi = std::acos(-1.0);
@@ -70,12 +51,6 @@ namespace GridTool::SPACING
         }
     }
 
-    /**
-     * Multi-segment Chebshev distribution.
-     * @param seg Splitting values.
-     * @param num Num of nodes within each segment.
-     * @param dst Target distribution.
-     */
     void chebshev(const std::vector<double> &seg, const std::vector<int> &num, DIST_ARR &dst)
     {
         if (seg.size() < 2)
@@ -111,15 +86,6 @@ namespace GridTool::SPACING
             throw std::runtime_error("Unexpected terminating position.");
     }
 
-    /**
-     * Single exponential distribution of n nodes in [0, 1].
-     * @param n Number of nodes.
-     * @param a The control parameter.
-     *          For a>0, nodes aggregate towards the starting position;
-     *          For a=0, nodes are uniform, no aggregation;
-     *          For a<0, nodes aggregate towards the ending position.
-     * @param dst Target distribution.
-     */
     void single_exponential(int n, double a, DIST_ARR &dst)
     {
         uniform(n, dst);
@@ -134,18 +100,6 @@ namespace GridTool::SPACING
         }
     }
 
-    /**
-     * Double exponential distribution of n nodes in [0, 1].
-     * The curve will go through (a3, a1).
-     * @param n Number of nodes.
-     * @param a1 Horizontal coordinate of the control point.
-     * @param a2 The control parameter.
-     *           For a2>0, nodes aggregate towards boundary;
-     *			 For a2=0, nodes are uniform, no aggregation;
-     *           For a2<0, nodes aggregate towards center.
-     * @param a3 Vertical coordinate of the control point.
-     * @param dst Target distribution.
-     */
     void double_exponential(int n, double a1, double a2, double a3, DIST_ARR &dst)
     {
         uniform(n, dst);
@@ -188,12 +142,6 @@ namespace GridTool::SPACING
         }
     }
 
-    /**
-     *  Hyperbolic tangent distribution of n nodes in [0, 1].
-     * @param n Number of nodes.
-     * @param b The control parameter.
-     * @param dst Target distribution.
-     */
     void hyperbolic_tangent(int n, double b, DIST_ARR &dst)
     {
         uniform(n, dst);
@@ -203,12 +151,6 @@ namespace GridTool::SPACING
             e = 1.0 + std::tanh(b * (e - 1.0)) / tb;
     }
 
-    /**
-     *  Hyperbolic sine distribution of n nodes in [0, 1].
-     * @param n Number of nodes.
-     * @param c The control parameter.
-     * @param dst Target distribution.
-     */
     void hyperbolic_sine(int n, double c, DIST_ARR &dst)
     {
         uniform(n, dst);

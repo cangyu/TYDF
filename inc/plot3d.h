@@ -1,56 +1,63 @@
-#ifndef __GT_PLOT3D_H__
-#define __GT_PLOT3D_H__
+#ifndef TYDF_PLOT3D_H
+#define TYDF_PLOT3D_H
 
 #include <vector>
 #include "common.h"
 
-namespace GridTool
+namespace GridTool::PLOT3D
 {
-    namespace PLOT3D
+    using COMMON::Vector;
+    using COMMON::DIM;
+    using COMMON::ArrayND;
+
+    class BLK : public DIM, public ArrayND<Vector>
     {
-        using COMMON::Vector;
-        using COMMON::DIM;
-        using COMMON::ArrayND;
+    public:
+        BLK(size_t nI, size_t nJ, bool is3D);
 
-        class BLK : public DIM, public ArrayND<Vector>
-        {
-        public:
-            BLK(size_t nI, size_t nJ, bool is3D);
-            BLK(size_t nI, size_t nJ, size_t nK);
-            BLK(const BLK &rhs) = default;
-            ~BLK() = default;
+        BLK(size_t nI, size_t nJ, size_t nK);
 
-            size_t node_num() const;
-            size_t cell_num() const;
-            size_t face_num() const;
+        BLK(const BLK &rhs) = default;
 
-            size_t boundary_face_num() const;
-            size_t internal_face_num() const;
-        };
+        ~BLK() = default;
 
-        class GRID : public DIM
-        {
-        private:
-            std::vector<BLK *> m_blk;
+        size_t node_num() const;
 
-        public:
-            GRID();
-            GRID(const std::string &fn);
-            GRID(const GRID &rhs);
-            ~GRID();
+        size_t cell_num() const;
 
-            size_t numOfBlock() const { return m_blk.size(); }
+        size_t face_num() const;
 
-            // IO
-            void readFromFile(const std::string &src);
-            void writeToFile(const std::string &dst) const;
+        size_t boundary_face_num() const;
 
-            // 0-based indexing
-            BLK *block(size_t loc_idx) { return m_blk[loc_idx]; }
+        size_t internal_face_num() const;
+    };
 
-        private:
-            void release_all();
-        };
-    }
+    class GRID : public DIM
+    {
+    private:
+        std::vector<BLK *> m_blk;
+
+    public:
+        GRID();
+
+        GRID(const std::string &fn);
+
+        GRID(const GRID &rhs);
+
+        ~GRID();
+
+        size_t numOfBlock() const;
+
+        /// IO
+        void readFromFile(const std::string &src);
+
+        void writeToFile(const std::string &dst) const;
+
+        /// 0-based indexing
+        BLK *block(size_t loc_idx);
+
+    private:
+        void release_all();
+    };
 }
 #endif

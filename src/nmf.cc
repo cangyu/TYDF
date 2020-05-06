@@ -118,6 +118,22 @@ namespace GridTool::NMF
         }
     }
 
+    CELL::CELL(size_t idx) :
+        m_cell(idx)
+    {
+        /// Empty body.
+    }
+
+    size_t CELL::CellSeq() const
+    {
+        return m_cell;
+    }
+
+    size_t &CELL::CellSeq()
+    {
+        return m_cell;
+    }
+
     BLOCK::BLOCK(size_t nI, size_t nJ) :
         m_idx(0),
         m_name(""),

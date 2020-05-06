@@ -47,15 +47,15 @@ namespace GridTool::NMF
         size_t m_cell; /// 1-based cell index.
 
     public:
-        CELL(size_t idx = 0) : m_cell(idx) {}
+        CELL(size_t idx = 0);
 
         CELL(const CELL &rhs) = default;
 
         virtual ~CELL() = default;
 
-        size_t CellSeq() const { return m_cell; }
+        size_t CellSeq() const;
 
-        size_t &CellSeq() { return m_cell; }
+        size_t &CellSeq();
 
         /// 1-based indexing of node
         virtual size_t NodeSeq(size_t n) const = 0;

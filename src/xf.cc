@@ -1139,32 +1139,32 @@ namespace GridTool::XF
 
     const MESH::NODE_ELEM &MESH::node(size_t id) const
     {
-        return m_node(id);
+        return m_node((int)id);
     }
 
     MESH::NODE_ELEM &MESH::node(size_t id)
     {
-        return m_node(id);
+        return m_node((int)id);
     }
 
     const MESH::FACE_ELEM &MESH::face(size_t id) const
     {
-        return m_face(id);
+        return m_face((int)id);
     }
 
     MESH::FACE_ELEM &MESH::face(size_t id)
     {
-        return m_face(id);
+        return m_face((int)id);
     }
 
     const MESH::CELL_ELEM &MESH::cell(size_t id) const
     {
-        return m_cell(id);
+        return m_cell((int)id);
     }
 
     MESH::CELL_ELEM &MESH::cell(size_t id)
     {
-        return m_cell(id);
+        return m_cell((int)id);
     }
 
     const MESH::ZONE_ELEM &MESH::zone(size_t id, bool isRealZoneID) const
@@ -1175,7 +1175,7 @@ namespace GridTool::XF
             return m_zone.at(real_idx);
         }
         else
-            return m_zone(id);
+            return m_zone((int)id);
     }
 
     MESH::ZONE_ELEM &MESH::zone(size_t id, bool isRealZoneID)
@@ -1186,7 +1186,7 @@ namespace GridTool::XF
             return m_zone.at(real_idx);
         }
         else
-            return m_zone(id);
+            return m_zone((int)id);
     }
 
     void MESH::raw2derived()

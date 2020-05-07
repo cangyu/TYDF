@@ -134,6 +134,62 @@ namespace GridTool::NMF
         return m_cell;
     }
 
+    QUAD_CELL::QUAD_CELL(size_t idx) :
+        CELL(idx),
+        m_node{ 0, 0, 0, 0 },
+        m_face{ 0, 0, 0, 0 }
+    {
+        /// Empty body.
+    }
+
+    size_t QUAD_CELL::NodeSeq(size_t n) const
+    {
+        return m_node.at(n - 1);
+    }
+
+    size_t &QUAD_CELL::NodeSeq(size_t n)
+    {
+        return m_node.at(n - 1);
+    }
+
+    size_t QUAD_CELL::FaceSeq(size_t n) const
+    {
+        return m_face.at(n - 1);
+    }
+
+    size_t &QUAD_CELL::FaceSeq(size_t n)
+    {
+        return m_face.at(n - 1);
+    }
+
+    HEX_CELL::HEX_CELL(size_t idx) :
+        CELL(idx),
+        m_node{ 0, 0, 0, 0, 0, 0, 0, 0 },
+        m_face{ 0, 0, 0, 0, 0, 0 }
+    {
+        /// Empty body.
+    }
+
+    size_t HEX_CELL::NodeSeq(size_t n) const
+    {
+        return m_node.at(n - 1);
+    }
+
+    size_t &HEX_CELL::NodeSeq(size_t n)
+    {
+        return m_node.at(n - 1);
+    }
+
+    size_t HEX_CELL::FaceSeq(size_t n) const
+    {
+        return m_face.at(n - 1);
+    }
+
+    size_t &HEX_CELL::FaceSeq(size_t n)
+    {
+        return m_face.at(n - 1);
+    }
+
     BLOCK::BLOCK(size_t nI, size_t nJ) :
         m_idx(0),
         m_name(""),

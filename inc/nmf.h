@@ -75,21 +75,21 @@ namespace GridTool::NMF
         std::array<size_t, 4> m_face; /// 1-based face sequence.
 
     public:
-        QUAD_CELL(size_t idx = 0) : CELL(idx), m_node{ 0, 0, 0, 0 }, m_face{ 0, 0, 0, 0 } {}
+        QUAD_CELL(size_t idx = 0);
 
         QUAD_CELL(const QUAD_CELL &rhs) = default;
 
         ~QUAD_CELL() = default;
 
         /// 1-based indexing of node
-        size_t NodeSeq(size_t n) const { return m_node.at(n - 1); }
+        size_t NodeSeq(size_t n) const;
 
-        size_t &NodeSeq(size_t n) { return m_node.at(n - 1); }
+        size_t &NodeSeq(size_t n);
 
         /// 1-based indexing of face
-        size_t FaceSeq(size_t n) const { return m_face.at(n - 1); }
+        size_t FaceSeq(size_t n) const;
 
-        size_t &FaceSeq(size_t n) { return m_face.at(n - 1); }
+        size_t &FaceSeq(size_t n);
     };
 
     class HEX_CELL : public CELL
@@ -99,21 +99,21 @@ namespace GridTool::NMF
         std::array<size_t, 6> m_face; /// 1-based face sequence.
 
     public:
-        HEX_CELL(size_t idx = 0) : CELL(idx), m_node{ 0, 0, 0, 0, 0, 0, 0, 0 }, m_face{ 0, 0, 0, 0, 0, 0 } {}
+        HEX_CELL(size_t idx = 0);
 
         HEX_CELL(const HEX_CELL &rhs) = default;
 
         ~HEX_CELL() = default;
 
         /// 1-based indexing of node
-        size_t NodeSeq(size_t n) const { return m_node.at(n - 1); }
+        size_t NodeSeq(size_t n) const;
 
-        size_t &NodeSeq(size_t n) { return m_node.at(n - 1); }
+        size_t &NodeSeq(size_t n);
 
         /// 1-based indexing of face
-        size_t FaceSeq(size_t n) const { return m_face.at(n - 1); }
+        size_t FaceSeq(size_t n) const;
 
-        size_t &FaceSeq(size_t n) { return m_face.at(n - 1); }
+        size_t &FaceSeq(size_t n);
     };
 
     class BLOCK
@@ -169,9 +169,9 @@ namespace GridTool::NMF
     {
     public:
         static const short NumOfVertex = 4;
-
         static const short NumOfFrame = 4;
 
+    public:
         struct FRAME
         {
             short local_index = 0; /// Ranges from 1 to 'NumOfFrame', set to 0 when uninitialized.
@@ -341,11 +341,10 @@ namespace GridTool::NMF
     {
     public:
         static const short NumOfVertex = 8;
-
         static const short NumOfFrame = 12;
-
         static const short NumOfSurf = 6;
 
+    public:
         struct SURF;
 
         struct FRAME;

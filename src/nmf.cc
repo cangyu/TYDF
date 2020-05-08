@@ -191,6 +191,7 @@ namespace GridTool::NMF
     }
 
     BLOCK::BLOCK(size_t nI, size_t nJ) :
+        DIM(2, false),
         m_idx(0),
         m_name(""),
         m_dim{ nI, nJ, 1 }
@@ -200,12 +201,76 @@ namespace GridTool::NMF
     }
 
     BLOCK::BLOCK(size_t nI, size_t nJ, size_t nK) :
+        DIM(3),
         m_idx(0),
         m_name(""),
         m_dim{ nI, nJ, nK }
     {
         if (nI < 2 || nJ < 2 || nK < 2)
             throw std::invalid_argument("Invalid dimension.");
+    }
+
+    BLOCK::BLOCK(const BLOCK &rhs) :
+        DIM(rhs.dimension(), rhs.is3D()),
+        m_idx(rhs.index()),
+        m_name(rhs.name()),
+        m_dim{ rhs.IDIM(), rhs.JDIM(), rhs.KDIM() }
+    {
+        if (IDIM() < 2 || JDIM() < 2)
+            throw std::invalid_argument("Invalid dimension not detected in previous construction.");
+
+        if (is3D() && KDIM() < 2)
+            throw std::invalid_argument("Wrong K-DIM!");
+    }
+
+    size_t BLOCK::index() const
+    {
+        return m_idx;
+    }
+
+    size_t &BLOCK::index()
+    {
+        return m_idx;
+    }
+
+    const std::string &BLOCK::name() const
+    {
+        return m_name;
+    }
+
+    std::string &BLOCK::name()
+    {
+        return m_name;
+    }
+
+    size_t BLOCK::IDIM() const
+    {
+        return m_dim[0];
+    }
+
+    size_t &BLOCK::IDIM()
+    {
+        return m_dim[0];
+    }
+
+    size_t BLOCK::JDIM() const
+    {
+        return m_dim[1];
+    }
+
+    size_t &BLOCK::JDIM()
+    {
+        return m_dim[1];
+    }
+
+    size_t BLOCK::KDIM() const
+    {
+        return m_dim[2];
+    }
+
+    size_t &BLOCK::KDIM()
+    {
+        return m_dim[2];
     }
 
     Block3D::Block3D(int nI, int nJ, int nK) :

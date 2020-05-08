@@ -20,6 +20,7 @@ namespace GridTool::NMF
 {
     using COMMON::wrong_index;
     using COMMON::Array1D;
+    using COMMON::DIM;
 
     class BC
     {
@@ -116,12 +117,18 @@ namespace GridTool::NMF
         size_t &FaceSeq(size_t n);
     };
 
-    class BLOCK
+    class BLOCK : public DIM
     {
     protected:
-        size_t m_idx; /// 1-based global index
+        /// 1-based global index.
+        size_t m_idx;
+
+        /// Byname of the block.
+        /// Set to empty string by defalut.
         std::string m_name;
-        std::array<size_t, 3> m_dim; /// Dimensions
+
+        /// Dimensions of the block.
+        std::array<size_t, 3> m_dim;
 
     public:
         BLOCK() = delete;
@@ -130,27 +137,29 @@ namespace GridTool::NMF
 
         BLOCK(size_t nI, size_t nJ, size_t nK);
 
-        BLOCK(const BLOCK &rhs) : m_idx(rhs.index()), m_name(rhs.name()), m_dim{ rhs.IDIM(), rhs.JDIM(), rhs.KDIM() } {}
+        BLOCK(const BLOCK &rhs);
 
         virtual ~BLOCK() = default;
 
-        size_t index() const { return m_idx; }
+        size_t index() const;
 
-        size_t &index() { return m_idx; }
+        size_t &index();
 
-        const std::string &name() const { return m_name; }
+        const std::string &name() const;
 
-        std::string &name() { return m_name; }
+        std::string &name();
 
-        size_t IDIM() const { return m_dim[0]; }
+        size_t IDIM() const;
 
-        size_t JDIM() const { return m_dim[1]; }
+        size_t &IDIM();
 
-        size_t KDIM() const { return m_dim[2]; }
+        size_t JDIM() const;
 
-        bool is3D() const { return (KDIM() != 1); }
+        size_t &JDIM();
 
-        short dimension() const { return is3D() ? 3 : 2; }
+        size_t KDIM() const;
+
+        size_t &KDIM();
 
         /// Here, terms 'node', 'face' and 'cell' are
         /// consistent with that in ANSYS Fluent convention.

@@ -39,14 +39,7 @@ namespace GridTool::COMMON
     class DIM
     {
     private:
-        struct wrong_dimension : public wrong_index
-        {
-            wrong_dimension(int dim) :
-                wrong_index(dim, "is not a valid dimension")
-            {
-                /// Empty body.
-            }
-        };
+        struct wrong_dimension;
 
     protected:
         bool m_is3D;
@@ -55,204 +48,70 @@ namespace GridTool::COMMON
     public:
         DIM() = delete;
 
-        DIM(int dim, bool is3d = true) :
-            m_is3D(is3d)
-        {
-            if (dim == 2 || dim == 3)
-                m_dim = dim;
-            else
-                throw wrong_dimension(dim);
-
-            if (dim == 3 && !is3d)
-                throw std::invalid_argument("Inconsistent dimensions.");
-        }
+        DIM(int dim, bool is3d = true);
 
         DIM(const DIM &rhs) = default;
 
         virtual ~DIM() = default;
 
-        bool is3D() const
-        {
-            return m_is3D;
-        }
+        bool is3D() const;
 
-        int dimension() const
-        {
-            return m_dim;
-        }
+        int dimension() const;
     };
 
     class Vector : public std::array<Scalar, 3>
     {
     protected:
-        struct not_vector_component : public wrong_index
-        {
-            not_vector_component(short x) :
-                wrong_index(x, "is not a valid index of certain vector component")
-            {
-                /// Empty body.
-            }
-        };
+        struct not_vector_component;
 
     public:
-        Vector() : std::array<Scalar, 3>{0.0, 0.0, 0.0} {}
+        Vector();
 
-        Vector(Scalar val) : std::array<Scalar, 3>{val, val, val} {}
+        Vector(Scalar val);
 
-        Vector(Scalar v1, Scalar v2, Scalar v3) : std::array<Scalar, 3>{v1, v2, v3} {}
+        Vector(Scalar v1, Scalar v2, Scalar v3);
 
-        Vector(const Vector &obj) : std::array<Scalar, 3>{obj.x(), obj.y(), obj.z()} {}
+        Vector(const Vector &obj);
 
         ~Vector() = default;
 
         /// 1-based indexing
-        const Scalar &operator()(short idx) const
-        {
-            switch (idx)
-            {
-            case 1:
-                return x();
-            case 2:
-                return y();
-            case 3:
-                return z();
-            case -3:
-                return x();
-            case -2:
-                return y();
-            case -1:
-                return z();
-            default:
-                throw not_vector_component(idx);
-            }
-        }
+        const Scalar &operator()(short idx) const;
 
-        Scalar &operator()(short idx)
-        {
-            switch (idx)
-            {
-            case 1:
-                return x();
-            case 2:
-                return y();
-            case 3:
-                return z();
-            case -3:
-                return x();
-            case -2:
-                return y();
-            case -1:
-                return z();
-            default:
-                throw not_vector_component(idx);
-            }
-        }
+        Scalar &operator()(short idx);
 
         /// Access through component
-        const Scalar &x() const
-        {
-            return at(0);
-        }
+        const Scalar &x() const;
 
-        const Scalar &y() const
-        {
-            return at(1);
-        }
+        const Scalar &y() const;
 
-        const Scalar &z() const
-        {
-            return at(2);
-        }
+        const Scalar &z() const;
 
-        Scalar &x()
-        {
-            return at(0);
-        }
+        Scalar &x();
 
-        Scalar &y()
-        {
-            return at(1);
-        }
+        Scalar &y();
 
-        Scalar &z()
-        {
-            return at(2);
-        }
+        Scalar &z();
 
         /// Operators
-        Vector &operator=(const Vector &rhs)
-        {
-            x() = rhs.x();
-            y() = rhs.y();
-            z() = rhs.z();
-            return *this;
-        }
+        Vector &operator=(const Vector &rhs);
 
-        Vector &operator+=(const Vector &rhs)
-        {
-            x() += rhs.x();
-            y() += rhs.y();
-            z() += rhs.z();
-            return *this;
-        }
+        Vector &operator+=(const Vector &rhs);
 
-        Vector &operator-=(const Vector &rhs)
-        {
-            x() -= rhs.x();
-            y() -= rhs.y();
-            z() -= rhs.z();
-            return *this;
-        }
+        Vector &operator-=(const Vector &rhs);
 
-        Vector &operator*=(Scalar a)
-        {
-            x() *= a;
-            y() *= a;
-            z() *= a;
-            return *this;
-        }
+        Vector &operator*=(Scalar a);
 
-        Vector &operator/=(Scalar a)
-        {
-            x() /= a;
-            y() /= a;
-            z() /= a;
-            return *this;
-        }
+        Vector &operator/=(Scalar a);
 
         /// Mathematical operations
-        Scalar dot(const Vector &b) const
-        {
-            Scalar ret = 0.0;
-            ret += x() * b.x();
-            ret += y() * b.y();
-            ret += z() * b.z();
-            return ret;
-        }
+        Scalar dot(const Vector &b) const;
 
-        Vector cross(const Vector &b) const
-        {
-            Vector ret;
-            ret.x() = y() * b.z() - z() * b.y();
-            ret.y() = z() * b.x() - x() * b.z();
-            ret.z() = x() * b.y() - y() * b.x();
-            return ret;
-        }
+        Vector cross(const Vector &b) const;
 
-        Scalar norm() const
-        {
-            Scalar ret = 0.0;
-            ret += std::pow(x(), 2);
-            ret += std::pow(y(), 2);
-            ret += std::pow(z(), 2);
-            return std::sqrt(ret);
-        }
+        Scalar norm() const;
 
-        void normalize()
-        {
-            const Scalar L = norm();
-            this->operator/=(L);
-        }
+        void normalize();
     };
 
     void delta(const Vector &na, const Vector &nb, Vector &dst);

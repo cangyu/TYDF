@@ -7,6 +7,215 @@ namespace GridTool::COMMON
         return (1.0 - x) * a + x * b;
     }
 
+    struct DIM::wrong_dimension : public wrong_index
+    {
+        wrong_dimension(int dim) :
+            wrong_index(dim, "is not a valid dimension")
+        {
+            /// Empty body.
+        }
+    };
+
+    DIM::DIM(int dim, bool is3d) :
+        m_is3D(is3d)
+    {
+        if (dim == 2 || dim == 3)
+            m_dim = dim;
+        else
+            throw wrong_dimension(dim);
+
+        if (dim == 3 && !is3d)
+            throw std::invalid_argument("Inconsistent dimensions.");
+    }
+
+    bool DIM::is3D() const
+    {
+        return m_is3D;
+    }
+
+    int DIM::dimension() const
+    {
+        return m_dim;
+    }
+
+    struct Vector::not_vector_component : public wrong_index
+    {
+        not_vector_component(short x) :
+            wrong_index(x, "is not a valid index of certain vector component")
+        {
+            /// Empty body.
+        }
+    };
+
+    Vector::Vector() :
+        std::array<Scalar, 3>{0.0, 0.0, 0.0}
+    {
+        /// Empty body.
+    }
+
+    Vector::Vector(Scalar val) :
+        std::array<Scalar, 3>{val, val, val}
+    {
+        /// Empty body.
+    }
+
+    Vector::Vector(Scalar v1, Scalar v2, Scalar v3) :
+        std::array<Scalar, 3>{v1, v2, v3}
+    {
+        /// Empty body.
+    }
+
+    Vector::Vector(const Vector &obj) :
+        std::array<Scalar, 3>{obj.x(), obj.y(), obj.z()}
+    {
+        /// Empty body.
+    }
+
+    const Scalar &Vector::operator()(short idx) const
+    {
+        switch (idx)
+        {
+        case 1:
+            return x();
+        case 2:
+            return y();
+        case 3:
+            return z();
+        case -3:
+            return x();
+        case -2:
+            return y();
+        case -1:
+            return z();
+        default:
+            throw not_vector_component(idx);
+        }
+    }
+
+    Scalar &Vector::operator()(short idx)
+    {
+        switch (idx)
+        {
+        case 1:
+            return x();
+        case 2:
+            return y();
+        case 3:
+            return z();
+        case -3:
+            return x();
+        case -2:
+            return y();
+        case -1:
+            return z();
+        default:
+            throw not_vector_component(idx);
+        }
+    }
+
+    const Scalar &Vector::x() const
+    {
+        return at(0);
+    }
+
+    const Scalar &Vector::y() const
+    {
+        return at(1);
+    }
+
+    const Scalar &Vector::z() const
+    {
+        return at(2);
+    }
+
+    Scalar &Vector::x()
+    {
+        return at(0);
+    }
+
+    Scalar &Vector::y()
+    {
+        return at(1);
+    }
+
+    Scalar &Vector::z()
+    {
+        return at(2);
+    }
+
+    Vector &Vector::operator=(const Vector &rhs)
+    {
+        x() = rhs.x();
+        y() = rhs.y();
+        z() = rhs.z();
+        return *this;
+    }
+
+    Vector &Vector::operator+=(const Vector &rhs)
+    {
+        x() += rhs.x();
+        y() += rhs.y();
+        z() += rhs.z();
+        return *this;
+    }
+
+    Vector &Vector::operator-=(const Vector &rhs)
+    {
+        x() -= rhs.x();
+        y() -= rhs.y();
+        z() -= rhs.z();
+        return *this;
+    }
+
+    Vector &Vector::operator*=(Scalar a)
+    {
+        x() *= a;
+        y() *= a;
+        z() *= a;
+        return *this;
+    }
+
+    Vector &Vector::operator/=(Scalar a)
+    {
+        x() /= a;
+        y() /= a;
+        z() /= a;
+        return *this;
+    }
+
+    Scalar Vector::dot(const Vector &b) const
+    {
+        Scalar ret = 0.0;
+        ret += x() * b.x();
+        ret += y() * b.y();
+        ret += z() * b.z();
+        return ret;
+    }
+
+    Vector Vector::cross(const Vector &b) const
+    {
+        Vector ret;
+        ret.x() = y() * b.z() - z() * b.y();
+        ret.y() = z() * b.x() - x() * b.z();
+        ret.z() = x() * b.y() - y() * b.x();
+        return ret;
+    }
+
+    Scalar Vector::norm() const
+    {
+        Scalar ret = 0.0;
+        ret += std::pow(x(), 2);
+        ret += std::pow(y(), 2);
+        ret += std::pow(z(), 2);
+        return std::sqrt(ret);
+    }
+
+    void Vector::normalize()
+    {
+        const Scalar L = norm();
+        this->operator/=(L);
+    }
+
     void delta(const Vector &na, const Vector &nb, Vector &dst)
     {
         dst = nb;

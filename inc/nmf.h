@@ -45,7 +45,8 @@ namespace GridTool::NMF
     class CELL
     {
     protected:
-        size_t m_cell; /// 1-based cell index.
+        /// 1-based cell index.
+        size_t m_cell;
 
     public:
         CELL(size_t idx = 0);
@@ -72,8 +73,11 @@ namespace GridTool::NMF
     class QUAD_CELL : public CELL
     {
     private:
-        std::array<size_t, 4> m_node; /// 1-based node sequence.
-        std::array<size_t, 4> m_face; /// 1-based face sequence.
+        /// 1-based node sequence.
+        std::array<size_t, 4> m_node;
+
+        /// 1-based face sequence.
+        std::array<size_t, 4> m_face;
 
     public:
         QUAD_CELL(size_t idx = 0);
@@ -96,8 +100,11 @@ namespace GridTool::NMF
     class HEX_CELL : public CELL
     {
     private:
-        std::array<size_t, 8> m_node; /// 1-based node sequence.
-        std::array<size_t, 6> m_face; /// 1-based face sequence.
+        /// 1-based node sequence.
+        std::array<size_t, 8> m_node;
+
+        /// 1-based face sequence.
+        std::array<size_t, 6> m_face;
 
     public:
         HEX_CELL(size_t idx = 0);
@@ -123,8 +130,8 @@ namespace GridTool::NMF
         /// 1-based global index.
         size_t m_idx;
 
-        /// Byname of the block.
-        /// Set to empty string by defalut.
+        /// By-name of the block.
+        /// Set to empty string by default.
         std::string m_name;
 
         /// Dimensions of the block.
@@ -183,18 +190,38 @@ namespace GridTool::NMF
     public:
         struct FRAME
         {
-            short local_index = 0; /// Ranges from 1 to 'NumOfFrame', set to 0 when uninitialized.
-            int global_index = 0; /// 1-based global index, set to 0 when uninitialized.
+            /// Ranges from 1 to 'NumOfFrame'.
+            /// Set to 0 when uninitialized.
+            short local_index = 0;
+
+            /// 1-based global index.
+            /// Set to 0 when uninitialized.
+            int global_index = 0;
+
+            /// By-name of the block.
+            /// Set to empty string by default.
             std::string name = "";
+
+            /// Dependence
             Block2D *dependentBlock = nullptr;
+
+            /// Connectivity
             Block2D *neighbourBlock = nullptr;
         };
 
         struct VERTEX
         {
-            short local_index = 0; /// Ranges from 1 to 'NumOfVertex', set to 0 when uninitialized.
-            int global_index = 0; /// 1-based global index, set to 0 when uninitialized.
+            /// Ranges from 1 to 'NumOfVertex'.
+            /// Set to 0 when uninitialized.
+            short local_index = 0;
+
+            /// 1-based global index.
+            /// Set to 0 when uninitialized.
+            int global_index = 0;
+
+            /// Dependence
             Block2D *dependentBlock = nullptr;
+
             std::array<FRAME*, 2> dependentFrame{ nullptr, nullptr };
         };
 
@@ -206,57 +233,15 @@ namespace GridTool::NMF
     public:
         Block2D() = delete;
 
-        Block2D(int nI, int nJ) :
-            BLOCK(nI, nJ),
-            m_cell(cell_num(), nullptr),
-            m_vertex(NumOfVertex),
-            m_frame(NumOfFrame)
-        {
-            for (short i = 0; i < NumOfFrame; ++i)
-                m_frame[i].local_index = i + 1;
+        Block2D(int nI, int nJ);
 
-            for (short i = 0; i < NumOfVertex; ++i)
-                m_vertex[i].local_index = i + 1;
-        }
+        Block2D(const Block2D &rhs);
 
-        Block2D(const Block2D &rhs) :
-            BLOCK(rhs.IDIM(), rhs.JDIM()),
-            m_cell(rhs.m_cell.size(), nullptr),
-            m_frame(rhs.m_frame),
-            m_vertex(rhs.m_vertex)
-        {
-            for (size_t i = 0; i < m_cell.size(); ++i)
-            {
-                auto p = rhs.m_cell[i];
-                if (p)
-                    m_cell[i] = new QUAD_CELL(*p);
-            }
-        }
+        ~Block2D();
 
-        ~Block2D()
-        {
-            release_cell_storage();
-        }
+        void release_cell_storage();
 
-        void release_cell_storage()
-        {
-            for (auto &c : m_cell)
-                if (c != nullptr)
-                {
-                    delete c;
-                    c = nullptr;
-                }
-        }
-
-        void allocate_cell_storage()
-        {
-            for (auto &c : m_cell)
-            {
-                c = new QUAD_CELL();
-                if (!c)
-                    throw std::bad_alloc();
-            }
-        }
+        void allocate_cell_storage();
 
         /// Access internal cell through 1-based index.
         /// Indexing convention:
@@ -264,86 +249,32 @@ namespace GridTool::NMF
         ///      "j" ranges from 1 to JDIM()-1;
         /// When the IJ-axis follows the right-hand convention, (i, j) represents
         /// the left-most, bottom-most node of the selected cell.
-        QUAD_CELL &cell(size_t i, size_t j)
-        {
-            const size_t i0 = i - 1, j0 = j - 1; /// Convert 1-based index to 0-based
-            const size_t idx = i0 + (IDIM() - 1) * j0;
-            return *m_cell.at(idx);
-        }
+        const QUAD_CELL &cell(size_t i, size_t j) const;
 
-        const QUAD_CELL &cell(size_t i, size_t j) const
-        {
-            const size_t i0 = i - 1, j0 = j - 1; /// Convert 1-based index to 0-based
-            const size_t idx = i0 + (IDIM() - 1) * j0;
-            return *m_cell.at(idx);
-        }
+        QUAD_CELL &cell(size_t i, size_t j);
 
         /// Access frame through 1-based index.
         /// The indexing convention follows OpenFOAM specification.
-        FRAME &frame(short n)
-        {
-            if (1 <= n && n <= NumOfFrame)
-                return m_frame.at(n - 1);
-            else if (-NumOfFrame <= n && n <= -1)
-                return m_frame.at(NumOfFrame + n);
-            else
-                throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
-        }
+        const FRAME &frame(short n) const;
 
-        const FRAME &frame(short n) const
-        {
-            if (1 <= n && n <= NumOfFrame)
-                return m_frame.at(n - 1);
-            else if (-NumOfFrame <= n && n <= -1)
-                return m_frame.at(NumOfFrame + n);
-            else
-                throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
-        }
+        FRAME &frame(short n);
 
         /// Access vertex through 1-based index.
         /// The indexing convention follows OpenFOAM specification.
-        VERTEX &vertex(short n)
-        {
-            if (1 <= n && n <= NumOfVertex)
-                return m_vertex.at(n - 1);
-            else if (-NumOfVertex <= n && n <= -1)
-                return m_vertex.at(NumOfVertex + n);
-            else
-                throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
-        }
+        const VERTEX &vertex(short n) const;
 
-        const VERTEX &vertex(short n) const
-        {
-            if (1 <= n && n <= NumOfVertex)
-                return m_vertex.at(n - 1);
-            else if (-NumOfVertex <= n && n <= -1)
-                return m_vertex.at(NumOfVertex + n);
-            else
-                throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
-        }
+        VERTEX &vertex(short n);
 
-        size_t node_num() const { return IDIM() * JDIM(); }
+        /// Counting
+        size_t node_num() const;
 
-        size_t face_num() const { return (IDIM() - 1) * JDIM() + IDIM() * (JDIM() - 1); }
+        size_t face_num() const;
 
-        size_t cell_num() const { return (IDIM() - 1) * (JDIM() - 1); }
+        size_t cell_num() const;
 
-        size_t block_internal_node_num() const { return (IDIM() - 2) * (JDIM() - 2); }
+        size_t block_internal_node_num() const;
 
-        size_t surface_internal_node_num(short s_idx) const
-        {
-            switch (s_idx)
-            {
-            case 1:
-            case 2:
-                return (JDIM() - 2);
-            case 3:
-            case 4:
-                return (IDIM() - 2);
-            default:
-                throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 2D block.");
-            }
-        }
+        size_t surface_internal_node_num(short s_idx) const;
     };
 
     class Block3D : public BLOCK
@@ -352,6 +283,22 @@ namespace GridTool::NMF
         static const short NumOfVertex = 8;
         static const short NumOfFrame = 12;
         static const short NumOfSurf = 6;
+
+    protected:
+        struct not_a_surface : public wrong_index
+        {
+            not_a_surface(short x) : wrong_index(x, "is not a valid surface index of a 3D block") {}
+        };
+
+        struct not_a_frame : public wrong_index
+        {
+            not_a_frame(short x) : wrong_index(x, "is not a valid frame index of a 3D block") {}
+        };
+
+        struct not_a_vertex : public wrong_index
+        {
+            not_a_vertex(short x) : wrong_index(x, "is not a valid vertex index of a 3D block") {}
+        };
 
     public:
         struct SURF;
@@ -388,22 +335,6 @@ namespace GridTool::NMF
             std::array<bool, 4> counterpartFrameIsOpposite{ false, false, false, false };
             std::array<VERTEX*, 4> includedVertex{ nullptr, nullptr, nullptr, nullptr };
             std::array<VERTEX*, 4> counterpartVertex{ nullptr, nullptr, nullptr, nullptr };
-        };
-
-    protected:
-        struct not_a_surface : public wrong_index
-        {
-            not_a_surface(short x) : wrong_index(x, "is not a valid surface index of a 3D block") {}
-        };
-
-        struct not_a_frame : public wrong_index
-        {
-            not_a_frame(short x) : wrong_index(x, "is not a valid frame index of a 3D block") {}
-        };
-
-        struct not_a_vertex : public wrong_index
-        {
-            not_a_vertex(short x) : wrong_index(x, "is not a valid vertex index of a 3D block") {}
         };
 
     private:

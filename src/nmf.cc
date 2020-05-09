@@ -273,6 +273,148 @@ namespace GridTool::NMF
         return m_dim[2];
     }
 
+    Block2D::Block2D(int nI, int nJ) :
+        BLOCK(nI, nJ),
+        m_cell(cell_num(), nullptr),
+        m_vertex(NumOfVertex),
+        m_frame(NumOfFrame)
+    {
+        for (short i = 0; i < NumOfFrame; ++i)
+            m_frame[i].local_index = i + 1;
+
+        for (short i = 0; i < NumOfVertex; ++i)
+            m_vertex[i].local_index = i + 1;
+    }
+
+    Block2D::Block2D(const Block2D &rhs) :
+        BLOCK(rhs.IDIM(), rhs.JDIM()),
+        m_cell(rhs.m_cell.size(), nullptr),
+        m_frame(rhs.m_frame),
+        m_vertex(rhs.m_vertex)
+    {
+        for (size_t i = 0; i < m_cell.size(); ++i)
+        {
+            auto p = rhs.m_cell[i];
+            if (p)
+                m_cell[i] = new QUAD_CELL(*p);
+        }
+    }
+
+    Block2D::~Block2D()
+    {
+        release_cell_storage();
+    }
+
+    void Block2D::release_cell_storage()
+    {
+        for (auto &c : m_cell)
+            if (c != nullptr)
+            {
+                delete c;
+                c = nullptr;
+            }
+    }
+
+    void Block2D::allocate_cell_storage()
+    {
+        for (auto &c : m_cell)
+        {
+            c = new QUAD_CELL();
+            if (!c)
+                throw std::bad_alloc();
+        }
+    }
+
+    const QUAD_CELL &Block2D::cell(size_t i, size_t j) const
+    {
+        const size_t i0 = i - 1, j0 = j - 1; /// Convert 1-based index to 0-based
+        const size_t idx = i0 + (IDIM() - 1) * j0;
+        return *m_cell.at(idx);
+    }
+
+
+    QUAD_CELL &Block2D::cell(size_t i, size_t j)
+    {
+        const size_t i0 = i - 1, j0 = j - 1; /// Convert 1-based index to 0-based
+        const size_t idx = i0 + (IDIM() - 1) * j0;
+        return *m_cell.at(idx);
+    }
+
+    const Block2D::FRAME &Block2D::frame(short n) const
+    {
+        if (1 <= n && n <= NumOfFrame)
+            return m_frame.at(n - 1);
+        else if (-NumOfFrame <= n && n <= -1)
+            return m_frame.at(NumOfFrame + n);
+        else
+            throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
+    }
+
+    Block2D::FRAME &Block2D::frame(short n)
+    {
+        if (1 <= n && n <= NumOfFrame)
+            return m_frame.at(n - 1);
+        else if (-NumOfFrame <= n && n <= -1)
+            return m_frame.at(NumOfFrame + n);
+        else
+            throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid frame index for a 2D block.");
+    }
+
+    const Block2D::VERTEX &Block2D::vertex(short n) const
+    {
+        if (1 <= n && n <= NumOfVertex)
+            return m_vertex.at(n - 1);
+        else if (-NumOfVertex <= n && n <= -1)
+            return m_vertex.at(NumOfVertex + n);
+        else
+            throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
+    }
+
+    Block2D::VERTEX &Block2D::vertex(short n)
+    {
+        if (1 <= n && n <= NumOfVertex)
+            return m_vertex.at(n - 1);
+        else if (-NumOfVertex <= n && n <= -1)
+            return m_vertex.at(NumOfVertex + n);
+        else
+            throw std::invalid_argument("\"" + std::to_string(n) + "\" is not a valid vertex index for a 2D block.");
+    }
+
+    size_t Block2D::node_num() const
+    {
+        return IDIM() * JDIM();
+    }
+
+    size_t Block2D::face_num() const
+    {
+        return (IDIM() - 1) * JDIM() + IDIM() * (JDIM() - 1);
+    }
+
+    size_t Block2D::cell_num() const
+    {
+        return (IDIM() - 1) * (JDIM() - 1);
+    }
+
+    size_t Block2D::block_internal_node_num() const
+    {
+        return (IDIM() - 2) * (JDIM() - 2);
+    }
+
+    size_t Block2D::surface_internal_node_num(short s_idx) const
+    {
+        switch (s_idx)
+        {
+        case 1:
+        case 2:
+            return (JDIM() - 2);
+        case 3:
+        case 4:
+            return (IDIM() - 2);
+        default:
+            throw std::invalid_argument("\"" + std::to_string(s_idx) + "\" is not a valid surface index of a 2D block.");
+        }
+    }
+
     Block3D::Block3D(int nI, int nJ, int nK) :
         BLOCK(nI, nJ, nK),
         m_cell(cell_num(), nullptr),

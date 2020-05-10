@@ -285,26 +285,13 @@ namespace GridTool::NMF
         static const short NumOfSurf = 6;
 
     protected:
-        struct not_a_surface : public wrong_index
-        {
-            not_a_surface(short x) : wrong_index(x, "is not a valid surface index of a 3D block") {}
-        };
-
-        struct not_a_frame : public wrong_index
-        {
-            not_a_frame(short x) : wrong_index(x, "is not a valid frame index of a 3D block") {}
-        };
-
-        struct not_a_vertex : public wrong_index
-        {
-            not_a_vertex(short x) : wrong_index(x, "is not a valid vertex index of a 3D block") {}
-        };
+        struct not_a_surface;
+        struct not_a_frame;
+        struct not_a_vertex;
 
     public:
         struct SURF;
-
         struct FRAME;
-
         struct VERTEX
         {
             short local_index = 0; /// Ranges from 1 to 8, set to 0 when uninitialized.
@@ -350,27 +337,11 @@ namespace GridTool::NMF
 
         Block3D(const Block3D &rhs);
 
-        ~Block3D() { release_cell_storage(); }
+        ~Block3D();
 
-        void release_cell_storage()
-        {
-            for (auto &c : m_cell)
-                if (c != nullptr)
-                {
-                    delete c;
-                    c = nullptr;
-                }
-        }
+        void release_cell_storage();
 
-        void allocate_cell_storage()
-        {
-            for (auto &c : m_cell)
-            {
-                c = new HEX_CELL();
-                if (!c)
-                    throw std::bad_alloc();
-            }
-        }
+        void allocate_cell_storage();
 
         /// Access internal cell through 1-based index.
         /// Indexing convention:
@@ -379,125 +350,47 @@ namespace GridTool::NMF
         ///      "k" ranges from 1 to KDIM()-1;
         /// When the IJK-axis follows the right-hand convention, (i, j, k) represents
         /// the left-most, bottom-most and back-most node of the selected cell.
-        HEX_CELL &cell(size_t i, size_t j, size_t k)
-        {
-            const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; /// Convert 1-based index to 0-based
-            const size_t idx = i0 + (IDIM() - 1) * (j0 + (JDIM() - 1) * k0);
-            return *m_cell.at(idx);
-        }
+        HEX_CELL &cell(size_t i, size_t j, size_t k);
 
-        const HEX_CELL &cell(size_t i, size_t j, size_t k) const
-        {
-            const size_t i0 = i - 1, j0 = j - 1, k0 = k - 1; /// Convert 1-based index to 0-based
-            const size_t idx = i0 + (IDIM() - 1) * (j0 + (JDIM() - 1) * k0);
-            return *m_cell.at(idx);
-        }
+        const HEX_CELL &cell(size_t i, size_t j, size_t k) const;
 
         /// Access vertex through 1-based index.
         /// The indexing convention follows OpenFOAM specification.
-        VERTEX &vertex(short n)
-        {
-            if (1 <= n && n <= NumOfVertex)
-                return m_vertex.at(n - 1);
-            else if (-NumOfVertex <= n && n <= -1)
-                return m_vertex.at(NumOfVertex + n);
-            else
-                throw not_a_vertex(n);
-        }
+        VERTEX &vertex(short n);
 
-        const VERTEX &vertex(short n) const
-        {
-            if (1 <= n && n <= NumOfVertex)
-                return m_vertex.at(n - 1);
-            else if (-NumOfVertex <= n && n <= -1)
-                return m_vertex.at(NumOfVertex + n);
-            else
-                throw not_a_vertex(n);
-        }
+        const VERTEX &vertex(short n) const;
 
         /// Access the frame edges through 1-based index.
         /// The indexing convention follows OpenFOAM specification.
-        FRAME &frame(short n)
-        {
-            if (1 <= n && n <= NumOfFrame)
-                return m_frame.at(n - 1);
-            else if (-NumOfFrame <= n && n <= -1)
-                return m_frame.at(NumOfFrame + n);
-            else
-                throw not_a_frame(n);
-        }
+        FRAME &frame(short n);
 
-        const FRAME &frame(short n) const
-        {
-            if (1 <= n && n <= NumOfFrame)
-                return m_frame.at(n - 1);
-            else if (-NumOfFrame <= n && n <= -1)
-                return m_frame.at(NumOfFrame + n);
-            else
-                throw not_a_frame(n);
-        }
+        const FRAME &frame(short n) const;
 
         /// Access surrounding surface through 1-based index.
         /// The index follows NMF convection.
-        SURF &surf(short n)
-        {
-            if (1 <= n && n <= NumOfSurf)
-                return m_surf.at(n - 1);
-            else if (-NumOfSurf <= n && n <= -1)
-                return m_surf.at(NumOfSurf + n);
-            else
-                throw not_a_surface(n);
-        }
+        SURF &surf(short n);
 
-        const SURF &surf(short n) const
-        {
-            if (1 <= n && n <= NumOfSurf)
-                return m_surf.at(n - 1);
-            else if (-NumOfSurf <= n && n <= -1)
-                return m_surf.at(NumOfSurf + n);
-            else
-                throw not_a_surface(n);
-        }
+        const SURF &surf(short n) const;
 
-        size_t node_num() const { return IDIM() * JDIM() * KDIM(); }
+        size_t node_num() const;
 
-        size_t face_num() const
-        {
-            size_t ret = 0;
-            ret += (IDIM() - 1) * (JDIM() - 1) * KDIM();
-            ret += IDIM() * (JDIM() - 1) * (KDIM() - 1);
-            ret += (IDIM() - 1) *JDIM() * (KDIM() - 1);
-            return ret;
-        }
+        size_t face_num() const;
 
-        size_t cell_num() const { return (IDIM() - 1) * (JDIM() - 1) * (KDIM() - 1); }
+        size_t cell_num() const;
 
-        size_t block_internal_node_num() const { return (IDIM() - 2) * (JDIM() - 2) * (KDIM() - 2); }
+        size_t block_internal_node_num() const;
 
         size_t surface_internal_node_num(short s) const;
 
         size_t frame_node_num(short idx) const;
 
-        size_t frame_internal_node_num(short idx) const
-        {
-            const auto n = frame_node_num(idx);
-            if (n >= 2)
-                return n - 2;
-            else
-                throw std::runtime_error("Internal error: too less nodes not detected when constructing.");
-        }
+        size_t frame_internal_node_num(short idx) const;
 
         size_t surface_node_num(short idx) const;
 
         size_t surface_face_num(short idx) const;
 
-        size_t shell_face_num() const
-        {
-            size_t ret = 0;
-            for (short i = 1; i <= NumOfSurf; ++i)
-                ret += surface_face_num(i);
-            return ret;
-        }
+        size_t shell_face_num() const;
 
         size_t &surface_face_index(short f, size_t pri, size_t sec);
 

@@ -416,7 +416,7 @@ namespace GridTool::XF
             OUTLET_VENT,
             PARENT_FACE,
             POROUS_JUMP,
-            PRESSURE_PAR_FIELD,
+            PRESSURE_FAR_FIELD,
             PRESSURE_INLET,
             PRESSURE_OUTLET,
             RADIATOR,

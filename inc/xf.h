@@ -59,9 +59,15 @@ namespace GridTool::XF
     class BC
     {
     public:
-        struct invalid_bc_idx;
+        struct invalid_bc_idx : public wrong_index
+        {
+            explicit invalid_bc_idx(int x) : wrong_index(x, "is not a valid B.C. index") {}
+        };
 
-        struct invalid_bc_str;
+        struct invalid_bc_str : public wrong_string
+        {
+            explicit invalid_bc_str(const std::string &s) : wrong_string(s, "is not a valid B.C. string") {}
+        };
 
     public:
         enum {
@@ -185,9 +191,15 @@ namespace GridTool::XF
     class NODE : public RANGE, public DIM, public std::vector<Vector>
     {
     public:
-        struct invalid_node_type_idx;
+        struct invalid_node_type_idx : public wrong_index
+        {
+            explicit invalid_node_type_idx(int x) : wrong_index(x, "is not a valid NODE-TYPE index") {}
+        };
 
-        struct invalid_node_type_str;
+        struct invalid_node_type_str : public wrong_string
+        {
+            explicit invalid_node_type_str(const std::string &s) : wrong_string(s, "is not a valid NODE-TYPE string") {}
+        };
 
     public:
         enum {
@@ -234,13 +246,25 @@ namespace GridTool::XF
     class CELL : public RANGE, public std::vector<int>
     {
     public:
-        struct invalid_cell_type_idx;
+        struct invalid_cell_type_idx : public wrong_index
+        {
+            explicit invalid_cell_type_idx(int x) : wrong_index(x, "is not a valid CELL-TYPE index") {}
+        };
 
-        struct invalid_cell_type_str;
+        struct invalid_cell_type_str : public wrong_string
+        {
+            explicit invalid_cell_type_str(const std::string &s) : wrong_string(s, "is not a valid CELL-TYPE string") {}
+        };
 
-        struct invalid_elem_type_idx;
+        struct invalid_elem_type_idx : public wrong_index
+        {
+            explicit invalid_elem_type_idx(int x) : wrong_index(x, "is not a valid CELL-ELEM-TYPE index") {}
+        };
 
-        struct invalid_elem_type_str;
+        struct invalid_elem_type_str : public wrong_string
+        {
+            explicit invalid_elem_type_str(const std::string &s) : wrong_string(s, "is not a valid CELL-ELEM-TYPE string") {}
+        };
 
     public:
         enum {
@@ -343,11 +367,20 @@ namespace GridTool::XF
     class FACE : public RANGE, public std::vector<CONNECTIVITY>
     {
     public:
-        struct polygon_not_supported;
+        struct polygon_not_supported : public std::invalid_argument
+        {
+            polygon_not_supported() : std::invalid_argument("Polygonal faces are NOT supported currently!") {}
+        };
 
-        struct invalid_face_type_idx;
+        struct invalid_face_type_idx : public wrong_index
+        {
+            explicit invalid_face_type_idx(int x) : wrong_index(x, "is not a valid FACE-TYPE index") {}
+        };
 
-        struct invalid_face_type_str;
+        struct invalid_face_type_str : public wrong_string
+        {
+            explicit invalid_face_type_str(const std::string &s) : wrong_string(s, "is not a valid FACE-TYPE string") {}
+        };
 
     public:
         enum {
@@ -395,9 +428,15 @@ namespace GridTool::XF
     class ZONE :public SECTION
     {
     public:
-        struct invalid_zone_type_idx;
+        struct invalid_zone_type_idx : public wrong_index
+        {
+            explicit invalid_zone_type_idx(int x) : wrong_index(x, "is not a valid ZONE-TYPE index") {}
+        };
 
-        struct invalid_zone_type_str;
+        struct invalid_zone_type_str : public wrong_string
+        {
+            explicit invalid_zone_type_str(const std::string &s) : wrong_string(s, "is not a valid specification of ZONE-TYPE") {}
+        };
 
     public:
         enum {
@@ -476,7 +515,14 @@ namespace GridTool::XF
     class MESH : public DIM
     {
     private:
-        struct internal_error;
+        struct internal_error : public std::runtime_error
+        {
+            explicit internal_error(int err) : std::runtime_error("Internal error occurred with error code: " + std::to_string(err) + ".") {}
+
+            explicit internal_error(const std::string &msg) : std::runtime_error("Internal error occurred with error message: \"" + msg + "\".") {}
+
+            internal_error(int err, const std::string &msg) : std::runtime_error("Internal error occurred with error code: " + std::to_string(err) + " and error message: \"" + msg + "\".") {}
+        };
 
     protected:
         /// Index of node, face, and cell starts from 1 

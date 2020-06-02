@@ -49,24 +49,6 @@ namespace GridTool::XF
         return m_identity;
     }
 
-    struct BC::invalid_bc_idx : public wrong_index
-    {
-        invalid_bc_idx(int x) :
-            wrong_index(x, "is not a valid B.C. index")
-        {
-            /// Empty body.
-        }
-    };
-
-    struct BC::invalid_bc_str : public wrong_string
-    {
-        invalid_bc_str(const std::string &s) :
-            wrong_string(s, "is not a valid B.C. string")
-        {
-            /// Empty body.
-        }
-    };
-
     bool BC::isValidIdx(int x)
     {
         static const std::set<int> candidate_set{
@@ -291,24 +273,6 @@ namespace GridTool::XF
         return ret;
     }
 
-    struct NODE::invalid_node_type_idx : public wrong_index
-    {
-        invalid_node_type_idx(int x) :
-            wrong_index(x, "is not a valid NODE-TYPE index")
-        {
-            /// Empty body.
-        }
-    };
-
-    struct NODE::invalid_node_type_str : public wrong_string
-    {
-        invalid_node_type_str(const std::string &s) :
-            wrong_string(s, "is not a valid NODE-TYPE string")
-        {
-            /// Empty body.
-        }
-    };
-
     bool NODE::isValidTypeIdx(int x)
     {
         return x == VIRTUAL || x == ANY || x == BOUNDARY;
@@ -422,42 +386,6 @@ namespace GridTool::XF
         }
         out << "))" << std::endl;
     }
-
-    struct CELL::invalid_cell_type_idx : public wrong_index
-    {
-        invalid_cell_type_idx(int x) :
-            wrong_index(x, "is not a valid CELL-TYPE index")
-        {
-            /// Empty body.
-        }
-    };
-
-    struct CELL::invalid_cell_type_str : public wrong_string
-    {
-        invalid_cell_type_str(const std::string &s) :
-            wrong_string(s, "is not a valid CELL-TYPE string")
-        {
-            /// Empty body.
-        }
-    };
-
-    struct CELL::invalid_elem_type_idx : public wrong_index
-    {
-        invalid_elem_type_idx(int x) :
-            wrong_index(x, "is not a valid CELL-ELEM-TYPE index")
-        {
-            /// Empty body.
-        }
-    };
-
-    struct CELL::invalid_elem_type_str : public wrong_string
-    {
-        invalid_elem_type_str(const std::string &s) :
-            wrong_string(s, "is not a valid CELL-ELEM-TYPE string")
-        {
-            /// Empty body.
-        }
-    };
 
     bool CELL::isValidTypeIdx(int x)
     {
@@ -714,33 +642,6 @@ namespace GridTool::XF
             return n[loc_idx + 1];
     }
 
-    struct FACE::polygon_not_supported : public std::invalid_argument
-    {
-        polygon_not_supported() :
-            std::invalid_argument("Polygonal faces are NOT supported currently!")
-        {
-            /// Empty body.
-        }
-    };
-
-    struct FACE::invalid_face_type_idx : public wrong_index
-    {
-        invalid_face_type_idx(int x) :
-            wrong_index(x, "is not a valid FACE-TYPE index")
-        {
-            /// Empty body.
-        }
-    };
-
-    struct FACE::invalid_face_type_str : public wrong_string
-    {
-        invalid_face_type_str(const std::string &s) :
-            wrong_string(s, "is not a valid FACE-TYPE string")
-        {
-            /// Empty body.
-        }
-    };
-
     bool FACE::isValidIdx(int x)
     {
         static const std::set<int> candidate_set{
@@ -886,24 +787,6 @@ namespace GridTool::XF
 
         out << "))" << std::endl;
     }
-
-    struct ZONE::invalid_zone_type_idx : public wrong_index
-    {
-        invalid_zone_type_idx(int x) :
-            wrong_index(x, "is not a valid ZONE-TYPE index")
-        {
-            /// Empty body.
-        }
-    };
-
-    struct ZONE::invalid_zone_type_str : public wrong_string
-    {
-        invalid_zone_type_str(const std::string &s) :
-            wrong_string(s, "is not a valid specification of ZONE-TYPE")
-        {
-            /// Empty body.
-        }
-    };
 
     bool ZONE::isValidIdx(int x)
     {
@@ -1070,27 +953,6 @@ namespace GridTool::XF
     {
         out << std::dec << "(" << identity() << " (" << zone() << " " << type() << " " << name() << ")())" << std::endl;
     }
-
-    struct MESH::internal_error : public std::runtime_error
-    {
-        internal_error(int err) :
-            std::runtime_error("Internal error occurred with error code: " + std::to_string(err) + ".")
-        {
-            /// Empty body.
-        }
-
-        internal_error(const std::string &msg) :
-            std::runtime_error("Internal error occurred with error message: \"" + msg + "\".")
-        {
-            /// Empty body.
-        }
-
-        internal_error(int err, const std::string &msg) :
-            std::runtime_error("Internal error occurred with error code: " + std::to_string(err) + " and error message: \"" + msg + "\".")
-        {
-            /// Empty body.
-        }
-    };
 
     MESH::MESH() :
         DIM(3), /// 3D by default.
